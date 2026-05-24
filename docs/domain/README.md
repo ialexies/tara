@@ -6,17 +6,17 @@ Get the domain right and the codebase stays clean. Get it wrong and you pay fore
 
 ## Documents
 
-| File                                       | Status  | Purpose                                                                               |
-| ------------------------------------------ | ------- | ------------------------------------------------------------------------------------- |
-| [`glossary.md`](glossary.md)               | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc. |
-| [`01-inventory.md`](01-inventory.md)       | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.    |
-| [`02-availability.md`](02-availability.md) | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.     |
-| `03-pricing.md`                            | 📝 TBD  | Rate plans, pricing rules, dynamic pricing, taxes, fees                               |
-| `04-booking-lifecycle.md`                  | 📝 TBD  | The booking state machine: hold → confirmed → cancelled → refunded → ...              |
-| `05-tours.md`                              | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)               |
-| `06-concurrency.md`                        | 📝 TBD  | Detailed mechanics of double-booking prevention (locks, transactions, holds, Redis)   |
-| `07-money.md`                              | 📝 TBD  | Currency, FX, rounding, tax, multi-currency display                                   |
-| `08-temporal.md`                           | 📝 TBD  | Time handling — timezones, check-in cutoffs, night boundaries                         |
+| File                                                 | Status  | Purpose                                                                                                                      |
+| ---------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [`glossary.md`](glossary.md)                         | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc.                                        |
+| [`01-inventory.md`](01-inventory.md)                 | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.                                           |
+| [`02-availability.md`](02-availability.md)           | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.                                            |
+| `03-pricing.md`                                      | 📝 TBD  | Rate plans, pricing rules, dynamic pricing, taxes, fees                                                                      |
+| [`04-booking-lifecycle.md`](04-booking-lifecycle.md) | ✅ Done | Booking state machine: Stripe + manual paths, transitions with side effects, cancellation policies, sweeper jobs, edge cases |
+| `05-tours.md`                                        | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)                                                      |
+| `06-concurrency.md`                                  | 📝 TBD  | Detailed mechanics of double-booking prevention (locks, transactions, holds, Redis)                                          |
+| `07-money.md`                                        | 📝 TBD  | Currency, FX, rounding, tax, multi-currency display                                                                          |
+| `08-temporal.md`                                     | 📝 TBD  | Time handling — timezones, check-in cutoffs, night boundaries                                                                |
 
 ## Reading order
 
