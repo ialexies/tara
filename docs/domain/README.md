@@ -16,7 +16,7 @@ Get the domain right and the codebase stays clean. Get it wrong and you pay fore
 | `05-tours.md`                                        | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)                                                      |
 | [`06-concurrency.md`](06-concurrency.md)             | ✅ Done | Defense-in-depth (DB locks + recheck + partial unique index + Redis), failure scenarios, test plan, monitoring               |
 | [`07-money.md`](07-money.md)                         | ✅ Done | Integer minor units, MoneyAmount value object, FX, PH tax model, commission math, refund rounding, formatting                |
-| `08-temporal.md`                                     | 📝 TBD  | Time handling — timezones, check-in cutoffs, night boundaries                                                                |
+| [`08-temporal.md`](08-temporal.md)                   | ✅ Done | UTC in DB / dates as dates, half-open night intervals, PH `Asia/Manila` TZ, date-fns + Temporal API path, edge cases         |
 
 ## Reading order
 
