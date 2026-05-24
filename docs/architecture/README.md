@@ -11,5 +11,6 @@ High-level architectural views of Tara. ADRs live in [`../adr/`](../adr/); domai
 | [`ai-features.md`](ai-features.md)           | Catalog of AI features (Ollama local, Claude API real-time), cost discipline, observability, what we DON'T use AI for.                                                   |
 | [`admin-dashboards.md`](admin-dashboards.md) | Owner dashboard + founder/superadmin dashboard + marketing CMS. Single-app vs separate apps. RBAC. Phase rollout.                                                        |
 | [`analytics.md`](analytics.md)               | Full analytics architecture: event taxonomy spec, PostHog + Metabase setup, 5 funnels, cohort analysis, consent compliance, A/B testing framework.                       |
+| [`reports.md`](reports.md)                   | Owner / founder / regulatory reports. Scheduled email digests, PDF generation, BIR-compliant exports, ownership rules.                                                   |
 
 When the architecture changes, update these diagrams + docs in the same PR as the code change. Stale diagrams are worse than no diagrams.
