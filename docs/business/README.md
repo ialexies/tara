@@ -2,15 +2,17 @@
 
 Strategy, model, personas, and regional plans. Lives in the repo because product and business decisions should evolve together with the code.
 
-## Planned documents
+## Documents
 
-| File | Purpose |
-| --- | --- |
-| `model.md` | The phased business model: free → take rate → subscriptions |
-| `personas.md` | Guest, property owner, tour operator — what they want and fear |
-| `launch-region.md` | Why Zambales, what success looks like in Zambales |
-| `mock-data.md` | Mock-data strategy: how we look populated without lying |
-| `unit-economics.md` | CAC, LTV, ROAS math with realistic Zambales numbers |
-| `marketing-plan.md` | Content pillars, channels, cadence, the "Zambales hostel guy" story |
-| `competitor-analysis.md` | Hostelworld, Booking, Airbnb, Klook — strengths and gaps |
-| `ph-business-setup.md` | DTI, BIR, SEC — what we need to register, when |
+| File                                         | Status  | Purpose                                                                                            |
+| -------------------------------------------- | ------- | -------------------------------------------------------------------------------------------------- |
+| [`trust-and-safety.md`](trust-and-safety.md) | ✅ Done | Verification badges, fraud patterns, dispute resolution, suspension policy, PH RA 10173 compliance |
+| `model.md`                                   | 📝 TBD  | The phased business model: free → take rate → subscriptions                                        |
+| `personas.md`                                | 📝 TBD  | Guest, property owner, tour operator — what they want and fear                                     |
+| `launch-region.md`                           | 📝 TBD  | Why Zambales, what success looks like in Zambales                                                  |
+| `mock-data.md`                               | 📝 TBD  | Mock-data strategy: how we look populated without lying                                            |
+| `unit-economics.md`                          | 📝 TBD  | CAC, LTV, ROAS math with realistic Zambales numbers                                                |
+| `marketing-plan.md`                          | 📝 TBD  | Content pillars, channels, cadence, the "Zambales hostel guy" story                                |
+| `competitor-analysis.md`                     | 📝 TBD  | Hostelworld, Booking, Airbnb, Klook — strengths and gaps                                           |
+| `ph-business-setup.md`                       | 📝 TBD  | DTI, BIR, SEC — what we need to register, when                                                     |
+| `risk-register.md`                           | 📝 TBD  | What could kill this project; mitigations                                                          |
