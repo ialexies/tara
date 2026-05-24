@@ -34,8 +34,8 @@ Future expansion: Cebuano (Visayas), Ilonggo (Iloilo), then possibly Bahasa Indo
 Locale prefix in every URL:
 
 ```
-https://tara.ph/en/zambales/san-antonio          ← English
-https://tara.ph/tl/zambales/san-antonio          ← Tagalog
+https://tarastays.com/en/zambales/san-antonio          ← English
+https://tarastays.com/tl/zambales/san-antonio          ← Tagalog
 ```
 
 **Why prefix over subdomain or query param:**
@@ -80,7 +80,7 @@ https://tara.ph/tl/zambales/san-antonio          ← Tagalog
 - **English-only at launch** — Rejected. Loses ~30-50% of potential PH owner-side conversion. Cost to add Tagalog later is much higher than now.
 - **`react-i18next` instead of `next-intl`** — Mature, language-agnostic, but doesn't integrate as cleanly with App Router server components. Passed.
 - **`@lingui/react` with extraction** — Good for large codebases with many translators. Overkill for a 2-locale start; can migrate later if needed.
-- **Subdomain per locale (`en.tara.ph`, `tl.tara.ph`)** — Bigger SEO win for some setups but adds DNS/cert complexity and breaks "single brand" feel. Passed.
+- **Subdomain per locale (`en.tarastays.com`, `tl.tarastays.com`)** — Bigger SEO win for some setups but adds DNS/cert complexity and breaks "single brand" feel. Passed.
 - **Query param locale (`?lang=tl`)** — Bad for SEO (often treated as duplicate content). Rejected.
 - **Cloudflare auto-translate at the edge** — Too lossy and unreliable for production content. Rejected for primary use; keep as accessibility fallback for unsupported locales.
 - **Storing all translations in DB** — Rejected for UI strings (versioning/diffing in git is critical for those). Accepted for owner-authored content (where versioning is per-row anyway).

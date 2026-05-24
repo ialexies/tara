@@ -205,7 +205,7 @@ flowchart TB
   Runner["🤖 GitHub Actions<br/>(self-hosted runner<br/>ON home server)"]
   Reg["📚 Local Docker registry"]
   Port["🎛️ Portainer API"]
-  Stage["🌐 staging.tara.ph<br/>(Cloudflare Tunnel)"]
+  Stage["🌐 staging.tarastays.com<br/>(Cloudflare Tunnel)"]
   Smoke["🧪 Smoke tests"]
   Disc["💬 Discord notify"]
 
@@ -226,9 +226,9 @@ flowchart TB
 ```mermaid
 flowchart TB
   subgraph CFEdge["🌐 Cloudflare Tunnel"]
-    T1["staging.tara.ph"]
-    T2["api.staging.tara.ph"]
-    T3["status.tara.ph"]
+    T1["staging.tarastays.com"]
+    T2["api.staging.tarastays.com"]
+    T3["status.tarastays.com"]
   end
 
   subgraph App["⚙️ Application Tier"]

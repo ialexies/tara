@@ -18,7 +18,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] T&C + Privacy Policy + Cookie Policy published (from Termly or similar templates — lawyer review can wait until Phase C)
 - [ ] Backup restore drill completed successfully (don't trust untested backups)
 - [ ] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
-- [ ] Status page is public at `status.tara.ph`
+- [ ] Status page is public at `status.tarastays.com`
 - [ ] Founder support WhatsApp number is pinned in owner dashboard
 - [ ] Audit log table exists and is being written to
 - [ ] Risk register reviewed; top 5 risks have mitigations in place
@@ -86,7 +86,7 @@ These must be true before moving between phases. Don't shortcut them.
 ### Annually (start of new year, ~1 day)
 - [ ] Major dependency upgrades (Node, Postgres, Next.js, NestJS) — plan and schedule
 - [ ] Architecture review — is the modular monolith still serving us, or extracting time?
-- [ ] Domain + service renewals (`tara.ph`, Stripe, etc.)
+- [ ] Domain + service renewals (`tarastays.com`, Stripe, etc.)
 - [ ] BIR annual return (Q1 deadline; work with accountant)
 - [ ] Business registration renewals
 - [ ] Stripe account review (rate negotiation possible at volume)
