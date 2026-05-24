@@ -27,15 +27,28 @@
     "db:generate": "pnpm --filter @tara/db db:generate",
     "db:migrate": "DATABASE_URL=postgres://tara:tara@localhost:5432/tara_dev pnpm --filter @tara/db db:migrate",
     "db:studio": "DATABASE_URL=postgres://tara:tara@localhost:5432/tara_dev pnpm --filter @tara/db db:studio",
-    "db:seed": "docker cp infra/scripts/seed.sql tara-postgres:/tmp/seed.sql && docker exec tara-postgres psql -U tara -d tara_dev -f /tmp/seed.sql"
+    "db:seed": "docker cp infra/scripts/seed.sql tara-postgres:/tmp/seed.sql && docker exec tara-postgres psql -U tara -d tara_dev -f /tmp/seed.sql",
+    "prepare": "husky"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.6.0",
+    "@commitlint/config-conventional": "^19.6.0",
     "@types/node": "^22.7.4",
     "eslint": "^9.12.0",
+    "husky": "^9.1.7",
+    "lint-staged": "^15.2.10",
     "prettier": "^3.3.3",
     "rimraf": "^6.0.1",
     "turbo": "^2.1.3",
     "typescript": "^5.6.2",
     "typescript-eslint": "^8.8.0"
+  },
+  "lint-staged": {
+    "*.{ts,tsx,js,jsx,mjs,cjs}": [
+      "prettier --write"
+    ],
+    "*.{json,md,yml,yaml,css}": [
+      "prettier --write"
+    ]
   }
 }

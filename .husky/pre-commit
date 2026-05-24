@@ -1,0 +1,19 @@
+#!/usr/bin/env sh
+# Pre-commit hook: runs lint-staged on staged files only.
+# Also runs gitleaks if installed (detects secrets).
+#
+# To skip in emergency: git commit --no-verify
+# But really don't — if a check fails, fix the underlying issue.
+
+# Run lint-staged (Prettier on staged files)
+pnpm exec lint-staged
+
+# Gitleaks secret scan (optional — only runs if installed)
+# Install: https://github.com/gitleaks/gitleaks#installing
+if command -v gitleaks >/dev/null 2>&1; then
+  echo "🔒 Running gitleaks..."
+  gitleaks protect --staged --verbose --no-banner
+else
+  echo "ℹ️  gitleaks not installed — skipping secret scan."
+  echo "   Install to enable: https://github.com/gitleaks/gitleaks#installing"
+fi

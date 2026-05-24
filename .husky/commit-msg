@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Commit-msg hook: validates message follows Conventional Commits format.
+# See commitlint.config.js for the full rule set.
+#
+# Examples that PASS:
+#   feat(booking): add hold expiry sweeper
+#   fix(pricing): correct LOS discount edge case
+#   docs(adr): add ADR-0008
+#
+# Examples that FAIL:
+#   Updated stuff                     (no type)
+#   Feat: added something             (capitalized type)
+#   feat: Did A Thing                 (subject in Title Case)
+
+pnpm exec commitlint --edit "$1"
