@@ -8,6 +8,7 @@ Strategy, model, personas, and regional plans. Lives in the repo because product
 | -------------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------- |
 | [`trust-and-safety.md`](trust-and-safety.md) | ✅ Done | Verification badges, fraud patterns, dispute resolution, suspension policy, PH RA 10173 compliance                      |
 | [`owner-onboarding.md`](owner-onboarding.md) | ✅ Done | Activation funnel (7 stages), TTFV targets, founder-led vs self-service plays, lifecycle comms, re-engagement, advocacy |
+| [`seo-strategy.md`](seo-strategy.md)         | ✅ Done | Technical SEO, content production pipeline, local SEO, link building bootstrap, KPIs, anti-patterns                     |
 | `model.md`                                   | 📝 TBD  | The phased business model: free → take rate → subscriptions                                                             |
 | `personas.md`                                | 📝 TBD  | Guest, property owner, tour operator — what they want and fear                                                          |
 | `launch-region.md`                           | 📝 TBD  | Why Zambales, what success looks like in Zambales                                                                       |
