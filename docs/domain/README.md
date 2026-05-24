@@ -6,17 +6,18 @@ Get the domain right and the codebase stays clean. Get it wrong and you pay fore
 
 ## Documents
 
-| File                                                 | Status  | Purpose                                                                                                                      |
-| ---------------------------------------------------- | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| [`glossary.md`](glossary.md)                         | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc.                                        |
-| [`01-inventory.md`](01-inventory.md)                 | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.                                           |
-| [`02-availability.md`](02-availability.md)           | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.                                            |
-| [`03-pricing.md`](03-pricing.md)                     | ✅ Done | Rate plans + pricing rules engine, applicability matchers, signed quote tokens, caching, worked PH examples                  |
-| [`04-booking-lifecycle.md`](04-booking-lifecycle.md) | ✅ Done | Booking state machine: Stripe + manual paths, transitions with side effects, cancellation policies, sweeper jobs, edge cases |
-| [`05-tours.md`](05-tours.md)                         | ✅ Done | Activity → Slot → Booking, capacity counters vs row-existence, bundling, tour-operator persona, why it's a moat              |
-| [`06-concurrency.md`](06-concurrency.md)             | ✅ Done | Defense-in-depth (DB locks + recheck + partial unique index + Redis), failure scenarios, test plan, monitoring               |
-| [`07-money.md`](07-money.md)                         | ✅ Done | Integer minor units, MoneyAmount value object, FX, PH tax model, commission math, refund rounding, formatting                |
-| [`08-temporal.md`](08-temporal.md)                   | ✅ Done | UTC in DB / dates as dates, half-open night intervals, PH `Asia/Manila` TZ, date-fns + Temporal API path, edge cases         |
+| File                                                               | Status  | Purpose                                                                                                                      |
+| ------------------------------------------------------------------ | ------- | ---------------------------------------------------------------------------------------------------------------------------- |
+| [`glossary.md`](glossary.md)                                       | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc.                                        |
+| [`01-inventory.md`](01-inventory.md)                               | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.                                           |
+| [`02-availability.md`](02-availability.md)                         | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.                                            |
+| [`03-pricing.md`](03-pricing.md)                                   | ✅ Done | Rate plans + pricing rules engine, applicability matchers, signed quote tokens, caching, worked PH examples                  |
+| [`04-booking-lifecycle.md`](04-booking-lifecycle.md)               | ✅ Done | Booking state machine: Stripe + manual paths, transitions with side effects, cancellation policies, sweeper jobs, edge cases |
+| [`05-tours.md`](05-tours.md)                                       | ✅ Done | Activity → Slot → Booking, capacity counters vs row-existence, bundling, tour-operator persona, why it's a moat              |
+| [`06-concurrency.md`](06-concurrency.md)                           | ✅ Done | Defense-in-depth (DB locks + recheck + partial unique index + Redis), failure scenarios, test plan, monitoring               |
+| [`07-money.md`](07-money.md)                                       | ✅ Done | Integer minor units, MoneyAmount value object, FX, PH tax model, commission math, refund rounding, formatting                |
+| [`08-temporal.md`](08-temporal.md)                                 | ✅ Done | UTC in DB / dates as dates, half-open night intervals, PH `Asia/Manila` TZ, date-fns + Temporal API path, edge cases         |
+| [`09-discounts-and-promotions.md`](09-discounts-and-promotions.md) | ✅ Done | Pricing rules vs promotions distinction, 8 promo types, stacking rules, attribution as marketing analytics, anti-patterns    |
 
 ## Reading order
 
