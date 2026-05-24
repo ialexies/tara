@@ -11,7 +11,7 @@ Get the domain right and the codebase stays clean. Get it wrong and you pay fore
 | [`glossary.md`](glossary.md)                         | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc.                                        |
 | [`01-inventory.md`](01-inventory.md)                 | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.                                           |
 | [`02-availability.md`](02-availability.md)           | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.                                            |
-| `03-pricing.md`                                      | 📝 TBD  | Rate plans, pricing rules, dynamic pricing, taxes, fees                                                                      |
+| [`03-pricing.md`](03-pricing.md)                     | ✅ Done | Rate plans + pricing rules engine, applicability matchers, signed quote tokens, caching, worked PH examples                  |
 | [`04-booking-lifecycle.md`](04-booking-lifecycle.md) | ✅ Done | Booking state machine: Stripe + manual paths, transitions with side effects, cancellation policies, sweeper jobs, edge cases |
 | `05-tours.md`                                        | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)                                                      |
 | [`06-concurrency.md`](06-concurrency.md)             | ✅ Done | Defense-in-depth (DB locks + recheck + partial unique index + Redis), failure scenarios, test plan, monitoring               |
