@@ -1,0 +1,13 @@
+{
+  "home": {
+    "title": "Tara",
+    "tagline": "Tara, na! Hanapin ang susunod mong hostel sa Pilipinas.",
+    "subtitle": "Booking marketplace para sa mga hostel at tour. Sisimulan sa Zambales.",
+    "comingSoon": "Ginagawa pa namin. Sumama ka sa amin.",
+    "apiStatus": "Estado ng API"
+  },
+  "common": {
+    "loading": "Naglo-load...",
+    "error": "May nagkaproblema"
+  }
+}
