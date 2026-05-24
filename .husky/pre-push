@@ -1,0 +1,15 @@
+#!/usr/bin/env sh
+# Pre-push hook: runs full typecheck across the workspace.
+# Catches type errors locally before they hit CI/PR.
+#
+# Skipped on emergency: git push --no-verify
+# Don't habituate to that — fix the issue.
+#
+# When we have tests, add:  pnpm test --filter=...[HEAD^]
+
+echo "🔍 Running typecheck across workspace before push..."
+
+pnpm typecheck
+
+# Future: when tests exist, also run them for affected packages
+# pnpm turbo run test --filter=...[HEAD^]
