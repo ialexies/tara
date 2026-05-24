@@ -4,18 +4,29 @@ The booking domain is the heart of this platform. This directory contains the lo
 
 Get the domain right and the codebase stays clean. Get it wrong and you pay forever.
 
-## Planned documents
+## Documents
 
-| File | Purpose |
-| --- | --- |
-| `glossary.md` | Shared vocabulary — what does "bed", "room", "dorm", "rate plan", "booking", "hold" mean here? |
-| `01-inventory.md` | Properties, rooms, dorm beds, units — how inventory is structured |
-| `02-availability.md` | How we store and query "is X free for nights Y-Z" |
-| `03-pricing.md` | Rate plans, pricing rules, dynamic pricing, taxes, fees |
-| `04-booking-lifecycle.md` | The booking state machine: hold → confirmed → cancelled → refunded → ... |
-| `05-tours.md` | Activities and time-slot inventory (different model from accommodation) |
-| `06-concurrency.md` | How we prevent double-bookings — locks, transactions, holds |
-| `07-money.md` | Currency, FX, rounding, tax, multi-currency display |
-| `08-temporal.md` | Time handling — timezones, check-in cutoffs, what counts as a "night" |
+| File                                       | Status  | Purpose                                                                               |
+| ------------------------------------------ | ------- | ------------------------------------------------------------------------------------- |
+| [`glossary.md`](glossary.md)               | ✅ Done | Shared vocabulary — bed/room/dorm/unit, hold, booking, rate plan, tenant, night, etc. |
+| [`01-inventory.md`](01-inventory.md)       | ✅ Done | Properties → Rooms → Beds/Units. Why `Unit` is the universal bookable abstraction.    |
+| [`02-availability.md`](02-availability.md) | ✅ Done | `booking_items` table strategy, the canonical queries, double-booking prevention.     |
+| `03-pricing.md`                            | 📝 TBD  | Rate plans, pricing rules, dynamic pricing, taxes, fees                               |
+| `04-booking-lifecycle.md`                  | 📝 TBD  | The booking state machine: hold → confirmed → cancelled → refunded → ...              |
+| `05-tours.md`                              | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)               |
+| `06-concurrency.md`                        | 📝 TBD  | Detailed mechanics of double-booking prevention (locks, transactions, holds, Redis)   |
+| `07-money.md`                              | 📝 TBD  | Currency, FX, rounding, tax, multi-currency display                                   |
+| `08-temporal.md`                           | 📝 TBD  | Time handling — timezones, check-in cutoffs, night boundaries                         |
 
-These will fill in as we go. The glossary comes first.
+## Reading order
+
+For new contributors (or future-you returning after months):
+
+1. `glossary.md` — get vocabulary right before anything else
+2. `01-inventory.md` — what the data world looks like
+3. `02-availability.md` — the core query of the platform
+4. `04-booking-lifecycle.md` — what happens to a booking over time
+5. `03-pricing.md` — how money is computed
+6. `06-concurrency.md` — how we don't ruin guests' stays
+7. `07-money.md` + `08-temporal.md` — gnarly details, read when needed
+8. `05-tours.md` — separate adjacent domain
