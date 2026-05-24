@@ -14,7 +14,7 @@ Get the domain right and the codebase stays clean. Get it wrong and you pay fore
 | `03-pricing.md`                                      | 📝 TBD  | Rate plans, pricing rules, dynamic pricing, taxes, fees                                                                      |
 | [`04-booking-lifecycle.md`](04-booking-lifecycle.md) | ✅ Done | Booking state machine: Stripe + manual paths, transitions with side effects, cancellation policies, sweeper jobs, edge cases |
 | `05-tours.md`                                        | 📝 TBD  | Activities and time-slot inventory (different model from accommodation)                                                      |
-| `06-concurrency.md`                                  | 📝 TBD  | Detailed mechanics of double-booking prevention (locks, transactions, holds, Redis)                                          |
+| [`06-concurrency.md`](06-concurrency.md)             | ✅ Done | Defense-in-depth (DB locks + recheck + partial unique index + Redis), failure scenarios, test plan, monitoring               |
 | `07-money.md`                                        | 📝 TBD  | Currency, FX, rounding, tax, multi-currency display                                                                          |
 | `08-temporal.md`                                     | 📝 TBD  | Time handling — timezones, check-in cutoffs, night boundaries                                                                |
 
