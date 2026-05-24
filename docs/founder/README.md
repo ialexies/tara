@@ -4,8 +4,8 @@ Personal playbook + checklists for the founder. Not strictly product/code docs, 
 
 ## Contents
 
-| File | Purpose |
-| --- | --- |
-| [`checklist.md`](checklist.md) | Phase gates + recurring checks (weekly / monthly / quarterly / annual) |
-| `operations.md` | _(pending)_ Weekly schedule, focus blocks, weekly review ritual |
-| `customer-discovery.md` | _(pending)_ Interview scripts, note templates, synthesis ritual |
+| File                                             | Purpose                                                                |
+| ------------------------------------------------ | ---------------------------------------------------------------------- |
+| [`checklist.md`](checklist.md)                   | Phase gates + recurring checks (weekly / monthly / quarterly / annual) |
+| [`operations.md`](operations.md)                 | Weekly schedule, focus blocks, Friday review ritual, burnout watch     |
+| [`customer-discovery.md`](customer-discovery.md) | Interview scripts, note templates, tagging, weekly + monthly synthesis |
