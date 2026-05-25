@@ -1,7 +1,16 @@
 {
   "$schema": "https://turbo.build/schema.json",
   "globalDependencies": [".env", "tsconfig.base.json"],
-  "globalEnv": ["NODE_ENV", "DATABASE_URL", "REDIS_URL", "API_URL", "WEB_URL", "API_PORT", "API_HOST"],
+  "globalEnv": [
+    "NODE_ENV",
+    "DATABASE_URL",
+    "REDIS_URL",
+    "API_URL",
+    "WEB_URL",
+    "API_PORT",
+    "API_HOST",
+    "JWT_SECRET"
+  ],
   "tasks": {
     "build": {
       "dependsOn": ["^build"],

@@ -19,9 +19,27 @@ jobs:
       - name: Build Web image
         run: docker build -f apps/web/Dockerfile -t tara-web:staging .
 
+      - name: Run DB migrations
+        run: |
+          docker exec tara-staging-postgres-1 psql -U tara -d tara_staging \
+            -c "CREATE EXTENSION IF NOT EXISTS citext;" 2>/dev/null || true
+          for f in packages/db/migrations/*.sql; do
+            TAG=$(basename "$f" .sql)
+            APPLIED=$(docker exec tara-staging-postgres-1 psql -U tara -d tara_staging -At \
+              -c "SELECT 1 FROM drizzle.__drizzle_migrations WHERE tag='$TAG' LIMIT 1" 2>/dev/null || echo "")
+            if [ -z "$APPLIED" ]; then
+              echo "Applying $TAG..."
+              docker cp "$f" tara-staging-postgres-1:/tmp/migration.sql
+              docker exec tara-staging-postgres-1 psql -U tara -d tara_staging -f /tmp/migration.sql
+              docker exec tara-staging-postgres-1 psql -U tara -d tara_staging \
+                -c "INSERT INTO drizzle.__drizzle_migrations (hash, created_at) VALUES ('$TAG', extract(epoch from now())*1000) ON CONFLICT DO NOTHING;" 2>/dev/null || true
+            fi
+          done
+
       - name: Redeploy staging stack
         run: |
           docker compose -f infra/portainer/stacks/tara-staging.yml \
+            --env-file /home/ialexies/stacks/tara-staging/.env \
             up -d --force-recreate web api cloudflared
 
       - name: Smoke test

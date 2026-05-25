@@ -1,5 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { HealthCheckSchema, type HealthCheck } from '@tara/schemas';
+import { getSession } from '@/lib/session';
+import { logoutAction } from '@/lib/auth-actions';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -23,7 +25,7 @@ export default async function HomePage({
   setRequestLocale(locale);
 
   const t = await getTranslations('home');
-  const health = await fetchApiHealth();
+  const [health, session] = await Promise.all([fetchApiHealth(), getSession()]);
   const isHealthy = 'status' in health;
 
   return (
@@ -45,6 +47,39 @@ export default async function HomePage({
         </p>
 
         <p className="text-sm italic text-zinc-400">{t('comingSoon')}</p>
+
+        {/* Auth actions */}
+        {session ? (
+          <div className="flex flex-wrap items-center gap-3">
+            <span className="text-sm text-zinc-500 dark:text-zinc-400">
+              Signed in as{' '}
+              <strong className="text-zinc-800 dark:text-zinc-200">{session.email}</strong>
+            </span>
+            <form action={logoutAction}>
+              <button
+                type="submit"
+                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
+              >
+                Sign out
+              </button>
+            </form>
+          </div>
+        ) : (
+          <div className="flex flex-wrap gap-3">
+            <a
+              href={`/${locale}/login`}
+              className="flex h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+            >
+              Sign in
+            </a>
+            <a
+              href={`/${locale}/register`}
+              className="flex h-11 items-center rounded-lg border border-zinc-300 px-5 text-sm font-medium text-zinc-700 dark:border-zinc-700 dark:text-zinc-300"
+            >
+              Create account
+            </a>
+          </div>
+        )}
 
         {/* API health debug card */}
         <div className="mt-8 w-full max-w-md rounded-lg border border-zinc-200 bg-white p-4 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-900">

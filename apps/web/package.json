@@ -11,6 +11,7 @@
     "clean": "rimraf .next .turbo node_modules"
   },
   "dependencies": {
+    "@tara/auth": "workspace:^",
     "@tara/schemas": "workspace:*",
     "next": "16.2.6",
     "next-intl": "^4.1.0",

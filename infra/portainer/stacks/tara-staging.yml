@@ -29,6 +29,7 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://tara:tara@postgres:5432/tara_staging
       - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - tara-staging
     restart: unless-stopped

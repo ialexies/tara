@@ -39,6 +39,8 @@ export const users = pgTable('users', {
     .default(sql`now()`),
   deletedAt: timestamp('deleted_at', { withTimezone: true }),
 
+  role: userRoleEnum('role').notNull().default('guest'),
+
   // Mock data flag — see docs/business/mock-data.md
   isMock: boolean('is_mock').notNull().default(false),
 });
