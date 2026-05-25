@@ -26,8 +26,10 @@ jobs:
 
       - name: Smoke test
         run: |
-          sleep 15
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.tara-stays.com/en)
-          API=$(curl -s https://api.staging.tara-stays.com/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))")
-          echo "Web: $STATUS | API: $API"
-          [ "$STATUS" = "200" ] && [ "$API" = "ok" ] || (echo "Smoke test failed" && exit 1)
+          echo "Waiting for services to be ready..."
+          sleep 30
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://staging.tara-stays.com/en)
+          API=$(curl -s --max-time 10 https://api.staging.tara-stays.com/health || echo '{"status":"error"}')
+          API_STATUS=$(echo "$API" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))" 2>/dev/null || echo "error")
+          echo "Web: $STATUS | API: $API_STATUS"
+          [ "$STATUS" = "200" ] && [ "$API_STATUS" = "ok" ] || (echo "Smoke test failed" && exit 1)
