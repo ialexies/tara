@@ -38,8 +38,12 @@ jobs:
 
       - name: Redeploy staging stack
         run: |
-          docker compose -f infra/portainer/stacks/tara-staging.yml \
-            --env-file /home/ialexies/stacks/tara-staging/.env \
+          # Read JWT_SECRET from host .env via docker volume mount (runner is containerized)
+          JWT_SECRET=$(docker run --rm \
+            -v /home/ialexies/stacks/tara-staging:/env:ro \
+            alpine sh -c "grep ^JWT_SECRET /env/.env | cut -d= -f2")
+          JWT_SECRET="$JWT_SECRET" docker compose \
+            -f infra/portainer/stacks/tara-staging.yml \
             up -d --force-recreate web api cloudflared
 
       - name: Smoke test
