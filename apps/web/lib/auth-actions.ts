@@ -2,7 +2,7 @@
 
 import { redirect } from 'next/navigation';
 import { LoginSchema, RegisterSchema } from '@tara/schemas';
-import { setSessionCookies, clearSessionCookies } from './session.js';
+import { setSessionCookies, clearSessionCookies } from './session';
 
 const API_URL = process.env['API_URL'] ?? 'http://localhost:4000';
 
