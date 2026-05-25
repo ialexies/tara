@@ -20,8 +20,7 @@ if (!DATABASE_URL) {
 const queryClient = postgres(DATABASE_URL, {
   max: process.env.NODE_ENV === 'production' ? 20 : 5,
   idle_timeout: 30,
-  // SSL only in prod
-  ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
+  ssl: process.env.DATABASE_SSL === 'true' ? 'require' : false,
 });
 
 export const db = drizzle(queryClient, { schema });
