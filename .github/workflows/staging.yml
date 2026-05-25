@@ -27,9 +27,10 @@ jobs:
       - name: Smoke test
         run: |
           echo "Waiting for services to be ready..."
-          sleep 30
-          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 10 https://staging.tara-stays.com/en)
-          API=$(curl -s --max-time 10 https://api.staging.tara-stays.com/health || echo '{"status":"error"}')
-          API_STATUS=$(echo "$API" | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))" 2>/dev/null || echo "error")
+          sleep 20
+          # Check web via Cloudflare
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://staging.tara-stays.com/en)
+          # Check API directly via Docker (avoids network routing issues in runner container)
+          API_STATUS=$(docker exec tara-staging-api-1 curl -s http://localhost:4000/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))" 2>/dev/null || echo "error")
           echo "Web: $STATUS | API: $API_STATUS"
           [ "$STATUS" = "200" ] && [ "$API_STATUS" = "ok" ] || (echo "Smoke test failed" && exit 1)
