@@ -43,6 +43,7 @@ jobs:
             -v /home/ialexies/stacks/tara-staging:/env:ro \
             alpine sh -c "grep ^JWT_SECRET /env/.env | cut -d= -f2")
           JWT_SECRET="$JWT_SECRET" docker compose \
+            -p tara-staging \
             -f infra/portainer/stacks/tara-staging.yml \
             up -d --force-recreate web api cloudflared
 
