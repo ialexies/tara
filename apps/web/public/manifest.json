@@ -1,0 +1,17 @@
+{
+  "name": "Tara — Hostels in the Philippines",
+  "short_name": "Tara",
+  "description": "Book hostels and tours in the Philippines",
+  "start_url": "/en",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "256x256",
+      "type": "image/x-icon"
+    }
+  ]
+}

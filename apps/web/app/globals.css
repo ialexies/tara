@@ -1,8 +1,14 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 :root {
   --background: #ffffff;
   --foreground: #171717;
+
+  /* Safe area insets for notched/dynamic island phones */
+  --sat: env(safe-area-inset-top);
+  --sar: env(safe-area-inset-right);
+  --sab: env(safe-area-inset-bottom);
+  --sal: env(safe-area-inset-left);
 }
 
 @theme inline {
@@ -19,8 +25,54 @@
   }
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  /* Use dynamic viewport height so mobile browser chrome is accounted for */
+  height: 100dvh;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+  min-height: 100dvh;
+  /* Prevent horizontal scroll on mobile */
+  overflow-x: hidden;
+  /* Smooth scrolling on iOS */
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Ensure tap targets are never too small */
+a,
+button,
+[role='button'] {
+  min-height: 44px;
+  min-width: 44px;
+}
+
+/* Remove tap highlight on mobile */
+a,
+button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Safe area utility classes */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom);
+}
+.pt-safe {
+  padding-top: env(safe-area-inset-top);
+}
+.pl-safe {
+  padding-left: env(safe-area-inset-left);
+}
+.pr-safe {
+  padding-right: env(safe-area-inset-right);
 }
