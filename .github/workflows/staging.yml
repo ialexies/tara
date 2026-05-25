@@ -5,7 +5,28 @@ on:
     branches: [main]
 
 jobs:
+  test:
+    runs-on: [self-hosted, home-server]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Build shared packages
+        run: pnpm --filter @tara/schemas build && pnpm --filter @tara/db build && pnpm --filter @tara/auth build
+
+      - name: Unit tests (auth + schemas)
+        run: pnpm --filter @tara/auth test && pnpm --filter @tara/schemas test
+
+      - name: Integration tests (API auth endpoints)
+        run: pnpm --filter @tara/api test
+
   deploy:
+    needs: test
     runs-on: [self-hosted, home-server]
     timeout-minutes: 30
 
@@ -51,11 +72,29 @@ jobs:
         run: |
           echo "Waiting for services to be ready..."
           sleep 20
-          # Check web via Cloudflare
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://staging.tara-stays.com/en)
-          # Check API directly via Docker (avoids network routing issues in runner container)
           API_STATUS=$(docker exec tara-staging-api-1 node -e \
             "fetch('http://localhost:4000/health').then(r=>r.json()).then(d=>process.stdout.write(d.status)).catch(()=>process.stdout.write('error'))" \
             2>/dev/null || echo "error")
           echo "Web: $STATUS | API: $API_STATUS"
           [ "$STATUS" = "200" ] && [ "$API_STATUS" = "ok" ] || (echo "Smoke test failed" && exit 1)
+
+  e2e:
+    needs: deploy
+    runs-on: [self-hosted, home-server]
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Install Playwright + system deps
+        run: npx playwright install chromium --with-deps
+        working-directory: apps/web
+
+      - name: Run E2E tests against staging
+        run: PLAYWRIGHT_BASE_URL=https://staging.tara-stays.com npx playwright test --project=mobile-chrome
+        working-directory: apps/web
