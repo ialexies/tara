@@ -13,14 +13,14 @@ Tara is developed on **Windows** and deployed to **Ubuntu** (home server staging
 
 ## Environment matrix
 
-| | Local (your machine) | Staging (home server) | Production (future cloud) |
-| --- | --- | --- | --- |
-| OS | Windows 11 + WSL2 Ubuntu | Ubuntu Server | Linux (Vercel / cloud) |
-| Node | 20.18.0 (`.nvmrc`) | 20.18.0 (Docker image) | 20.18.0 |
-| pnpm | 9.12.0 (`packageManager`) | 9.12.0 | 9.12.0 |
-| Postgres | 16 (Docker) | 16 (Docker) | 16 (managed) |
-| Redis | 7 (Docker) | 7 (Docker) | 7 (managed) |
-| Deploy via | n/a (local only) | GitHub Actions → SSH | GitHub Actions → cloud API |
+|            | Local (your machine)      | Staging (home server)  | Production (future cloud)  |
+| ---------- | ------------------------- | ---------------------- | -------------------------- |
+| OS         | Windows 11 + WSL2 Ubuntu  | Ubuntu Server          | Linux (Vercel / cloud)     |
+| Node       | 20.18.0 (`.nvmrc`)        | 20.18.0 (Docker image) | 20.18.0                    |
+| pnpm       | 9.12.0 (`packageManager`) | 9.12.0                 | 9.12.0                     |
+| Postgres   | 16 (Docker)               | 16 (Docker)            | 16 (managed)               |
+| Redis      | 7 (Docker)                | 7 (Docker)             | 7 (managed)                |
+| Deploy via | n/a (local only)          | GitHub Actions → SSH   | GitHub Actions → cloud API |
 
 ---
 
@@ -103,6 +103,31 @@ cd ~/projects/tara
 ```bash
 pnpm install
 ```
+
+### 9. Set up SSH access to the home server
+
+The home server runs at `192.168.0.253` (local network). PowerShell on Windows already has the SSH key configured, but WSL2 needs the key copied manually.
+
+```bash
+# Copy the Windows RSA key into WSL2
+cp /mnt/c/Users/alexi/.ssh/id_rsa ~/.ssh/id_rsa
+chmod 600 ~/.ssh/id_rsa
+
+# Verify the connection
+ssh ialexies@192.168.0.253
+```
+
+**Home server details:**
+
+|        |                                                          |
+| ------ | -------------------------------------------------------- |
+| Host   | `192.168.0.253`                                          |
+| User   | `ialexies`                                               |
+| Auth   | RSA key (`~/.ssh/id_rsa` copied from Windows)            |
+| OS     | Ubuntu Server                                            |
+| Access | Local network only — public access via Cloudflare Tunnel |
+
+> From PowerShell (Windows): `ssh ialexies@192.168.0.253` works directly without any extra setup.
 
 ---
 
@@ -196,6 +221,7 @@ refactor(money): extract currency formatting
 ```
 
 This enables:
+
 - Auto-generated changelogs
 - Semantic version bumps (Phase D)
 - Easier release notes
