@@ -8,6 +8,7 @@ COPY packages/ ./packages/
 COPY apps/web/ ./apps/web/
 RUN pnpm install --frozen-lockfile --filter @tara/web...
 RUN pnpm --filter @tara/schemas build
+RUN pnpm --filter @tara/auth build
 RUN pnpm --filter @tara/web build
 
 FROM base AS runner
