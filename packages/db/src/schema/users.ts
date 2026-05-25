@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
 import { boolean, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
-import { citext } from './_types';
+import { citext } from './_types.js';
 
 /**
  * User roles in Tara.

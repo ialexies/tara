@@ -1,2 +1,2 @@
-export * from './users';
-export * from './properties';
+export * from './users.js';
+export * from './properties.js';

@@ -1,6 +1,6 @@
 import { drizzle } from 'drizzle-orm/postgres-js';
 import postgres from 'postgres';
-import * as schema from './schema';
+import * as schema from './schema/index.js';
 
 const DATABASE_URL = process.env.DATABASE_URL;
 
@@ -29,4 +29,4 @@ export const db = drizzle(queryClient, { schema });
 export type Database = typeof db;
 
 // Re-export schema for convenience: `import { db, users } from '@tara/db';`
-export * from './schema';
+export * from './schema/index.js';
