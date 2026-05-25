@@ -1,18 +1,12 @@
 FROM node:22-alpine AS base
 RUN corepack enable && corepack prepare pnpm@9.12.0 --activate
 
-FROM base AS deps
-WORKDIR /app
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
-COPY apps/web/package.json ./apps/web/
-COPY packages/schemas/package.json ./packages/schemas/
-RUN pnpm install --frozen-lockfile
-
 FROM base AS builder
 WORKDIR /app
-COPY --from=deps /app/node_modules ./node_modules
-COPY --from=deps /app/apps/web/node_modules ./apps/web/node_modules
-COPY . .
+COPY package.json pnpm-workspace.yaml pnpm-lock.yaml ./
+COPY packages/ ./packages/
+COPY apps/web/ ./apps/web/
+RUN pnpm install --frozen-lockfile --filter @tara/web...
 RUN pnpm --filter @tara/schemas build
 RUN pnpm --filter @tara/web build
 
