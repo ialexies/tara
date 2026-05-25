@@ -6,6 +6,7 @@ const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   transpilePackages: ['@tara/schemas'],
+  output: 'standalone',
 };
 
 export default withNextIntl(nextConfig);
