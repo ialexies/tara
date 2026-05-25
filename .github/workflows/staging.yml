@@ -21,7 +21,7 @@ jobs:
 
       - name: Redeploy staging stack
         run: |
-          docker compose -f /home/ialexies/stacks/tara-staging/docker-compose.yml \
+          docker compose -f infra/portainer/stacks/tara-staging.yml \
             up -d --force-recreate web api cloudflared
 
       - name: Smoke test

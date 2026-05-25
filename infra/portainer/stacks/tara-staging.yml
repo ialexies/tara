@@ -1,0 +1,65 @@
+services:
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
+    volumes:
+      - /home/ialexies/stacks/tara-staging/config.yml:/etc/cloudflared/config.yml
+      - /home/ialexies/.cloudflared/0d14bf36-6431-4595-9cad-438fa15cdf88.json:/etc/cloudflared/creds.json
+    networks:
+      - tara-staging
+    restart: unless-stopped
+
+  web:
+    image: tara-web:staging
+    pull_policy: never
+    environment:
+      - NODE_ENV=production
+      - API_URL=http://api:4000
+      - HOSTNAME=0.0.0.0
+    networks:
+      - tara-staging
+    restart: unless-stopped
+    depends_on:
+      - api
+
+  api:
+    image: tara-api:staging
+    pull_policy: never
+    environment:
+      - NODE_ENV=production
+      - DATABASE_URL=postgresql://tara:tara@postgres:5432/tara_staging
+      - REDIS_URL=redis://redis:6379
+    networks:
+      - tara-staging
+    restart: unless-stopped
+    depends_on:
+      - postgres
+      - redis
+
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=tara
+      - POSTGRES_PASSWORD=tara
+      - POSTGRES_DB=tara_staging
+    volumes:
+      - tara-staging-postgres:/var/lib/postgresql/data
+    networks:
+      - tara-staging
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    volumes:
+      - tara-staging-redis:/data
+    networks:
+      - tara-staging
+    restart: unless-stopped
+
+networks:
+  tara-staging:
+    driver: bridge
+
+volumes:
+  tara-staging-postgres:
+  tara-staging-redis:
