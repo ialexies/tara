@@ -1,0 +1,33 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, home-server]
+    timeout-minutes: 30
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build API image
+        run: docker build -f apps/api/Dockerfile -t tara-api:staging .
+
+      - name: Build Web image
+        run: docker build -f apps/web/Dockerfile -t tara-web:staging .
+
+      - name: Redeploy staging stack
+        run: |
+          docker compose -f /home/ialexies/stacks/tara-staging/docker-compose.yml \
+            up -d --force-recreate web api cloudflared
+
+      - name: Smoke test
+        run: |
+          sleep 15
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" https://staging.tara-stays.com/en)
+          API=$(curl -s https://api.staging.tara-stays.com/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))")
+          echo "Web: $STATUS | API: $API"
+          [ "$STATUS" = "200" ] && [ "$API" = "ok" ] || (echo "Smoke test failed" && exit 1)
