@@ -1,0 +1,113 @@
+# Tara — local dev infrastructure
+#
+# Spins up the data layer + dev tooling locally. Run from project root:
+#   pnpm db:up         (start everything in the background)
+#   pnpm db:down       (stop everything, keep data)
+#   pnpm db:logs       (tail logs)
+#   pnpm db:reset      (destroy data and restart with fresh DB)
+#
+# Services:
+#   postgres  :5432  — primary database
+#   redis     :6379  — cache + queue + holds
+#   mailpit   :8025  — dev SMTP catch-all (web UI at http://localhost:8025)
+#   adminer   :8081  — DB browser (http://localhost:8081)
+#
+# All services are on the `tara-net` network. Volumes are named so data
+# survives `docker compose down` (but not `down -v`).
+
+name: tara-dev
+
+services:
+  postgres:
+    image: postgres:16.4-alpine
+    container_name: tara-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: tara
+      POSTGRES_PASSWORD: tara
+      POSTGRES_DB: tara_dev
+      # tune for dev
+      POSTGRES_INITDB_ARGS: "--encoding=UTF8 --locale=C"
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U tara -d tara_dev"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - tara-net
+    # Useful query logging in dev. Comment out if too noisy.
+    command:
+      - "postgres"
+      - "-c"
+      - "log_statement=mod"
+      - "-c"
+      - "log_min_duration_statement=200"
+
+  redis:
+    image: redis:7.4-alpine
+    container_name: tara-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - tara-net
+    command:
+      - "redis-server"
+      - "--appendonly"
+      - "yes"
+      - "--maxmemory"
+      - "256mb"
+      - "--maxmemory-policy"
+      - "allkeys-lru"
+
+  mailpit:
+    image: axllent/mailpit:v1.20
+    container_name: tara-mailpit
+    restart: unless-stopped
+    ports:
+      - "1025:1025"   # SMTP — point your app's SMTP_HOST here in dev
+      - "8025:8025"   # Web UI — open http://localhost:8025
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+      MP_MAX_MESSAGES: 5000
+    networks:
+      - tara-net
+
+  adminer:
+    image: adminer:4-standalone
+    container_name: tara-adminer
+    restart: unless-stopped
+    ports:
+      - "8081:8080"
+    environment:
+      ADMINER_DEFAULT_SERVER: postgres
+      ADMINER_DESIGN: pepa-linha-dark
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tara-net
+
+volumes:
+  postgres-data:
+    name: tara-postgres-data
+  redis-data:
+    name: tara-redis-data
+
+networks:
+  tara-net:
+    name: tara-net
+    driver: bridge
