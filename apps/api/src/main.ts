@@ -1,9 +1,7 @@
 import 'reflect-metadata';
 import { NestFactory } from '@nestjs/core';
-import {
-  FastifyAdapter,
-  type NestFastifyApplication,
-} from '@nestjs/platform-fastify';
+import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import helmet from '@fastify/helmet';
 import { AppModule } from './app.module.js';
 
 const PORT = Number(process.env.API_PORT ?? 4000);
@@ -12,17 +10,21 @@ const HOST = process.env.API_HOST ?? '0.0.0.0';
 async function bootstrap(): Promise<void> {
   const app = await NestFactory.create<NestFastifyApplication>(
     AppModule,
-    new FastifyAdapter({ logger: true }),
+    new FastifyAdapter({ logger: true, bodyLimit: 1_048_576 }), // 1 MB body limit
   );
 
-  // CORS — allow the web app in dev
+  // Security headers — API serves JSON only, no HTML, so CSP is omitted
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  await (app as any).register(helmet, { contentSecurityPolicy: false });
+
+  // CORS — restrict to the web origin only
   app.enableCors({
     origin: process.env.WEB_URL ?? 'http://localhost:3000',
     credentials: true,
   });
 
   await app.listen(PORT, HOST);
-  console.info(`🚀 Tara API listening on http://${HOST}:${PORT}`);
+  console.info(`API listening on http://${HOST}:${PORT}`);
 }
 
 void bootstrap();

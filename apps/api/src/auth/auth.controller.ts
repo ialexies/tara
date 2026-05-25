@@ -1,10 +1,12 @@
 import { Body, Controller, Get, HttpCode, Post, UseGuards } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { RegisterSchema, LoginSchema, RefreshSchema } from '@tara/schemas';
 import type { TokenPayload } from '@tara/auth';
 import { AuthService } from './auth.service.js';
 import { JwtGuard } from './jwt.guard.js';
 import { CurrentUser } from './current-user.decorator.js';
 
+@Throttle({ auth: {} })
 @Controller('auth')
 export class AuthController {
   constructor(private readonly auth: AuthService) {}

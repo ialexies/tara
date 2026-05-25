@@ -13,5 +13,6 @@ High-level architectural views of Tara. ADRs live in [`../adr/`](../adr/); domai
 | [`analytics.md`](analytics.md)                             | Full analytics architecture: event taxonomy spec, PostHog + Metabase setup, 5 funnels, cohort analysis, consent compliance, A/B testing framework.                       |
 | [`reports.md`](reports.md)                                 | Owner / founder / regulatory reports. Scheduled email digests, PDF generation, BIR-compliant exports, ownership rules.                                                   |
 | [`caching-and-performance.md`](caching-and-performance.md) | Four-layer caching strategy: Next.js ISR, Redis cache-aside, Cloudflare edge, DB indexes. Includes what must never be cached (availability, booking state).              |
+| [`security.md`](security.md)                               | Six-layer security model: JWT auth, Zod validation, rate limiting, HTTP headers, CSRF, secrets management. Checklist for every new feature. Incident response.           |
 
 When the architecture changes, update these diagrams + docs in the same PR as the code change. Stale diagrams are worse than no diagrams.
