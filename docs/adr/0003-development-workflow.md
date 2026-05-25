@@ -39,7 +39,7 @@ For deployment:
 
 - **Self-hosted GitHub Actions runner on the home server** (Linux container, free)
 - **Workflows build Docker images, push to local registry on home server, update via Portainer API**
-- **Staging URL** via Cloudflare Tunnel: `staging.tarastays.com`
+- **Staging URL** via Cloudflare Tunnel: `staging.tara-stays.com`
 - **No manual deploys from the dev machine** — everything goes through CI
 
 ## Alternatives considered

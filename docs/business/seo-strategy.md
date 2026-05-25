@@ -130,7 +130,7 @@ Next.js 15+ App Router with React Server Components. All public pages render HTM
 Per [ADR-0007](../adr/0007-internationalization.md):
 
 ```
-https://tarastays.com/
+https://tara-stays.com/
   /en/                                    home (English)
   /tl/                                    home (Tagalog)
   /en/zambales                            destination
@@ -154,9 +154,9 @@ https://tarastays.com/
 Every page declares its locale alternates:
 
 ```html
-<link rel="alternate" hreflang="en" href="https://tarastays.com/en/zambales" />
-<link rel="alternate" hreflang="tl" href="https://tarastays.com/tl/zambales" />
-<link rel="alternate" hreflang="x-default" href="https://tarastays.com/en/zambales" />
+<link rel="alternate" hreflang="en" href="https://tara-stays.com/en/zambales" />
+<link rel="alternate" hreflang="tl" href="https://tara-stays.com/tl/zambales" />
+<link rel="alternate" hreflang="x-default" href="https://tara-stays.com/en/zambales" />
 ```
 
 This tells Google "these are the same page in different languages." Prevents duplicate content penalties.
@@ -176,7 +176,7 @@ This is the biggest SEO quick-win. Most travel sites don't do it well.
     "@type": "LodgingBusiness",
     "name": "Maria's Surf Hostel",
     "description": "...",
-    "image": ["https://images.tarastays.com/.../hero.jpg"],
+    "image": ["https://images.tara-stays.com/.../hero.jpg"],
     "address": {
       "@type": "PostalAddress",
       "streetAddress": "...",
@@ -245,18 +245,18 @@ This is the biggest SEO quick-win. Most travel sites don't do it well.
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     "itemListElement": [
-      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tarastays.com/en" },
+      { "@type": "ListItem", "position": 1, "name": "Home", "item": "https://tara-stays.com/en" },
       {
         "@type": "ListItem",
         "position": 2,
         "name": "Zambales",
-        "item": "https://tarastays.com/en/zambales"
+        "item": "https://tara-stays.com/en/zambales"
       },
       {
         "@type": "ListItem",
         "position": 3,
         "name": "San Antonio",
-        "item": "https://tarastays.com/en/zambales/san-antonio"
+        "item": "https://tara-stays.com/en/zambales/san-antonio"
       }
     ]
   }
@@ -287,7 +287,7 @@ Disallow: /api
 Disallow: /checkout
 Disallow: /*?utm_*  # don't index UTM-tagged URLs
 
-Sitemap: https://tarastays.com/sitemap.xml
+Sitemap: https://tara-stays.com/sitemap.xml
 ```
 
 ### Page speed targets (Core Web Vitals)
@@ -559,7 +559,7 @@ These are 80% of what an SEO consultant would do, automated, free. Compound adva
 
 ### Pre-launch (Phase A)
 
-- [ ] Domain registered (✅ done: tarastays.com)
+- [ ] Domain registered (✅ done: tara-stays.com)
 - [ ] Google Search Console + Bing Webmaster verified
 - [ ] robots.txt + sitemap.xml generated
 - [ ] Schema.org helper in `packages/seo/`

@@ -20,10 +20,12 @@ Future expansion: Cebuano (Visayas), Ilonggo (Iloilo), then possibly Bahasa Indo
 **Use `next-intl` as the i18n library, with locale-prefixed URLs, JSON files for UI strings, and database storage for content that owners author.**
 
 ### Locales at launch
+
 - `en` (English) — default for international guests and as fallback
 - `tl` (Tagalog/Filipino) — for owner dashboard + guest-facing Filipino market
 
 ### Future locales (architecture must support, not built yet)
+
 - `ceb` (Cebuano)
 - `hil` (Ilonggo)
 - `id` (Bahasa Indonesia) — SE Asia expansion
@@ -34,11 +36,12 @@ Future expansion: Cebuano (Visayas), Ilonggo (Iloilo), then possibly Bahasa Indo
 Locale prefix in every URL:
 
 ```
-https://tarastays.com/en/zambales/san-antonio          ← English
-https://tarastays.com/tl/zambales/san-antonio          ← Tagalog
+https://tara-stays.com/en/zambales/san-antonio          ← English
+https://tara-stays.com/tl/zambales/san-antonio          ← Tagalog
 ```
 
 **Why prefix over subdomain or query param:**
+
 - Good for SEO (each locale is a distinct indexable URL)
 - Works with Next.js App Router built-in i18n routing
 - Easy hreflang tags for search engine targeting
@@ -46,13 +49,13 @@ https://tarastays.com/tl/zambales/san-antonio          ← Tagalog
 
 ### Where translations live
 
-| Content type | Storage | Edited by |
-|---|---|---|
-| UI strings (buttons, labels, errors) | JSON files in `packages/i18n/messages/{locale}.json` | Developer, committed to git |
-| Marketing copy (homepage, about, guides) | DB table `content_translation` | Founder, via admin UI |
-| Property descriptions | DB row, multilingual columns | Owner |
-| Reviews | DB row in original language only | Guest |
-| Email templates | React Email component with locale prop | Developer |
+| Content type                             | Storage                                              | Edited by                   |
+| ---------------------------------------- | ---------------------------------------------------- | --------------------------- |
+| UI strings (buttons, labels, errors)     | JSON files in `packages/i18n/messages/{locale}.json` | Developer, committed to git |
+| Marketing copy (homepage, about, guides) | DB table `content_translation`                       | Founder, via admin UI       |
+| Property descriptions                    | DB row, multilingual columns                         | Owner                       |
+| Reviews                                  | DB row in original language only                     | Guest                       |
+| Email templates                          | React Email component with locale prop               | Developer                   |
 
 ### Locale detection precedence
 
@@ -80,7 +83,7 @@ https://tarastays.com/tl/zambales/san-antonio          ← Tagalog
 - **English-only at launch** — Rejected. Loses ~30-50% of potential PH owner-side conversion. Cost to add Tagalog later is much higher than now.
 - **`react-i18next` instead of `next-intl`** — Mature, language-agnostic, but doesn't integrate as cleanly with App Router server components. Passed.
 - **`@lingui/react` with extraction** — Good for large codebases with many translators. Overkill for a 2-locale start; can migrate later if needed.
-- **Subdomain per locale (`en.tarastays.com`, `tl.tarastays.com`)** — Bigger SEO win for some setups but adds DNS/cert complexity and breaks "single brand" feel. Passed.
+- **Subdomain per locale (`en.tara-stays.com`, `tl.tara-stays.com`)** — Bigger SEO win for some setups but adds DNS/cert complexity and breaks "single brand" feel. Passed.
 - **Query param locale (`?lang=tl`)** — Bad for SEO (often treated as duplicate content). Rejected.
 - **Cloudflare auto-translate at the edge** — Too lossy and unreliable for production content. Rejected for primary use; keep as accessibility fallback for unsupported locales.
 - **Storing all translations in DB** — Rejected for UI strings (versioning/diffing in git is critical for those). Accepted for owner-authored content (where versioning is per-row anyway).

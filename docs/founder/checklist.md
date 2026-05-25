@@ -18,7 +18,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] T&C + Privacy Policy + Cookie Policy published (from Termly or similar templates — lawyer review can wait until Phase C)
 - [ ] Backup restore drill completed successfully (don't trust untested backups)
 - [ ] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
-- [ ] Status page is public at `status.tarastays.com`
+- [ ] Status page is public at `status.tara-stays.com`
 - [ ] Founder support WhatsApp number is pinned in owner dashboard
 - [ ] Audit log table exists and is being written to
 - [ ] Risk register reviewed; top 5 risks have mitigations in place
@@ -57,6 +57,7 @@ These must be true before moving between phases. Don't shortcut them.
 ## 🔁 Recurring checks
 
 ### Weekly (Friday afternoon, ~30 min)
+
 - [ ] Run pnpm test, verify CI is green
 - [ ] Review last 7 days of bookings — any patterns or anomalies?
 - [ ] Read all CodeRabbit comments from the week — anything I dismissed that I should reconsider?
@@ -66,6 +67,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Weekly review: what shipped, what learned, what's next week's #1 priority
 
 ### Monthly (first weekday of month, ~2 hours)
+
 - [ ] Restore drill: spin up fresh container, restore latest backup, verify app boots and bookings come back
 - [ ] Review notification audit log — any delivery failures or unusual patterns?
 - [ ] Review Renovate PRs for security updates (merge minor/patch after CI passes)
@@ -75,6 +77,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Personal energy check: am I sustainable?
 
 ### Quarterly (first weekday of new quarter, ~half day)
+
 - [ ] Risk register review — any new risks emerged? Probabilities/impacts changed?
 - [ ] Phase progress assessment — are the graduation gates closer? what's blocking?
 - [ ] Roadmap review — are we still building the right things?
@@ -84,9 +87,10 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Update ADRs index — any decisions superseded?
 
 ### Annually (start of new year, ~1 day)
+
 - [ ] Major dependency upgrades (Node, Postgres, Next.js, NestJS) — plan and schedule
 - [ ] Architecture review — is the modular monolith still serving us, or extracting time?
-- [ ] Domain + service renewals (`tarastays.com`, Stripe, etc.)
+- [ ] Domain + service renewals (`tara-stays.com`, Stripe, etc.)
 - [ ] BIR annual return (Q1 deadline; work with accountant)
 - [ ] Business registration renewals
 - [ ] Stripe account review (rate negotiation possible at volume)
@@ -98,6 +102,7 @@ These must be true before moving between phases. Don't shortcut them.
 ## 🧯 Incident-time reminders
 
 When things break:
+
 - [ ] Check `docs/runbooks/incident-response.md` (TBD)
 - [ ] Update status page within 5 min of detection
 - [ ] Post-incident: write a postmortem within 48h (template in runbooks)

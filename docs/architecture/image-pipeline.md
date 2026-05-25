@@ -63,7 +63,7 @@ That's the wedge: **better photos than the incumbents, automated.**
 
    Guest request
          │
-         │ <img src="https://images.tarastays.com/property/{id}/abc.jpg?w=800&format=webp">
+         │ <img src="https://images.tara-stays.com/property/{id}/abc.jpg?w=800&format=webp">
          ▼
    ┌──────────────────────────────────────────┐
    │  Cloudflare Image Resizing (CDN)         │
@@ -344,13 +344,13 @@ Original lives in R2. We never serve originals directly. Instead, requests go th
 **URL pattern:**
 
 ```
-https://images.tarastays.com/cdn-cgi/image/width=800,format=auto,quality=80/property/abc123/orig/photo456.jpg
+https://images.tara-stays.com/cdn-cgi/image/width=800,format=auto,quality=80/property/abc123/orig/photo456.jpg
 ```
 
 Or, prettier (via Cloudflare Worker rewriter):
 
 ```
-https://images.tarastays.com/property/abc123/photo456.webp?w=800
+https://images.tara-stays.com/property/abc123/photo456.webp?w=800
 ```
 
 Cloudflare resizes on demand, caches the variant at the edge. First visitor pays the resize cost (~200ms); every other visitor gets cached (<10ms).
@@ -381,7 +381,7 @@ Cloudflare resizes on demand, caches the variant at the edge. First visitor pays
 import Image from 'next/image';
 
 <Image
-  src={`https://images.tarastays.com/property/${id}/${photoId}.jpg`}
+  src={`https://images.tara-stays.com/property/${id}/${photoId}.jpg`}
   alt={photo.alt_text}
   width={800}
   height={600}

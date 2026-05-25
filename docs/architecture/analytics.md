@@ -69,7 +69,7 @@ Each gets its own section below.
 **Why a Cloudflare Worker proxy:**
 
 - PostHog domain (`*.posthog.com` or our self-hosted) is blocked by ~30% of adblockers
-- Cloudflare Worker routes `tarastays.com/ph/*` → home server PostHog
+- Cloudflare Worker routes `tara-stays.com/ph/*` → home server PostHog
 - To the browser, it looks like first-party requests to our own domain
 - Free (within Cloudflare Worker free tier)
 
@@ -555,7 +555,7 @@ These should be in place BEFORE the first real owner is onboarded:
 - [ ] `packages/analytics/events.ts` with typed event catalog
 - [ ] `posthog-node` SDK in `apps/api` + `apps/jobs`
 - [ ] `posthog-js` SDK in `apps/web` (gated by consent)
-- [ ] Cloudflare Worker reverse proxy for `tarastays.com/ph/*`
+- [ ] Cloudflare Worker reverse proxy for `tara-stays.com/ph/*`
 - [ ] PostHog container in Portainer (per `home-server-services.md`)
 - [ ] Metabase container + read-only DB user
 - [ ] Google Search Console + Bing Webmaster verified

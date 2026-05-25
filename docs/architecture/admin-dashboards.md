@@ -397,9 +397,9 @@ Migration playbook:
 2. Move all `app/[locale]/admin/**` to `apps/admin/app/[locale]/**`
 3. Move `components/admin/**` to `apps/admin/components/**`
 4. Share `packages/ui` for design tokens + primitives
-5. Configure Cloudflare Tunnel to route `admin.tarastays.com` → `apps/admin`
+5. Configure Cloudflare Tunnel to route `admin.tara-stays.com` → `apps/admin`
 6. Update auth: same auth provider (Auth.js), same DB, different cookie scope
-7. Same for `apps/superadmin` → `admin.tarastays.com/founder` or `founder.tarastays.com`
+7. Same for `apps/superadmin` → `admin.tara-stays.com/founder` or `founder.tara-stays.com`
 
 Estimated effort: 1-2 days at Phase C when seams are clear.
 

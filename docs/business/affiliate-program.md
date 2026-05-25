@@ -53,7 +53,7 @@ Different creator-relationship intensities warrant different mechanics.
 
 **What they get:**
 
-- Unique tracking link: `tarastays.com/?aff=MARIATRAVELS`
+- Unique tracking link: `tara-stays.com/?aff=MARIATRAVELS`
 - 5% commission on any booking attributed to their link (90-day attribution window)
 - Real-time dashboard showing their earnings + clicks
 - Monthly payout via GCash or bank (Stripe Connect for the creator side)
@@ -88,9 +88,9 @@ Reuses the promotion infrastructure from [`09-discounts-and-promotions.md`](../d
 ### Tracking links
 
 ```
-https://tarastays.com/?aff=MARIATRAVELS                 (general)
-https://tarastays.com/en/zambales/?aff=MARIATRAVELS     (deep link)
-https://tarastays.com/en/properties/marias-surf-hostel/?aff=MARIATRAVELS
+https://tara-stays.com/?aff=MARIATRAVELS                 (general)
+https://tara-stays.com/en/zambales/?aff=MARIATRAVELS     (deep link)
+https://tara-stays.com/en/properties/marias-surf-hostel/?aff=MARIATRAVELS
 ```
 
 When a user lands with `?aff=<code>`:

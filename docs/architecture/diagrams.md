@@ -205,7 +205,7 @@ flowchart TB
   Runner["🤖 GitHub Actions<br/>(self-hosted runner<br/>ON home server)"]
   Reg["📚 Local Docker registry"]
   Port["🎛️ Portainer API"]
-  Stage["🌐 staging.tarastays.com<br/>(Cloudflare Tunnel)"]
+  Stage["🌐 staging.tara-stays.com<br/>(Cloudflare Tunnel)"]
   Smoke["🧪 Smoke tests"]
   Disc["💬 Discord notify"]
 
@@ -226,9 +226,9 @@ flowchart TB
 ```mermaid
 flowchart TB
   subgraph CFEdge["🌐 Cloudflare Tunnel"]
-    T1["staging.tarastays.com"]
-    T2["api.staging.tarastays.com"]
-    T3["status.tarastays.com"]
+    T1["staging.tara-stays.com"]
+    T2["api.staging.tara-stays.com"]
+    T3["status.tara-stays.com"]
   end
 
   subgraph App["⚙️ Application Tier"]
@@ -382,6 +382,7 @@ flowchart TB
 ```
 
 **Two execution paths in practice:**
+
 - **High-touch (Phase B):** Founder sits with the owner in person, drives the flow themselves. 1-2 hours total. Conversion 30-50%.
 - **Self-service (Phase C+):** Owner does it alone on phone. Drop-off at every step. Target: 25% completion start-to-finish.
 

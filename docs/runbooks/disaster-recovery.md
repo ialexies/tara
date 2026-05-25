@@ -37,7 +37,7 @@ You're reading this because one of these happened:
 ```bash
 # From any machine with internet
 ssh ialexies@<home-server-public-ip>     # times out / refused
-curl https://staging.tarastays.com       # 502 / unreachable
+curl https://staging.tara-stays.com       # 502 / unreachable
 ```
 
 If only the public is unreachable: maybe just ISP outage; check ISP status, wait 1 hour.
@@ -115,7 +115,7 @@ pnpm --filter @tara/web start &
 ### Step 5: Repoint DNS via Cloudflare (10 min)
 
 ```
-Cloudflare dashboard → tarastays.com → DNS
+Cloudflare dashboard → tara-stays.com → DNS
   Update A records:
     @ → <new VPS public IP>
     staging → <new VPS public IP>
@@ -127,9 +127,9 @@ DNS propagates in 1-5 minutes (TTL 60 set in advance for this reason).
 ### Step 6: Verify (10 min)
 
 ```bash
-curl https://staging.tarastays.com/en              # 200, page loads
-curl https://api.staging.tarastays.com/health      # {"status":"ok"...}
-curl https://api.staging.tarastays.com/properties  # real data
+curl https://staging.tara-stays.com/en              # 200, page loads
+curl https://api.staging.tara-stays.com/health      # {"status":"ok"...}
+curl https://api.staging.tara-stays.com/properties  # real data
 ```
 
 ### Step 7: Notify (5 min)

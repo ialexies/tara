@@ -55,17 +55,17 @@ Stacks are Portainer-managed, each `docker-compose.yml` lives in `infra/portaine
 
 ### 🌐 EDGE (Cloudflare-fronted, public)
 
-| Service       | Phase | Port         | Image / Source                  | Purpose                                                                                     |
-| ------------- | ----- | ------------ | ------------------------------- | ------------------------------------------------------------------------------------------- |
-| `cloudflared` | A     | — (outbound) | `cloudflare/cloudflared:latest` | Cloudflare Tunnel — routes traffic from `staging.tarastays.com` etc. to internal containers |
+| Service       | Phase | Port         | Image / Source                  | Purpose                                                                                      |
+| ------------- | ----- | ------------ | ------------------------------- | -------------------------------------------------------------------------------------------- |
+| `cloudflared` | A     | — (outbound) | `cloudflare/cloudflared:latest` | Cloudflare Tunnel — routes traffic from `staging.tara-stays.com` etc. to internal containers |
 
 Tunnel config maps:
 
-- `staging.tarastays.com` → `http://web:3000`
-- `api.staging.tarastays.com` → `http://api:4000`
-- `status.tarastays.com` → `http://uptime-kuma:3001`
-- `n8n.tarastays.com` → `http://n8n:5678` (auth-protected via Cloudflare Access)
-- `flowise.tarastays.com` → `http://flowise:3002` (auth-protected)
+- `staging.tara-stays.com` → `http://web:3000`
+- `api.staging.tara-stays.com` → `http://api:4000`
+- `status.tara-stays.com` → `http://uptime-kuma:3001`
+- `n8n.tara-stays.com` → `http://n8n:5678` (auth-protected via Cloudflare Access)
+- `flowise.tara-stays.com` → `http://flowise:3002` (auth-protected)
 
 ### ⚙️ APPLICATION (Tara product code)
 
