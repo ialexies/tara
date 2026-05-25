@@ -204,8 +204,37 @@ These are the rules that prevent "works on my machine" bugs.
 
 ### Branches
 
-- `main` is always deployable. Direct commits to `main` are fine for solo dev now; later add a `develop` branch when team grows.
-- Feature branches: `feature/short-description`, `fix/short-description`, `chore/short-description`.
+Three long-lived branches, each with a clear purpose:
+
+| Branch    | Purpose                         | Deploys to                |
+| --------- | ------------------------------- | ------------------------- |
+| `develop` | Active development, feature PRs | Nowhere (local only)      |
+| `staging` | QA and integration testing      | `staging.tara-stays.com`  |
+| `main`    | Stable, production-ready        | `tara-stays.com` (future) |
+
+`develop` is the default branch — all PRs target it. Promote deliberately:
+
+```
+feature/my-thing → develop → staging → main
+```
+
+**Promoting to staging:**
+
+```bash
+git checkout staging
+git merge develop
+git push origin staging   # triggers CI → build → deploy → E2E
+```
+
+**Promoting to production** (when staging is verified):
+
+```bash
+git checkout main
+git merge staging
+git push origin main      # triggers production deploy (once configured)
+```
+
+Feature branches use the `feature/short-description` convention, cut from `develop`.
 
 ### Commits
 
@@ -243,29 +272,30 @@ These will be set up in a follow-up task.
 ## CI / staging deploy flow
 
 ```
-Push to feature branch
-    ↓
-GitHub Actions (self-hosted runner on home server)
-    ├─ Install
-    ├─ Lint
-    ├─ Typecheck
-    ├─ Unit + integration tests
-    ├─ Build
-    └─ Comment "Build OK" on PR
-    ↓
-Merge to main
-    ↓
-GitHub Actions
-    ├─ All of the above
-    ├─ Build Docker images (for web, api, jobs)
-    ├─ Push to local registry on home server
-    ├─ SSH into home server
-    ├─ Portainer stack update via API
-    ├─ Smoke tests against staging URL
-    └─ Notify Discord on success/failure
-```
+Push to develop (feature PR merged)
+    → No deploy. Tests run on PR if configured.
 
-Detailed in `docs/runbooks/deploy.md` once set up.
+Push to staging
+    ↓
+GitHub Actions — job: test (self-hosted runner)
+    ├─ pnpm install
+    ├─ Build shared packages
+    ├─ Unit tests (auth, schemas)
+    └─ Integration tests (API, real DB via testcontainers)
+    ↓
+GitHub Actions — job: deploy (needs: test)
+    ├─ Build Docker images (web, api)
+    ├─ Run DB migrations
+    ├─ docker compose up --force-recreate
+    └─ Smoke test (HTTP 200 + /health check)
+    ↓
+GitHub Actions — job: e2e (needs: deploy)
+    ├─ Playwright install
+    └─ E2E tests against https://staging.tara-stays.com
+
+Push to main (future production deploy)
+    → Separate workflow (production.yml) — not yet configured
+```
 
 ---
 
