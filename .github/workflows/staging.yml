@@ -31,6 +31,8 @@ jobs:
           # Check web via Cloudflare
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://staging.tara-stays.com/en)
           # Check API directly via Docker (avoids network routing issues in runner container)
-          API_STATUS=$(docker exec tara-staging-api-1 curl -s http://localhost:4000/health | python3 -c "import sys,json; print(json.load(sys.stdin).get('status','error'))" 2>/dev/null || echo "error")
+          API_STATUS=$(docker exec tara-staging-api-1 node -e \
+            "fetch('http://localhost:4000/health').then(r=>r.json()).then(d=>process.stdout.write(d.status)).catch(()=>process.stdout.write('error'))" \
+            2>/dev/null || echo "error")
           echo "Web: $STATUS | API: $API_STATUS"
           [ "$STATUS" = "200" ] && [ "$API_STATUS" = "ok" ] || (echo "Smoke test failed" && exit 1)
