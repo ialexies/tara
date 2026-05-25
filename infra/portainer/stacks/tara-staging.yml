@@ -16,6 +16,7 @@ services:
       - NODE_ENV=production
       - API_URL=http://api:4000
       - HOSTNAME=0.0.0.0
+      - JWT_SECRET=${JWT_SECRET}
     networks:
       - tara-staging
     restart: unless-stopped
