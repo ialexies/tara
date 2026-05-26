@@ -30,6 +30,17 @@ The majority of Tara's users are on mobile. Every UI decision must start from mo
 - No premature abstractions
 - Conventional Commits (`feat:`, `fix:`, `chore:`, `docs:`)
 
+## Logging (apps/api)
+
+Structured logging via `nestjs-pino`. Every log line is JSON in production and auto-binds `reqId` for in-request correlation.
+
+- **Log objects, never strings.** `this.logger.log({ event: 'booking.created', bookingId, userId })` — not `` `created booking ${id}` ``.
+- **Event names**: `noun.verb` past tense, snake_case fields. Examples: `booking.created`, `payment.failed`, `auth.session.create_failed`. Match the analytics taxonomy in [docs/architecture/analytics.md](docs/architecture/analytics.md).
+- **Log at boundaries, not internals.** Worth logging: external API calls (Stripe, Firebase, R2), money mutations, auth events, caught-and-swallowed errors. Skip: indexed reads, getters, pure transforms, loop iterations.
+- **Inject via `new Logger(ClassName.name)`** from `@nestjs/common` for 95% of cases. Use `PinoLogger.assign(...)` only when you need request-scoped bound context.
+- **No `console.log`.** It bypasses the structured stream and won't be queryable in Loki.
+- Reference pattern: [apps/api/src/auth/auth.service.ts](apps/api/src/auth/auth.service.ts).
+
 ## Infra
 
 - Staging: `staging.tara-stays.com` — auto-deploys on push to `main` via GitHub Actions self-hosted runner

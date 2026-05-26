@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { users, type User } from '@tara/db/schema';
 import { eq } from 'drizzle-orm';
@@ -14,6 +14,8 @@ const SESSION_COOKIE_TTL_MS = 60 * 60 * 24 * 14 * 1000; // 14 days
 
 @Injectable()
 export class AuthService {
+  private readonly logger = new Logger(AuthService.name);
+
   /**
    * Exchange a Firebase ID token for a long-lived session cookie.
    * The cookie is set httpOnly by the caller; this method just returns the value + maxAge.
@@ -24,8 +26,13 @@ export class AuthService {
       const sessionCookie = await admin.auth().createSessionCookie(idToken, {
         expiresIn: SESSION_COOKIE_TTL_MS,
       });
+      this.logger.log({ event: 'auth.session.created', ttlMs: SESSION_COOKIE_TTL_MS });
       return { sessionCookie, maxAge: SESSION_COOKIE_TTL_MS / 1000 };
-    } catch {
+    } catch (err) {
+      this.logger.warn({
+        event: 'auth.session.create_failed',
+        reason: err instanceof Error ? err.message : String(err),
+      });
       throw new UnauthorizedException('Invalid Firebase ID token');
     }
   }
@@ -41,12 +48,19 @@ export class AuthService {
     let decoded;
     try {
       decoded = await admin.auth().verifyIdToken(input.idToken);
-    } catch {
+    } catch (err) {
+      this.logger.warn({
+        event: 'auth.verify_token.failed',
+        reason: err instanceof Error ? err.message : String(err),
+      });
       throw new UnauthorizedException('Invalid Firebase ID token');
     }
 
     const { uid, email, email_verified } = decoded;
-    if (!email) throw new UnauthorizedException('Firebase token missing email');
+    if (!email) {
+      this.logger.warn({ event: 'auth.verify_token.missing_email', firebaseUid: uid });
+      throw new UnauthorizedException('Firebase token missing email');
+    }
 
     // 1. Lookup by firebase_uid — normal path for repeat sign-ins.
     const [byUid] = await db.select().from(users).where(eq(users.firebaseUid, uid)).limit(1);
@@ -64,6 +78,7 @@ export class AuthService {
         .where(eq(users.id, byUid.id))
         .returning();
       user = updated!;
+      this.logger.log({ event: 'auth.profile.updated', userId: user.id, firebaseUid: uid });
     } else {
       // 2. Lookup by email — handles pre-existing rows that don't yet have a firebase_uid.
       const [byEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1);
@@ -79,6 +94,7 @@ export class AuthService {
           .where(eq(users.id, byEmail.id))
           .returning();
         user = claimed!;
+        this.logger.log({ event: 'auth.profile.claimed', userId: user.id, firebaseUid: uid });
       } else {
         // 3. Brand-new user.
         const [created] = await db
@@ -92,12 +108,24 @@ export class AuthService {
           })
           .returning();
         user = created!;
+        this.logger.log({
+          event: 'auth.profile.created',
+          userId: user.id,
+          firebaseUid: uid,
+          role: user.role,
+        });
       }
     }
 
     await admin.auth().setCustomUserClaims(uid, {
       role: user.role,
       tenantId: user.id,
+    });
+    this.logger.log({
+      event: 'auth.claims.set',
+      userId: user.id,
+      firebaseUid: uid,
+      role: user.role,
     });
 
     return user;
