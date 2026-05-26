@@ -1,7 +1,7 @@
 import { getTranslations, setRequestLocale } from 'next-intl/server';
 import { HealthCheckSchema, type HealthCheck } from '@tara/schemas';
 import { getSession } from '@/lib/session';
-import { logoutAction } from '@/lib/auth-actions';
+import { SignOutButton } from './sign-out-button';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -55,14 +55,7 @@ export default async function HomePage({
               Signed in as{' '}
               <strong className="text-zinc-800 dark:text-zinc-200">{session.email}</strong>
             </span>
-            <form action={logoutAction}>
-              <button
-                type="submit"
-                className="rounded-lg border border-zinc-300 px-4 py-2 text-sm font-medium text-zinc-700 hover:bg-zinc-100 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-900"
-              >
-                Sign out
-              </button>
-            </form>
+            <SignOutButton />
           </div>
         ) : (
           <div className="flex flex-wrap gap-3">

@@ -7,7 +7,7 @@ const DATABASE_URL = process.env.DATABASE_URL;
 if (!DATABASE_URL) {
   throw new Error(
     'DATABASE_URL is not set. Set it in .env or your shell.\n' +
-      'Dev default: postgres://tara:tara@localhost:5432/tara_dev',
+      'Dev default: postgres://tara:tara@localhost:5433/tara_dev',
   );
 }
 

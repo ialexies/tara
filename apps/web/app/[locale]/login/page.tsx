@@ -4,10 +4,10 @@ import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
-  getRedirectResult,
+  onAuthStateChanged,
   sendPasswordResetEmail,
   signInWithEmailAndPassword,
-  signInWithRedirect,
+  signInWithPopup,
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from '@/lib/firebase-client';
 import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
@@ -38,25 +38,17 @@ export default function LoginPage(): React.ReactElement {
     router.push(`/${locale}`);
   }
 
-  // Pick up the result after returning from a Google redirect sign-in.
-  // Don't toggle `pending` here — we don't want to block the form while
-  // Firebase's internal iframe initialises (it can be slow / hang in test envs).
+  // If the user is already authenticated in Firebase but the app has no session
+  // cookie yet (e.g. page refresh after sign-in), finish the sign-in.
   useEffect(() => {
-    let cancelled = false;
-    getRedirectResult(firebaseAuth)
-      .then(async (cred) => {
-        if (cancelled || !cred?.user) return;
-        setPending(true);
-        await finishSignIn(cred.user);
-      })
-      .catch((err: { code?: string }) => {
-        if (cancelled) return;
-        setError(friendlyError(err?.code) ?? 'Google sign-in failed');
-        setPending(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+    let handled = false;
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (handled || !user) return;
+      handled = true;
+      setPending(true);
+      void finishSignIn(user);
+    });
+    return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -82,10 +74,12 @@ export default function LoginPage(): React.ReactElement {
     setInfo(null);
     setPending(true);
     try {
-      // Full-page redirect to Google; user comes back to this page,
-      // where the useEffect above picks up the result.
-      await signInWithRedirect(firebaseAuth, googleProvider);
+      // Popup avoids the third-party-storage isolation problem that breaks
+      // signInWithRedirect on localhost (helper page lives on a different origin).
+      const cred = await signInWithPopup(firebaseAuth, googleProvider);
+      await finishSignIn(cred.user);
     } catch (err: unknown) {
+      console.error('[google sign-in]', err);
       setError(friendlyError((err as { code?: string }).code) ?? 'Google sign-in failed');
       setPending(false);
     }

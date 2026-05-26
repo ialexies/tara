@@ -23,7 +23,10 @@ export async function getSession(): Promise<Session | null> {
 
   try {
     const admin = getFirebaseAdmin();
-    const decoded = await admin.auth().verifySessionCookie(cookie, true);
+    // Pass `false` (don't check revocation) — avoids an extra network call to
+    // Firebase Auth that can flake. Add revocation back when we wire a real
+    // "revoke session" feature.
+    const decoded = await admin.auth().verifySessionCookie(cookie, false);
     return {
       uid: decoded.uid,
       email: decoded.email ?? '',
@@ -31,7 +34,8 @@ export async function getSession(): Promise<Session | null> {
       tenantId: decoded['tenantId'] as string | undefined,
       emailVerified: decoded.email_verified ?? false,
     };
-  } catch {
+  } catch (err) {
+    console.error('[getSession] verifySessionCookie failed:', err);
     return null;
   }
 }

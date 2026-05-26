@@ -5,9 +5,9 @@ import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   createUserWithEmailAndPassword,
-  getRedirectResult,
+  onAuthStateChanged,
   sendEmailVerification,
-  signInWithRedirect,
+  signInWithPopup,
   updateProfile,
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from '@/lib/firebase-client';
@@ -69,35 +69,33 @@ export default function RegisterPage(): React.ReactElement {
     setError(null);
     setPending(true);
     try {
-      await signInWithRedirect(firebaseAuth, googleProvider);
+      // Popup avoids the third-party-storage isolation problem on localhost.
+      const cred = await signInWithPopup(firebaseAuth, googleProvider);
+      await finishSignIn(cred.user, {
+        fullName: cred.user.displayName ?? undefined,
+        role: 'guest',
+      });
     } catch (err: unknown) {
+      console.error('[google sign-in]', err);
       const code = (err as { code?: string }).code;
       setError(friendlyError(code) ?? 'Google sign-in failed');
       setPending(false);
     }
   }
 
-  // Pick up the result after returning from a Google redirect sign-in.
-  // Don't toggle `pending` here — Firebase's iframe init can hang in test envs.
+  // If user is already authenticated in Firebase (page refresh), finish sign-in.
   useEffect(() => {
-    let cancelled = false;
-    getRedirectResult(firebaseAuth)
-      .then(async (cred) => {
-        if (cancelled || !cred?.user) return;
-        setPending(true);
-        await finishSignIn(cred.user, {
-          fullName: cred.user.displayName ?? undefined,
-          role: 'guest',
-        });
-      })
-      .catch((err: { code?: string }) => {
-        if (cancelled) return;
-        setError(friendlyError(err?.code) ?? 'Google sign-in failed');
-        setPending(false);
+    let handled = false;
+    const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
+      if (handled || !user) return;
+      handled = true;
+      setPending(true);
+      void finishSignIn(user, {
+        fullName: user.displayName ?? undefined,
+        role: 'guest',
       });
-    return () => {
-      cancelled = true;
-    };
+    });
+    return unsubscribe;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 

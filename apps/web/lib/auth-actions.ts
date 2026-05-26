@@ -1,6 +1,5 @@
 'use server';
 
-import { redirect } from 'next/navigation';
 import { setSessionCookie, clearSessionCookie, SESSION_TTL_SECONDS } from './session';
 import { getFirebaseAdmin } from './firebase-admin';
 
@@ -44,13 +43,14 @@ export async function establishSessionAction(idToken: string): Promise<{ error: 
       expiresIn: SESSION_TTL_SECONDS * 1000,
     });
     await setSessionCookie(sessionCookie, SESSION_TTL_SECONDS);
+    console.log('[establishSession] cookie set, length:', sessionCookie.length);
     return null;
-  } catch {
+  } catch (err) {
+    console.error('[establishSession] failed:', err);
     return { error: 'Failed to create session' };
   }
 }
 
 export async function logoutAction(): Promise<void> {
   await clearSessionCookie();
-  redirect('/en/login');
 }

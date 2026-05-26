@@ -18,4 +18,8 @@ if (getApps().length === 0) {
 }
 
 export const firebaseAuth: Auth = getAuth(app);
+
 export const googleProvider = new GoogleAuthProvider();
+// Always show the account chooser, even if the user is already signed in to Google.
+// Lets users switch accounts and makes signed-out state obvious.
+googleProvider.setCustomParameters({ prompt: 'select_account' });
