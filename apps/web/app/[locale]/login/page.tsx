@@ -1,9 +1,14 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
-import { sendPasswordResetEmail, signInWithEmailAndPassword, signInWithPopup } from 'firebase/auth';
+import {
+  getRedirectResult,
+  sendPasswordResetEmail,
+  signInWithEmailAndPassword,
+  signInWithRedirect,
+} from 'firebase/auth';
 import { firebaseAuth, googleProvider } from '@/lib/firebase-client';
 import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
 
@@ -14,6 +19,8 @@ export default function LoginPage(): React.ReactElement {
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [email, setEmail] = useState('');
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   async function finishSignIn(user: import('firebase/auth').User): Promise<void> {
     const idToken = await user.getIdToken();
@@ -30,6 +37,28 @@ export default function LoginPage(): React.ReactElement {
     }
     router.push(`/${locale}`);
   }
+
+  // Pick up the result after returning from a Google redirect sign-in.
+  // Don't toggle `pending` here — we don't want to block the form while
+  // Firebase's internal iframe initialises (it can be slow / hang in test envs).
+  useEffect(() => {
+    let cancelled = false;
+    getRedirectResult(firebaseAuth)
+      .then(async (cred) => {
+        if (cancelled || !cred?.user) return;
+        setPending(true);
+        await finishSignIn(cred.user);
+      })
+      .catch((err: { code?: string }) => {
+        if (cancelled) return;
+        setError(friendlyError(err?.code) ?? 'Google sign-in failed');
+        setPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function handleLogin(e: FormEvent<HTMLFormElement>): Promise<void> {
     e.preventDefault();
@@ -53,11 +82,11 @@ export default function LoginPage(): React.ReactElement {
     setInfo(null);
     setPending(true);
     try {
-      const cred = await signInWithPopup(firebaseAuth, googleProvider);
-      await finishSignIn(cred.user);
+      // Full-page redirect to Google; user comes back to this page,
+      // where the useEffect above picks up the result.
+      await signInWithRedirect(firebaseAuth, googleProvider);
     } catch (err: unknown) {
       setError(friendlyError((err as { code?: string }).code) ?? 'Google sign-in failed');
-    } finally {
       setPending(false);
     }
   }
@@ -90,7 +119,7 @@ export default function LoginPage(): React.ReactElement {
         <button
           type="button"
           onClick={handleGoogle}
-          disabled={pending}
+          disabled={pending || !hydrated}
           className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
         >
           <GoogleIcon />
@@ -161,7 +190,7 @@ export default function LoginPage(): React.ReactElement {
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !hydrated}
             className="mt-2 flex h-12 items-center justify-center rounded-lg bg-zinc-900 text-base font-semibold text-white transition-opacity disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
           >
             {pending ? 'Signing in…' : 'Sign in'}

@@ -48,33 +48,51 @@ export class AuthService {
     const { uid, email, email_verified } = decoded;
     if (!email) throw new UnauthorizedException('Firebase token missing email');
 
-    const [existing] = await db.select().from(users).where(eq(users.firebaseUid, uid)).limit(1);
+    // 1. Lookup by firebase_uid — normal path for repeat sign-ins.
+    const [byUid] = await db.select().from(users).where(eq(users.firebaseUid, uid)).limit(1);
 
     let user: User;
-    if (existing) {
+    if (byUid) {
       const [updated] = await db
         .update(users)
         .set({
           email,
-          emailVerifiedAt: email_verified ? new Date() : existing.emailVerifiedAt,
-          fullName: input.fullName ?? existing.fullName,
+          emailVerifiedAt: email_verified ? new Date() : byUid.emailVerifiedAt,
+          fullName: input.fullName ?? byUid.fullName,
           updatedAt: new Date(),
         })
-        .where(eq(users.id, existing.id))
+        .where(eq(users.id, byUid.id))
         .returning();
       user = updated!;
     } else {
-      const [created] = await db
-        .insert(users)
-        .values({
-          firebaseUid: uid,
-          email,
-          emailVerifiedAt: email_verified ? new Date() : null,
-          fullName: input.fullName ?? null,
-          role: input.role ?? 'guest',
-        })
-        .returning();
-      user = created!;
+      // 2. Lookup by email — handles pre-existing rows that don't yet have a firebase_uid.
+      const [byEmail] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+      if (byEmail) {
+        const [claimed] = await db
+          .update(users)
+          .set({
+            firebaseUid: uid,
+            emailVerifiedAt: email_verified ? new Date() : byEmail.emailVerifiedAt,
+            fullName: input.fullName ?? byEmail.fullName,
+            updatedAt: new Date(),
+          })
+          .where(eq(users.id, byEmail.id))
+          .returning();
+        user = claimed!;
+      } else {
+        // 3. Brand-new user.
+        const [created] = await db
+          .insert(users)
+          .values({
+            firebaseUid: uid,
+            email,
+            emailVerifiedAt: email_verified ? new Date() : null,
+            fullName: input.fullName ?? null,
+            role: input.role ?? 'guest',
+          })
+          .returning();
+        user = created!;
+      }
     }
 
     await admin.auth().setCustomUserClaims(uid, {

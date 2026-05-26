@@ -1,12 +1,13 @@
 'use client';
 
-import { useState, type FormEvent } from 'react';
+import { useEffect, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
   createUserWithEmailAndPassword,
+  getRedirectResult,
   sendEmailVerification,
-  signInWithPopup,
+  signInWithRedirect,
   updateProfile,
 } from 'firebase/auth';
 import { firebaseAuth, googleProvider } from '@/lib/firebase-client';
@@ -17,6 +18,8 @@ export default function RegisterPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
+  const [hydrated, setHydrated] = useState(false);
+  useEffect(() => setHydrated(true), []);
 
   async function finishSignIn(
     user: import('firebase/auth').User,
@@ -66,18 +69,37 @@ export default function RegisterPage(): React.ReactElement {
     setError(null);
     setPending(true);
     try {
-      const cred = await signInWithPopup(firebaseAuth, googleProvider);
-      await finishSignIn(cred.user, {
-        fullName: cred.user.displayName ?? undefined,
-        role: 'guest',
-      });
+      await signInWithRedirect(firebaseAuth, googleProvider);
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       setError(friendlyError(code) ?? 'Google sign-in failed');
-    } finally {
       setPending(false);
     }
   }
+
+  // Pick up the result after returning from a Google redirect sign-in.
+  // Don't toggle `pending` here — Firebase's iframe init can hang in test envs.
+  useEffect(() => {
+    let cancelled = false;
+    getRedirectResult(firebaseAuth)
+      .then(async (cred) => {
+        if (cancelled || !cred?.user) return;
+        setPending(true);
+        await finishSignIn(cred.user, {
+          fullName: cred.user.displayName ?? undefined,
+          role: 'guest',
+        });
+      })
+      .catch((err: { code?: string }) => {
+        if (cancelled) return;
+        setError(friendlyError(err?.code) ?? 'Google sign-in failed');
+        setPending(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <main className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-4 py-8 dark:bg-black">
@@ -92,7 +114,7 @@ export default function RegisterPage(): React.ReactElement {
         <button
           type="button"
           onClick={handleGoogle}
-          disabled={pending}
+          disabled={pending || !hydrated}
           className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
         >
           <GoogleIcon />
@@ -194,7 +216,7 @@ export default function RegisterPage(): React.ReactElement {
 
           <button
             type="submit"
-            disabled={pending}
+            disabled={pending || !hydrated}
             className="mt-2 flex h-12 items-center justify-center rounded-lg bg-zinc-900 text-base font-semibold text-white transition-opacity disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
           >
             {pending ? 'Creating account…' : 'Create account'}
