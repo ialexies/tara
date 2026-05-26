@@ -1,47 +1,55 @@
 import { cookies } from 'next/headers';
-import { verifyAccessToken, type TokenPayload } from '@tara/auth';
+import { getFirebaseAdmin } from './firebase-admin';
 
-const ACCESS_COOKIE = 'tara_access';
-const REFRESH_COOKIE = 'tara_refresh';
+const SESSION_COOKIE = 'tara_session';
+const SESSION_TTL_SECONDS = 60 * 60 * 24 * 14; // 14 days
 
-export async function getSession(): Promise<TokenPayload | null> {
+export type Session = {
+  uid: string;
+  email: string;
+  role: 'guest' | 'owner' | 'admin' | 'ops';
+  tenantId?: string;
+  emailVerified: boolean;
+};
+
+/**
+ * Read and verify the session cookie. Returns the decoded user, or null if
+ * no cookie / invalid / expired / revoked.
+ */
+export async function getSession(): Promise<Session | null> {
   const jar = await cookies();
-  const token = jar.get(ACCESS_COOKIE)?.value;
-  if (!token) return null;
-
-  const secret = process.env['JWT_SECRET'];
-  if (!secret) return null;
+  const cookie = jar.get(SESSION_COOKIE)?.value;
+  if (!cookie) return null;
 
   try {
-    return await verifyAccessToken(token, secret);
+    const admin = getFirebaseAdmin();
+    const decoded = await admin.auth().verifySessionCookie(cookie, true);
+    return {
+      uid: decoded.uid,
+      email: decoded.email ?? '',
+      role: (decoded['role'] as Session['role']) ?? 'guest',
+      tenantId: decoded['tenantId'] as string | undefined,
+      emailVerified: decoded.email_verified ?? false,
+    };
   } catch {
     return null;
   }
 }
 
-export async function setSessionCookies(accessToken: string, refreshToken: string): Promise<void> {
+export async function setSessionCookie(value: string, maxAge: number): Promise<void> {
   const jar = await cookies();
-  const secure = process.env['NODE_ENV'] === 'production';
-
-  jar.set(ACCESS_COOKIE, accessToken, {
+  jar.set(SESSION_COOKIE, value, {
     httpOnly: true,
-    secure,
+    secure: process.env['NODE_ENV'] === 'production',
     sameSite: 'lax',
     path: '/',
-    maxAge: 60 * 15, // 15 min
-  });
-
-  jar.set(REFRESH_COOKIE, refreshToken, {
-    httpOnly: true,
-    secure,
-    sameSite: 'lax',
-    path: '/',
-    maxAge: 60 * 60 * 24 * 30, // 30 days
+    maxAge,
   });
 }
 
-export async function clearSessionCookies(): Promise<void> {
+export async function clearSessionCookie(): Promise<void> {
   const jar = await cookies();
-  jar.delete(ACCESS_COOKIE);
-  jar.delete(REFRESH_COOKIE);
+  jar.delete(SESSION_COOKIE);
 }
+
+export { SESSION_COOKIE, SESSION_TTL_SECONDS };

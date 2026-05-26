@@ -1,86 +1,56 @@
 'use server';
 
 import { redirect } from 'next/navigation';
-import { LoginSchema, RegisterSchema } from '@tara/schemas';
-import { setSessionCookies, clearSessionCookies } from './session';
+import { setSessionCookie, clearSessionCookie, SESSION_TTL_SECONDS } from './session';
+import { getFirebaseAdmin } from './firebase-admin';
 
 const API_URL = process.env['API_URL'] ?? 'http://localhost:4000';
 
-type AuthResult = { error: string } | null;
+type SyncResult = { error: string } | { ok: true; role: string };
 
-export async function loginAction(_prev: AuthResult, formData: FormData): Promise<AuthResult> {
-  const parsed = LoginSchema.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
-  }
-
+/**
+ * Create the local user profile (DB row) and set Firebase custom claims for role/tenantId.
+ * Called by the client after Firebase sign-in but before establishing the session.
+ */
+export async function syncProfileAction(
+  idToken: string,
+  profile: { fullName?: string; role?: 'guest' | 'owner' },
+): Promise<SyncResult> {
   try {
-    const res = await fetch(`${API_URL}/auth/login`, {
+    const res = await fetch(`${API_URL}/auth/sync`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(parsed.data),
+      body: JSON.stringify({ idToken, ...profile }),
     });
-
     if (!res.ok) {
       const body = (await res.json().catch(() => ({}))) as { message?: string };
-      return { error: body.message ?? 'Login failed' };
+      return { error: body.message ?? 'Profile sync failed' };
     }
-
-    const { accessToken, refreshToken } = (await res.json()) as {
-      accessToken: string;
-      refreshToken: string;
-    };
-
-    await setSessionCookies(accessToken, refreshToken);
+    const { role } = (await res.json()) as { role: string };
+    return { ok: true, role };
   } catch {
-    return { error: 'Could not connect to server. Please try again.' };
+    return { error: 'Could not connect to server' };
   }
-
-  redirect('/en');
 }
 
-export async function registerAction(_prev: AuthResult, formData: FormData): Promise<AuthResult> {
-  const parsed = RegisterSchema.safeParse({
-    email: formData.get('email'),
-    password: formData.get('password'),
-    fullName: formData.get('fullName') || undefined,
-    role: formData.get('role') ?? 'guest',
-  });
-
-  if (!parsed.success) {
-    return { error: parsed.error.issues[0]?.message ?? 'Invalid input' };
-  }
-
+/**
+ * Exchange a (refreshed) Firebase ID token for an httpOnly session cookie.
+ * Caller must have already run syncProfileAction and refreshed the ID token client-side.
+ */
+export async function establishSessionAction(idToken: string): Promise<{ error: string } | null> {
   try {
-    const res = await fetch(`${API_URL}/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(parsed.data),
+    const admin = getFirebaseAdmin();
+    const sessionCookie = await admin.auth().createSessionCookie(idToken, {
+      expiresIn: SESSION_TTL_SECONDS * 1000,
     });
-
-    if (!res.ok) {
-      const body = (await res.json().catch(() => ({}))) as { message?: string };
-      return { error: body.message ?? 'Registration failed' };
-    }
-
-    const { accessToken, refreshToken } = (await res.json()) as {
-      accessToken: string;
-      refreshToken: string;
-    };
-
-    await setSessionCookies(accessToken, refreshToken);
+    await setSessionCookie(sessionCookie, SESSION_TTL_SECONDS);
+    return null;
   } catch {
-    return { error: 'Could not connect to server. Please try again.' };
+    return { error: 'Failed to create session' };
   }
-
-  redirect('/en');
 }
 
 export async function logoutAction(): Promise<void> {
-  await clearSessionCookies();
+  await clearSessionCookie();
   redirect('/en/login');
 }
