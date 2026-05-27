@@ -3,6 +3,7 @@ import Stripe from 'stripe';
 import { db, bookings, properties, rooms } from '@tara/db';
 import { eq, and } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
+import { AuditService } from '../audit/audit.service.js';
 
 @Injectable()
 export class StripeService implements OnModuleInit {
@@ -10,7 +11,10 @@ export class StripeService implements OnModuleInit {
   private client: Stripe | null = null;
   private webhookSecret = '';
 
-  constructor(private readonly emailService: EmailService) {}
+  constructor(
+    private readonly emailService: EmailService,
+    private readonly auditService: AuditService,
+  ) {}
 
   onModuleInit() {
     const key = process.env['STRIPE_SECRET_KEY'];
@@ -115,6 +119,12 @@ export class StripeService implements OnModuleInit {
       sessionId: session.id,
     });
 
+    void this.auditService.log('payment.stripe_session.completed', {
+      entityType: 'booking',
+      entityId: bookingId,
+      metadata: { sessionId: session.id, amountTotal: session.amount_total },
+    });
+
     await this.sendConfirmationEmail(updated).catch((err: unknown) => {
       this.logger.error({ event: 'email.confirmation_failed', bookingId, error: String(err) });
     });
@@ -134,6 +144,12 @@ export class StripeService implements OnModuleInit {
       bookingId,
       via: 'stripe_expired',
       sessionId: session.id,
+    });
+
+    void this.auditService.log('payment.stripe_session.expired', {
+      entityType: 'booking',
+      entityId: bookingId,
+      metadata: { sessionId: session.id },
     });
   }
 

@@ -12,6 +12,7 @@ import { buildLoggerConfig } from './common/logger.config.js';
 import { EmailModule } from './email/email.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { StripeModule } from './stripe/stripe.module.js';
+import { AuditModule } from './audit/audit.module.js';
 
 @Module({
   imports: [
@@ -20,6 +21,7 @@ import { StripeModule } from './stripe/stripe.module.js';
       { name: 'global', ttl: 60_000, limit: 120 }, // 120 req/min default
       { name: 'auth', ttl: 60_000, limit: 10 }, // 10 req/min on auth endpoints
     ]),
+    AuditModule,
     EmailModule,
     UploadsModule,
     StripeModule,

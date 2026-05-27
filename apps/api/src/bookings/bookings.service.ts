@@ -12,6 +12,7 @@ import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
 import { StripeService } from '../stripe/stripe.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -39,6 +40,7 @@ export class BookingsService {
   constructor(
     private readonly emailService: EmailService,
     private readonly stripeService: StripeService,
+    private readonly auditService: AuditService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -239,6 +241,22 @@ export class BookingsService {
           tenantId: property.tenantId,
           nights: nights.length,
           totalMinor,
+        });
+
+        void this.auditService.log('booking.created', {
+          actorUid: guestUid ?? null,
+          entityType: 'booking',
+          entityId: booking!.id,
+          metadata: {
+            referenceCode,
+            propertyId: input.propertyId,
+            roomId: input.roomId,
+            checkIn: input.checkIn,
+            checkOut: input.checkOut,
+            nights: nights.length,
+            totalMinor,
+            paymentMode: property.paymentMode,
+          },
         });
 
         return {
@@ -551,6 +569,14 @@ export class BookingsService {
       .returning();
 
     this.logger.log({ event: `booking.${to}`, bookingId: id, tenantId: user.tenantId });
+
+    void this.auditService.log(to === 'confirmed' ? 'booking.confirmed' : 'booking.cancelled', {
+      actorUid: user.uid,
+      entityType: 'booking',
+      entityId: id,
+      metadata: { tenantId: user.tenantId, previousStatus: booking.status },
+    });
+
     return updated!;
   }
 }
