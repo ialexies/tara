@@ -7,9 +7,10 @@ import { getAuth, GoogleAuthProvider, type Auth } from 'firebase/auth';
 // available as Docker build args (they'd be baked into the image layer).
 let _auth: Auth | undefined;
 
-if (typeof window !== 'undefined') {
+const apiKey = process.env['NEXT_PUBLIC_FIREBASE_API_KEY'];
+if (typeof window !== 'undefined' && apiKey) {
   const firebaseConfig = {
-    apiKey: process.env['NEXT_PUBLIC_FIREBASE_API_KEY']!,
+    apiKey,
     authDomain: process.env['NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN']!,
     projectId: process.env['NEXT_PUBLIC_FIREBASE_PROJECT_ID']!,
     storageBucket: process.env['NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET']!,
