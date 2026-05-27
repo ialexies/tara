@@ -1,0 +1,106 @@
+import { getIdToken, onAuthStateChanged } from 'firebase/auth';
+import { firebaseAuth } from './firebase-client';
+
+const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
+
+function getToken(): Promise<string> {
+  // firebaseAuth.currentUser is null until Firebase restores the session.
+  // onAuthStateChanged fires once immediately with the resolved user.
+  return new Promise((resolve, reject) => {
+    const unsub = onAuthStateChanged(firebaseAuth, (user) => {
+      unsub();
+      if (!user) {
+        reject(new Error('Not authenticated'));
+        return;
+      }
+      getIdToken(user).then(resolve).catch(reject);
+    });
+  });
+}
+
+async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
+  const token = await getToken();
+  const res = await fetch(`${API_URL}${path}`, {
+    ...init,
+    headers: {
+      ...(init?.body != null ? { 'Content-Type': 'application/json' } : {}),
+      Authorization: `Bearer ${token}`,
+      ...init?.headers,
+    },
+  });
+
+  if (!res.ok) {
+    const body = (await res.json().catch(() => ({}))) as { message?: string };
+    throw new Error(body.message ?? `API error ${res.status}`);
+  }
+
+  return res.json() as Promise<T>;
+}
+
+export const api = {
+  properties: {
+    list: () => apiFetch<{ data: unknown[] }>('/properties/mine'),
+    create: (body: unknown) =>
+      apiFetch<unknown>('/properties', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (id: string, body: unknown) =>
+      apiFetch<unknown>(`/properties/${id}`, { method: 'PATCH', body: JSON.stringify(body) }),
+    getUploadUrl: (id: string, contentType: string, contentLength: number) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(`/properties/${id}/upload-url`, {
+        method: 'POST',
+        body: JSON.stringify({ contentType, contentLength }),
+      }),
+    saveCoverImage: (id: string, url: string) =>
+      apiFetch<unknown>(`/properties/${id}/cover-image`, {
+        method: 'PATCH',
+        body: JSON.stringify({ url }),
+      }),
+    publish: (id: string) => apiFetch<unknown>(`/properties/${id}/publish`, { method: 'POST' }),
+    unpublish: (id: string) => apiFetch<unknown>(`/properties/${id}/unpublish`, { method: 'POST' }),
+  },
+  rooms: {
+    list: (propertyId: string) => apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/rooms`),
+    create: (propertyId: string, body: unknown) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    update: (propertyId: string, roomId: string, body: unknown) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms/${roomId}`, {
+        method: 'PATCH',
+        body: JSON.stringify(body),
+      }),
+    remove: (propertyId: string, roomId: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms/${roomId}`, { method: 'DELETE' }),
+    getUploadUrl: (
+      propertyId: string,
+      roomId: string,
+      contentType: string,
+      contentLength: number,
+    ) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(
+        `/properties/${propertyId}/rooms/${roomId}/upload-url`,
+        { method: 'POST', body: JSON.stringify({ contentType, contentLength }) },
+      ),
+    saveCoverImage: (propertyId: string, roomId: string, url: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms/${roomId}/cover-image`, {
+        method: 'PATCH',
+        body: JSON.stringify({ url }),
+      }),
+  },
+  bookings: {
+    availability: (propertyId: string, checkIn: string, checkOut: string) =>
+      apiFetch<{ data: unknown[] }>(
+        `/properties/${propertyId}/availability?checkIn=${checkIn}&checkOut=${checkOut}`,
+      ),
+    mine: () => apiFetch<{ data: unknown[] }>('/bookings/mine'),
+    create: (body: unknown) =>
+      apiFetch<unknown>('/bookings', { method: 'POST', body: JSON.stringify(body) }),
+    listByProperty: (propertyId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/bookings`),
+    confirm: (id: string) => apiFetch<unknown>(`/bookings/${id}/confirm`, { method: 'POST' }),
+    cancel: (id: string) => apiFetch<unknown>(`/bookings/${id}/cancel`, { method: 'POST' }),
+  },
+};

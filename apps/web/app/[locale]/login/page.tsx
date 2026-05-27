@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -21,6 +21,9 @@ export default function LoginPage(): React.ReactElement {
   const [email, setEmail] = useState('');
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+  // Tracks whether an explicit sign-in (popup / email) is in flight so the
+  // onAuthStateChanged listener doesn't race it with a duplicate finishSignIn.
+  const signingIn = useRef(false);
 
   async function finishSignIn(user: import('firebase/auth').User): Promise<void> {
     const idToken = await user.getIdToken();
@@ -43,7 +46,7 @@ export default function LoginPage(): React.ReactElement {
   useEffect(() => {
     let handled = false;
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      if (handled || !user) return;
+      if (handled || !user || signingIn.current) return;
       handled = true;
       setPending(true);
       void finishSignIn(user);
@@ -57,6 +60,7 @@ export default function LoginPage(): React.ReactElement {
     setError(null);
     setInfo(null);
     setPending(true);
+    signingIn.current = true;
     const data = new FormData(e.currentTarget);
     const password = String(data.get('password') ?? '');
     try {
@@ -65,6 +69,7 @@ export default function LoginPage(): React.ReactElement {
     } catch (err: unknown) {
       setError(friendlyError((err as { code?: string }).code) ?? 'Sign-in failed');
     } finally {
+      signingIn.current = false;
       setPending(false);
     }
   }
@@ -73,15 +78,21 @@ export default function LoginPage(): React.ReactElement {
     setError(null);
     setInfo(null);
     setPending(true);
+    signingIn.current = true;
     try {
       // Popup avoids the third-party-storage isolation problem that breaks
       // signInWithRedirect on localhost (helper page lives on a different origin).
       const cred = await signInWithPopup(firebaseAuth, googleProvider);
       await finishSignIn(cred.user);
     } catch (err: unknown) {
-      console.error('[google sign-in]', err);
-      setError(friendlyError((err as { code?: string }).code) ?? 'Google sign-in failed');
+      const code = (err as { code?: string }).code;
+      if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
+        console.error('[google sign-in]', err);
+      }
+      setError(friendlyError(code) ?? 'Google sign-in failed');
       setPending(false);
+    } finally {
+      signingIn.current = false;
     }
   }
 

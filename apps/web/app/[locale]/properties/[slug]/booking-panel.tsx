@@ -1,0 +1,319 @@
+'use client';
+
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { getIdToken } from 'firebase/auth';
+import { firebaseAuth } from '@/lib/firebase-client';
+import { DateRangeCalendar } from '@/components/date-range-calendar';
+
+type Room = {
+  id: string;
+  name: string;
+  roomType: 'dorm' | 'private';
+  capacity: number;
+  gender: string | null;
+  bathroomType: string | null;
+  hasAircon: boolean;
+  hasLocker: boolean;
+  hasWindow: boolean;
+  hasOutletPerBed: boolean;
+  description: string | null;
+  baseNightlyRateMinor: number;
+};
+
+type Property = {
+  id: string;
+  slug: string;
+  name: string;
+  paymentMode: string;
+  rooms: Room[];
+};
+
+type AvailabilityResult = {
+  roomId: string;
+  roomName: string;
+  roomType: string;
+  capacity: number;
+  gender: string | null;
+  baseNightlyRateMinor: number;
+  availableUnits: number;
+  totalUnits: number;
+};
+
+const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+function todayStr() {
+  return new Date().toISOString().slice(0, 10);
+}
+function tomorrowStr() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  return d.toISOString().slice(0, 10);
+}
+function nightCount(checkIn: string, checkOut: string) {
+  return Math.max(0, (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000);
+}
+
+export function BookingPanel({
+  property,
+  locale,
+}: {
+  property: Property;
+  locale: string;
+}): React.ReactElement {
+  const router = useRouter();
+
+  const [checkIn, setCheckIn] = useState(todayStr());
+  const [checkOut, setCheckOut] = useState(tomorrowStr());
+  const [availability, setAvailability] = useState<AvailabilityResult[] | null>(null);
+  const [checking, setChecking] = useState(false);
+  const [checkError, setCheckError] = useState<string | null>(null);
+
+  const [bookingRoom, setBookingRoom] = useState<AvailabilityResult | null>(null);
+  const [guestName, setGuestName] = useState('');
+  const [guestEmail, setGuestEmail] = useState('');
+  const [guestPhone, setGuestPhone] = useState('');
+  const [specialRequests, setSpecialRequests] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [bookError, setBookError] = useState<string | null>(null);
+
+  const nights = nightCount(checkIn, checkOut);
+
+  async function handleCheckAvailability(e: React.FormEvent) {
+    e.preventDefault();
+    setChecking(true);
+    setCheckError(null);
+    setAvailability(null);
+    setBookingRoom(null);
+    try {
+      const res = await fetch(
+        `${API_URL}/properties/${property.id}/availability?checkIn=${checkIn}&checkOut=${checkOut}`,
+      );
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? 'Could not check availability');
+      }
+      const json = (await res.json()) as { data: AvailabilityResult[] };
+      setAvailability(json.data);
+    } catch (e: unknown) {
+      setCheckError(e instanceof Error ? e.message : 'Something went wrong');
+    } finally {
+      setChecking(false);
+    }
+  }
+
+  async function handleBook(e: React.FormEvent) {
+    e.preventDefault();
+    if (!bookingRoom) return;
+    setSubmitting(true);
+    setBookError(null);
+    try {
+      const authHeaders: Record<string, string> = {};
+      const currentUser = firebaseAuth.currentUser;
+      if (currentUser) {
+        const token = await getIdToken(currentUser);
+        authHeaders['Authorization'] = `Bearer ${token}`;
+      }
+
+      const res = await fetch(`${API_URL}/bookings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', ...authHeaders },
+        body: JSON.stringify({
+          propertyId: property.id,
+          roomId: bookingRoom.roomId,
+          checkIn,
+          checkOut,
+          guestName,
+          guestEmail,
+          guestPhone: guestPhone || undefined,
+          specialRequests: specialRequests || undefined,
+        }),
+      });
+      if (!res.ok) {
+        const body = (await res.json().catch(() => ({}))) as { message?: string };
+        throw new Error(body.message ?? 'Booking failed');
+      }
+      const booking = (await res.json()) as { id: string; checkoutUrl?: string };
+      if (booking.checkoutUrl) {
+        window.location.href = booking.checkoutUrl;
+      } else {
+        router.push(`/${locale}/bookings/${booking.id}`);
+      }
+    } catch (e: unknown) {
+      setBookError(e instanceof Error ? e.message : 'Something went wrong');
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <section className="space-y-6">
+      {/* Date picker */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          Check availability
+        </h2>
+        <form onSubmit={handleCheckAvailability} className="space-y-4">
+          <DateRangeCalendar
+            propertyId={property.id}
+            checkIn={checkIn}
+            checkOut={checkOut}
+            onRangeChange={(ci, co) => {
+              setCheckIn(ci);
+              setCheckOut(co);
+              setAvailability(null);
+            }}
+          />
+          <div className="flex items-center justify-between gap-3 rounded-lg bg-zinc-50 px-3 py-2 text-sm dark:bg-zinc-800">
+            <span className="text-zinc-500">
+              {checkIn} → {checkOut}
+            </span>
+            {nights > 0 && (
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">
+                {nights} night{nights !== 1 ? 's' : ''}
+              </span>
+            )}
+          </div>
+          {checkError && <p className="text-sm text-red-600 dark:text-red-400">{checkError}</p>}
+          <button
+            type="submit"
+            disabled={checking || nights < 1}
+            className="flex h-11 w-full items-center justify-center rounded-lg bg-zinc-900 text-sm font-semibold text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            {checking ? 'Checking…' : 'Check availability'}
+          </button>
+        </form>
+      </div>
+
+      {/* Availability results */}
+      {availability !== null && (
+        <div className="space-y-3">
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Rooms</h2>
+          {availability.length === 0 && (
+            <p className="text-sm text-zinc-500">No rooms listed for this property.</p>
+          )}
+          {availability.map((room) => {
+            const isSelected = bookingRoom?.roomId === room.roomId;
+            const unavailable = room.availableUnits === 0;
+            const total = room.baseNightlyRateMinor * nights;
+
+            return (
+              <div
+                key={room.roomId}
+                className={`rounded-xl border bg-white p-4 dark:bg-zinc-900 ${
+                  isSelected
+                    ? 'border-zinc-900 dark:border-zinc-50'
+                    : 'border-zinc-200 dark:border-zinc-800'
+                }`}
+              >
+                <div className="flex items-start justify-between gap-4">
+                  <div className="min-w-0">
+                    <p className="font-semibold text-zinc-900 dark:text-zinc-50">{room.roomName}</p>
+                    <p className="mt-0.5 text-sm text-zinc-500">
+                      {room.roomType === 'dorm' ? `${room.capacity}-bed dorm` : 'Private room'}
+                      {room.gender ? ` · ${room.gender}-only` : ''}
+                    </p>
+                    {unavailable ? (
+                      <p className="mt-1 text-xs font-medium text-red-500">Sold out</p>
+                    ) : (
+                      <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
+                        {room.availableUnits} of {room.totalUnits} available
+                      </p>
+                    )}
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <p className="font-bold text-zinc-900 dark:text-zinc-50">
+                      ₱{(room.baseNightlyRateMinor / 100).toLocaleString('en-PH')}
+                      <span className="text-xs font-normal text-zinc-500">/night</span>
+                    </p>
+                    <p className="text-xs text-zinc-500">
+                      ₱{(total / 100).toLocaleString('en-PH')} total
+                    </p>
+                  </div>
+                </div>
+
+                {!unavailable && (
+                  <button
+                    onClick={() => setBookingRoom(isSelected ? null : room)}
+                    className={`mt-3 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                      isSelected
+                        ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                        : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
+                    }`}
+                  >
+                    {isSelected ? 'Cancel' : 'Book this room'}
+                  </button>
+                )}
+
+                {/* Inline booking form */}
+                {isSelected && (
+                  <form
+                    onSubmit={handleBook}
+                    className="mt-4 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800"
+                  >
+                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
+                      Your details
+                    </p>
+                    {bookError && (
+                      <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
+                        {bookError}
+                      </p>
+                    )}
+                    <input
+                      type="text"
+                      placeholder="Full name *"
+                      value={guestName}
+                      onChange={(e) => setGuestName(e.target.value)}
+                      required
+                      minLength={2}
+                      className={inputClass}
+                    />
+                    <input
+                      type="email"
+                      placeholder="Email address *"
+                      value={guestEmail}
+                      onChange={(e) => setGuestEmail(e.target.value)}
+                      required
+                      className={inputClass}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Phone / WhatsApp (optional)"
+                      value={guestPhone}
+                      onChange={(e) => setGuestPhone(e.target.value)}
+                      className={inputClass}
+                    />
+                    <textarea
+                      placeholder="Special requests (optional)"
+                      value={specialRequests}
+                      onChange={(e) => setSpecialRequests(e.target.value)}
+                      rows={2}
+                      maxLength={500}
+                      className={`${inputClass} resize-none`}
+                    />
+                    <div className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
+                      Total: <strong>₱{(total / 100).toLocaleString('en-PH')}</strong> for {nights}{' '}
+                      night{nights !== 1 ? 's' : ''}
+                      {' · '}Payment instructions sent after booking.
+                    </div>
+                    <button
+                      type="submit"
+                      disabled={submitting}
+                      className="flex h-11 w-full items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+                    >
+                      {submitting
+                        ? 'Confirming…'
+                        : `Confirm booking · ₱${(total / 100).toLocaleString('en-PH')}`}
+                    </button>
+                  </form>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      )}
+    </section>
+  );
+}
+
+const inputClass =
+  'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-600';
