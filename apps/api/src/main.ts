@@ -2,6 +2,7 @@ import 'reflect-metadata';
 import crypto from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fastify';
+import type { FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
 import { AppModule } from './app.module.js';
@@ -23,6 +24,20 @@ async function bootstrap(): Promise<void> {
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));
+
+  // Capture raw body for Stripe webhook signature verification.
+  const fastify = app.getHttpAdapter().getInstance() as unknown as FastifyInstance;
+  fastify.addHook('preParsing', async (request, _reply, payload) => {
+    if (request.url !== '/stripe/webhook') return payload;
+    const chunks: Buffer[] = [];
+    for await (const chunk of payload as AsyncIterable<Buffer>) {
+      chunks.push(chunk);
+    }
+    const raw = Buffer.concat(chunks);
+    (request as unknown as Record<string, unknown>)['rawBody'] = raw;
+    const { Readable } = await import('node:stream');
+    return Readable.from(raw) as typeof payload;
+  });
 
   // Security headers — API serves JSON only, no HTML, so CSP is omitted
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
