@@ -26,6 +26,10 @@ if (typeof window !== 'undefined' && apiKey) {
   _auth = getAuth(app);
 }
 
+// True only when Firebase was successfully initialized (i.e. API key is set).
+// Use this to conditionally render auth UI instead of calling Firebase with undefined.
+export const isFirebaseConfigured = _auth !== undefined;
+
 // Consumers are always 'use client' components — they only access firebaseAuth
 // inside useEffect / event handlers, which run after browser hydration.
 export const firebaseAuth = _auth as Auth;

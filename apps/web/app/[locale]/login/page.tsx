@@ -11,7 +11,7 @@ import {
   signInWithEmailAndPassword,
   signInWithPopup,
 } from 'firebase/auth';
-import { firebaseAuth, googleProvider } from '@/lib/firebase-client';
+import { firebaseAuth, googleProvider, isFirebaseConfigured } from '@/lib/firebase-client';
 import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
 
 export default function LoginPage(): React.ReactElement {
@@ -46,6 +46,7 @@ export default function LoginPage(): React.ReactElement {
   // If the user is already authenticated in Firebase but the app has no session
   // cookie yet (e.g. page refresh after sign-in), finish the sign-in.
   useEffect(() => {
+    if (!isFirebaseConfigured) return;
     let handled = false;
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
       if (handled || !user || signingIn.current) return;
@@ -123,21 +124,25 @@ export default function LoginPage(): React.ReactElement {
           Sign in to your Tara account
         </p>
 
-        <button
-          type="button"
-          onClick={handleGoogle}
-          disabled={pending || !hydrated}
-          className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
-        >
-          <GoogleIcon />
-          Continue with Google
-        </button>
+        {isFirebaseConfigured && (
+          <>
+            <button
+              type="button"
+              onClick={handleGoogle}
+              disabled={pending || !hydrated}
+              className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
+            >
+              <GoogleIcon />
+              Continue with Google
+            </button>
 
-        <div className="my-4 flex items-center gap-3">
-          <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-          <span className="text-xs uppercase tracking-wider text-zinc-400">or</span>
-          <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-        </div>
+            <div className="my-4 flex items-center gap-3">
+              <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+              <span className="text-xs uppercase tracking-wider text-zinc-400">or</span>
+              <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
+            </div>
+          </>
+        )}
 
         <form onSubmit={handleLogin} className="flex flex-col gap-4">
           {error && (
