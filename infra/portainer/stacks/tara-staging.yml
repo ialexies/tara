@@ -16,6 +16,10 @@ services:
       - NODE_ENV=production
       - API_URL=http://api:4000
       - HOSTNAME=0.0.0.0
+      # Firebase Admin SDK — needed by Next.js server actions (session cookie creation)
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
     networks:
       - tara-staging
     restart: unless-stopped
