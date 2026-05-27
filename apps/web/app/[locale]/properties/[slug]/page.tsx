@@ -2,9 +2,11 @@ import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
 import Image from 'next/image';
+import type { Metadata } from 'next';
 import { BookingPanel } from './booking-panel';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
+const WEB_URL = process.env.WEB_URL ?? 'http://localhost:3000';
 
 type Room = {
   id: string;
@@ -32,9 +34,57 @@ type Property = {
   coverImageUrl: string | null;
   propertyType: string;
   paymentMode: string;
+  latitude: number | null;
+  longitude: number | null;
   manualPaymentMethods: { gcash?: string; maya?: string; bank?: string } | null;
   rooms: Room[];
 };
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ locale: string; slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const property = await fetchProperty(slug);
+  if (!property) return { title: 'Property not found · Tara' };
+
+  const cheapest = property.rooms.reduce<Room | null>(
+    (min, r) => (!min || r.baseNightlyRateMinor < min.baseNightlyRateMinor ? r : min),
+    null,
+  );
+  const priceStr = cheapest
+    ? ` · From ₱${(cheapest.baseNightlyRateMinor / 100).toLocaleString('en-PH')}/night`
+    : '';
+
+  const title = `${property.name} · ${property.city} Hostel${priceStr} · Tara`;
+  const description =
+    property.description?.slice(0, 160) ??
+    `Book ${property.name} in ${property.city}, ${property.region}. ${property.propertyType} accommodation in the Philippines.`;
+  const url = `${WEB_URL}/en/properties/${slug}`;
+
+  return {
+    title,
+    description,
+    openGraph: {
+      title,
+      description,
+      url,
+      type: 'website',
+      siteName: 'Tara',
+      ...(property.coverImageUrl && {
+        images: [{ url: property.coverImageUrl, width: 1200, height: 630, alt: property.name }],
+      }),
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      ...(property.coverImageUrl && { images: [property.coverImageUrl] }),
+    },
+    alternates: { canonical: url },
+  };
+}
 
 async function fetchProperty(slug: string): Promise<Property | null> {
   try {
@@ -133,6 +183,10 @@ export default async function PropertyPage({
           )}
         </div>
 
+        {property.latitude && property.longitude && (
+          <PropertyMap lat={property.latitude} lng={property.longitude} name={property.name} />
+        )}
+
         <BookingPanel property={property} locale={locale} />
       </main>
 
@@ -148,5 +202,47 @@ function Chip({ children }: { children: React.ReactNode }): React.ReactElement {
     <span className="inline-flex items-center rounded-full bg-zinc-100 px-2.5 py-1 text-xs font-medium capitalize text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
       {children}
     </span>
+  );
+}
+
+function PropertyMap({
+  lat,
+  lng,
+  name,
+}: {
+  lat: number;
+  lng: number;
+  name: string;
+}): React.ReactElement {
+  // Zoom 16 = street level; bbox pads ~0.003° (~300 m) around the pin
+  const pad = 0.003;
+  const bbox = `${lng - pad},${lat - pad},${lng + pad},${lat + pad}`;
+  const marker = `${lat},${lng}`;
+  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
+  const link = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lng}#map=16/${lat}/${lng}`;
+
+  return (
+    <div className="mb-8">
+      <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">Location</h2>
+      <div className="relative overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
+        <iframe
+          title={`Map showing location of ${name}`}
+          src={src}
+          width="100%"
+          height="260"
+          className="block"
+          loading="lazy"
+          referrerPolicy="no-referrer"
+        />
+        <a
+          href={link}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="absolute bottom-2 right-2 rounded-md bg-white/90 px-2.5 py-1 text-xs font-medium text-zinc-700 shadow backdrop-blur-sm hover:bg-white dark:bg-zinc-900/90 dark:text-zinc-300 dark:hover:bg-zinc-900"
+        >
+          Open in Maps ↗
+        </a>
+      </div>
+    </div>
   );
 }
