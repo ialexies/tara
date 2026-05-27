@@ -22,6 +22,27 @@
       "when": 1764028800000,
       "tag": "0002_firebase_auth",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "when": 1748476800000,
+      "tag": "0003_rooms_units",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "7",
+      "when": 1748563200000,
+      "tag": "0004_room_base_rate",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1748649600000,
+      "tag": "0005_bookings",
+      "breakpoints": true
     }
   ]
 }

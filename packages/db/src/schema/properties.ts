@@ -92,6 +92,9 @@ export const properties = pgTable(
       .default(sql`now()`),
     deletedAt: timestamp('deleted_at', { withTimezone: true }),
 
+    description: text('description'),
+    coverImageUrl: text('cover_image_url'),
+
     // Mock data flag — see docs/business/mock-data.md
     isMock: boolean('is_mock').notNull().default(false),
   },
