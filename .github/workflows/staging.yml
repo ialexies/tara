@@ -101,10 +101,15 @@ jobs:
         run: |
           echo "Waiting for services to be ready..."
           sleep 20
+          echo "--- Container states ---"
+          docker ps --filter "name=tara-staging" --format "{{.Names}} {{.Status}}"
+          echo "--- API last 30 log lines ---"
+          docker logs --tail 30 tara-staging-api-1 2>&1 || echo "(no logs)"
+          echo "--- Checks ---"
           STATUS=$(curl -s -o /dev/null -w "%{http_code}" --max-time 15 https://staging.tara-stays.com/en)
           API_STATUS=$(docker exec tara-staging-api-1 node -e \
-            "fetch('http://localhost:4000/health').then(r=>r.json()).then(d=>process.stdout.write(d.status)).catch(()=>process.stdout.write('error'))" \
-            2>/dev/null || echo "error")
+            "fetch('http://localhost:4000/health').then(r=>r.json()).then(d=>process.stdout.write(d.status)).catch((e)=>process.stdout.write('error:'+e.message))" \
+            2>&1 || echo "exec-failed")
           echo "Web: $STATUS | API: $API_STATUS"
           [ "$STATUS" = "200" ] && [ "$API_STATUS" = "ok" ] || (echo "Smoke test failed" && exit 1)
 
