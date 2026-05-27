@@ -14,9 +14,9 @@ export default defineConfig({
   ],
   test: {
     include: ['src/**/*.test.ts'],
-    globalSetup: ['src/test/global-setup.ts'],
-    testTimeout: 30_000,
-    hookTimeout: 90_000,
+    // globalSetup removed — old DB integration tests are gone (see auth.integration.test.ts).
+    // Re-add with a testcontainer setup when adding DB-dependent integration tests.
+    testTimeout: 10_000,
     pool: 'forks',
   },
 });
