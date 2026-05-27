@@ -16,7 +16,7 @@ Tara is developed on **Windows** and deployed to **Ubuntu** (home server staging
 |            | Local (your machine)      | Staging (home server)  | Production (future cloud)  |
 | ---------- | ------------------------- | ---------------------- | -------------------------- |
 | OS         | Windows 11 + WSL2 Ubuntu  | Ubuntu Server          | Linux (Vercel / cloud)     |
-| Node       | 20.18.0 (`.nvmrc`)        | 20.18.0 (Docker image) | 20.18.0                    |
+| Node       | 22.13.0 (`.nvmrc`)        | 22.13.0 (Docker image) | 22.13.0                    |
 | pnpm       | 9.12.0 (`packageManager`) | 9.12.0                 | 9.12.0                     |
 | Postgres   | 16 (Docker)               | 16 (Docker)            | 16 (managed)               |
 | Redis      | 7 (Docker)                | 7 (Docker)             | 7 (managed)                |
@@ -58,8 +58,8 @@ Use [fnm](https://github.com/Schniz/fnm) (faster than nvm):
 ```bash
 curl -fsSL https://fnm.vercel.app/install | bash
 # Add fnm to ~/.bashrc per the installer instructions, then:
-fnm install 20.18.0
-fnm default 20.18.0
+fnm install 22.13.0
+fnm default 22.13.0
 
 # Enable Corepack (ships with Node) for pnpm
 corepack enable
