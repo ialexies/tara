@@ -124,12 +124,12 @@ export default function LoginPage(): React.ReactElement {
           Sign in to your Tara account
         </p>
 
-        {isFirebaseConfigured && (
+        {hydrated && isFirebaseConfigured && (
           <>
             <button
               type="button"
               onClick={handleGoogle}
-              disabled={pending || !hydrated}
+              disabled={pending}
               className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
             >
               <GoogleIcon />
