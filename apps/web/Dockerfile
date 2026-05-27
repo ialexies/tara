@@ -9,12 +9,18 @@ COPY apps/web/ ./apps/web/
 RUN pnpm install --frozen-lockfile --filter @tara/web...
 RUN pnpm --filter @tara/schemas build
 RUN pnpm --filter @tara/auth build
+ARG NEXT_PUBLIC_API_URL=http://localhost:4000
+ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ARG R2_PUBLIC_URL
+ENV R2_PUBLIC_URL=$R2_PUBLIC_URL
 RUN pnpm --filter @tara/web build
 
 FROM base AS runner
 WORKDIR /app
 ENV NODE_ENV=production
 RUN addgroup --system --gid 1001 nodejs && adduser --system --uid 1001 nextjs
+# Install sharp via npm so Next.js image optimisation works without pnpm symlink issues
+RUN npm install --no-save sharp
 COPY --from=builder /app/apps/web/public ./apps/web/public
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/apps/web/.next/static ./apps/web/.next/static

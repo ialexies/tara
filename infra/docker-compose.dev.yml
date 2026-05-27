@@ -101,6 +101,51 @@ services:
     networks:
       - tara-net
 
+  api:
+    build:
+      context: ..
+      dockerfile: apps/api/Dockerfile
+    container_name: tara-api
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      # Override localhost addresses with Docker service names
+      DATABASE_URL: postgres://tara:tara@postgres:5432/tara_dev
+      REDIS_URL: redis://redis:6379
+      API_HOST: 0.0.0.0
+      API_PORT: '4000'
+      WEB_URL: http://localhost:3000
+    ports:
+      - '4000:4000'
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - tara-net
+
+  web:
+    build:
+      context: ..
+      dockerfile: apps/web/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:4000
+        R2_PUBLIC_URL: https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev
+    container_name: tara-web
+    restart: unless-stopped
+    env_file: ../.env
+    environment:
+      # Server-side fetches go through the Docker network
+      API_URL: http://api:4000
+      WEB_URL: http://localhost:3000
+      PORT: '3000'
+      HOSTNAME: 0.0.0.0
+    ports:
+      - '3000:3000'
+    depends_on:
+      - api
+    networks:
+      - tara-net
+
 volumes:
   postgres-data:
     name: tara-postgres-data
