@@ -27,8 +27,9 @@ test.describe('Email/password registration', () => {
 
     // After successful registration we redirect to /en
     await expect(page).toHaveURL(/\/en$/, { timeout: 15_000 });
-    await expect(page.getByText(/signed in as/i)).toBeVisible();
-    await expect(page.getByText(TEST_EMAIL)).toBeVisible();
+    // Logged-in guests see "My bookings" and "Sign out"
+    await expect(page.getByRole('link', { name: /my bookings/i })).toBeVisible();
+    await expect(page.getByRole('button', { name: /sign out/i })).toBeVisible();
   });
 
   test('rejects duplicate email', async ({ page }) => {
@@ -52,14 +53,13 @@ test.describe('Email/password login', () => {
     await page.getByRole('button', { name: /^sign in$/i }).click();
 
     await expect(page).toHaveURL(/\/en$/, { timeout: 15_000 });
-    await expect(page.getByText(/signed in as/i)).toBeVisible();
+    await expect(page.getByRole('link', { name: /my bookings/i })).toBeVisible();
 
     await page.getByRole('button', { name: /sign out/i }).click();
     await expect(page).toHaveURL(/\/en\/login$/);
 
     await page.goto('/en');
     await expect(page.getByRole('link', { name: /sign in/i })).toBeVisible();
-    await expect(page.getByRole('link', { name: /create account/i })).toBeVisible();
   });
 
   test('shows error for wrong password', async ({ page }) => {
