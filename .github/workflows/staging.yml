@@ -30,11 +30,8 @@ jobs:
       - name: Build shared packages
         run: pnpm --filter @tara/schemas build && pnpm --filter @tara/db build && pnpm --filter @tara/auth build
 
-      - name: Unit tests (auth + schemas)
-        run: pnpm --filter @tara/auth test && pnpm --filter @tara/schemas test
-
-      - name: Integration tests (API)
-        run: pnpm --filter @tara/api test
+      - name: Unit tests
+        run: pnpm --filter @tara/auth test && pnpm --filter @tara/api test
 
   deploy:
     needs: test
