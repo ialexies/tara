@@ -25,7 +25,7 @@ jobs:
       - name: Unit tests (auth + schemas)
         run: pnpm --filter @tara/auth test && pnpm --filter @tara/schemas test
 
-      - name: Integration tests (API auth endpoints)
+      - name: Integration tests (API)
         run: pnpm --filter @tara/api test
 
   deploy:
@@ -41,7 +41,17 @@ jobs:
         run: docker build -f apps/api/Dockerfile -t tara-api:staging .
 
       - name: Build Web image
-        run: docker build -f apps/web/Dockerfile -t tara-web:staging .
+        # NEXT_PUBLIC_* vars are baked into the Next.js build at image build time.
+        # R2_PUBLIC_URL is needed for next/image remotePatterns.
+        run: |
+          R2_URL=$(docker run --rm \
+            -v /home/ialexies/stacks/tara-staging:/env:ro \
+            alpine sh -c "grep ^R2_PUBLIC_URL /env/.env | cut -d= -f2-")
+          docker build \
+            -f apps/web/Dockerfile \
+            --build-arg NEXT_PUBLIC_API_URL=https://api.staging.tara-stays.com \
+            --build-arg R2_PUBLIC_URL="${R2_URL}" \
+            -t tara-web:staging .
 
       - name: Run DB migrations
         run: |
@@ -62,14 +72,20 @@ jobs:
 
       - name: Redeploy staging stack
         run: |
-          # Read JWT_SECRET from host .env via docker volume mount (runner is containerized)
-          JWT_SECRET=$(docker run --rm \
+          # Read all secrets from host .env into an env file the runner can use.
+          # The runner is containerised (Docker socket mounted) so host paths are
+          # accessed via a temporary alpine sidecar.
+          docker run --rm \
             -v /home/ialexies/stacks/tara-staging:/env:ro \
-            alpine sh -c "grep ^JWT_SECRET /env/.env | cut -d= -f2")
-          JWT_SECRET="$JWT_SECRET" docker compose \
+            alpine sh -c "cat /env/.env" > /tmp/staging-secrets.env
+
+          docker compose \
             -p tara-staging \
             -f infra/portainer/stacks/tara-staging.yml \
+            --env-file /tmp/staging-secrets.env \
             up -d --force-recreate web api cloudflared
+
+          rm -f /tmp/staging-secrets.env
 
       - name: Smoke test
         run: |

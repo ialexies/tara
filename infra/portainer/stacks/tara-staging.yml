@@ -16,7 +16,6 @@ services:
       - NODE_ENV=production
       - API_URL=http://api:4000
       - HOSTNAME=0.0.0.0
-      - JWT_SECRET=${JWT_SECRET}
     networks:
       - tara-staging
     restart: unless-stopped
@@ -30,7 +29,24 @@ services:
       - NODE_ENV=production
       - DATABASE_URL=postgresql://tara:tara@postgres:5432/tara_staging
       - REDIS_URL=redis://redis:6379
+      - API_HOST=0.0.0.0
+      - API_PORT=4000
+      - WEB_URL=https://staging.tara-stays.com
+      # ─── Secrets (read from /home/ialexies/stacks/tara-staging/.env by CI) ───
       - JWT_SECRET=${JWT_SECRET}
+      - FIREBASE_PROJECT_ID=${FIREBASE_PROJECT_ID}
+      - FIREBASE_CLIENT_EMAIL=${FIREBASE_CLIENT_EMAIL}
+      - FIREBASE_PRIVATE_KEY=${FIREBASE_PRIVATE_KEY}
+      - STRIPE_SECRET_KEY=${STRIPE_SECRET_KEY}
+      - STRIPE_WEBHOOK_SECRET=${STRIPE_WEBHOOK_SECRET}
+      - RESEND_API_KEY=${RESEND_API_KEY}
+      - EMAIL_FROM=${EMAIL_FROM}
+      - R2_ACCOUNT_ID=${R2_ACCOUNT_ID}
+      - R2_ACCESS_KEY_ID=${R2_ACCESS_KEY_ID}
+      - R2_SECRET_ACCESS_KEY=${R2_SECRET_ACCESS_KEY}
+      - R2_BUCKET=${R2_BUCKET}
+      - R2_PUBLIC_URL=${R2_PUBLIC_URL}
+      - LOG_LEVEL=info
     networks:
       - tara-staging
     restart: unless-stopped
