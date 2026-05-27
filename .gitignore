@@ -67,3 +67,7 @@ secrets/
 # Local-only files
 TODO.local.md
 NOTES.local.md
+
+# Claude Code local settings and session memory
+.claude/settings.local.json
+.claude/projects/

@@ -139,10 +139,17 @@ cd ~/projects/tara
 git pull
 pnpm install              # in case deps changed
 docker compose -f infra/docker-compose.dev.yml up -d
-pnpm dev                  # runs all apps via Turborepo
+# API and web now run in Docker — no separate pnpm dev needed
+# For active development with hot-reload, run API/web in terminal instead:
+#   cd apps/api && pnpm dev      # terminal 1
+#   cd apps/web && pnpm dev      # terminal 2
 
-# In another terminal, watch logs
-docker compose -f infra/docker-compose.dev.yml logs -f postgres
+# Watch logs for all services
+docker compose -f infra/docker-compose.dev.yml logs -f api web
+
+# After code changes, rebuild the affected service
+docker compose -f infra/docker-compose.dev.yml build api   # or web
+docker compose -f infra/docker-compose.dev.yml up -d api   # restart with new image
 
 # Run tests
 pnpm test
@@ -155,6 +162,76 @@ pnpm typecheck
 
 # Stop everything
 docker compose -f infra/docker-compose.dev.yml down
+```
+
+---
+
+## Environment variables
+
+All secrets live in `.env` at the monorepo root. Copy `.env.example` to get started.
+
+| Variable                 | Required | Description                                                        |
+| ------------------------ | -------- | ------------------------------------------------------------------ |
+| `DATABASE_URL`           | ✅       | Postgres connection string                                         |
+| `REDIS_URL`              | ✅       | Redis connection string                                            |
+| `FIREBASE_PROJECT_ID`    | ✅       | Firebase Admin SDK                                                 |
+| `FIREBASE_CLIENT_EMAIL`  | ✅       | Firebase Admin SDK                                                 |
+| `FIREBASE_PRIVATE_KEY`   | ✅       | Firebase Admin SDK                                                 |
+| `NEXT_PUBLIC_FIREBASE_*` | ✅       | Firebase Client SDK (browser)                                      |
+| `RESEND_API_KEY`         | ✅       | Transactional email — booking confirmations, owner alerts          |
+| `EMAIL_FROM`             | ✅       | Sender address shown to guests                                     |
+| `STRIPE_SECRET_KEY`      | ✅       | Stripe server-side — `sk_test_...` for dev                         |
+| `STRIPE_WEBHOOK_SECRET`  | ✅       | Webhook signature verification — get from `stripe listen` output   |
+| `R2_ACCOUNT_ID`          | ✅       | Cloudflare R2 — property/room image uploads                        |
+| `R2_ACCESS_KEY_ID`       | ✅       | Cloudflare R2                                                      |
+| `R2_SECRET_ACCESS_KEY`   | ✅       | Cloudflare R2                                                      |
+| `R2_BUCKET`              | ✅       | R2 bucket name (e.g. `tara-dev`)                                   |
+| `R2_PUBLIC_URL`          | ✅       | Public CDN URL for the bucket (e.g. `https://pub-xxx.r2.dev`)      |
+| `WEB_URL`                | ✅       | Full web URL — used in email links                                 |
+| `API_URL`                | ✅       | Internal API URL (server-side Next.js fetches)                     |
+| `NEXT_PUBLIC_API_URL`    | —        | Public API URL (browser-side). Defaults to `http://localhost:4000` |
+| `LOG_LEVEL`              | —        | Pino log level. Default: `debug` in dev, `info` in prod            |
+
+> **Local webhook testing**: run `~/.local/bin/stripe listen --forward-to http://localhost:4000/stripe/webhook`. It prints the `STRIPE_WEBHOOK_SECRET` to use.
+
+---
+
+## Dev tools & dashboards
+
+Both run as part of the local Docker stack (`docker compose -f infra/docker-compose.dev.yml up -d`).
+
+### Mailpit — email catch-all
+
+**URL:** http://localhost:8025
+
+Intercepts all outbound emails from the app in dev — nothing actually sends. Every verification email, password reset, and booking confirmation shows up here with full HTML rendering, headers, and raw source.
+
+The API routes outbound mail through `localhost:1025` (SMTP). No extra config needed; the dev compose file wires it up.
+
+### Adminer — database browser
+
+**URL:** http://localhost:8081
+
+Lightweight UI for browsing and querying Postgres directly. Login with:
+
+| Field    | Value      |
+| -------- | ---------- |
+| System   | PostgreSQL |
+| Server   | `postgres` |
+| Username | `tara`     |
+| Password | `tara`     |
+| Database | `tara_dev` |
+
+Useful for inspecting rows after seeding, verifying migrations ran correctly, and running ad-hoc queries during debugging.
+
+### Starting them individually
+
+```bash
+# Just mailpit + adminer (without postgres/redis)
+docker compose -f infra/docker-compose.dev.yml up -d mailpit adminer
+
+# Check they're up
+docker compose -f infra/docker-compose.dev.yml ps
 ```
 
 ---
