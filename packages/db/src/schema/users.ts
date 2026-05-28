@@ -32,6 +32,7 @@ export const users = pgTable('users', {
   role: userRoleEnum('role').notNull().default('guest'),
 
   isMock: boolean('is_mock').notNull().default(false),
+  referralCode: text('referral_code').unique(),
 });
 
 export type User = typeof users.$inferSelect;

@@ -24,6 +24,10 @@ import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
 import { StripeService } from '../stripe/stripe.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PriceRulesService } from '../price-rules/price-rules.service.js';
+import { PromoCodesService } from '../promo-codes/promo-codes.service.js';
+import { GuestBlacklistService } from '../guest-blacklist/guest-blacklist.service.js';
+import { WaitlistService } from '../waitlist/waitlist.service.js';
+import { WebhooksService } from '../webhooks/webhooks.service.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -54,6 +58,10 @@ export class BookingsService {
     private readonly stripeService: StripeService,
     private readonly auditService: AuditService,
     private readonly priceRulesService: PriceRulesService,
+    private readonly promoCodesService: PromoCodesService,
+    private readonly blacklistService: GuestBlacklistService,
+    private readonly waitlistService: WaitlistService,
+    private readonly webhooksService: WebhooksService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -198,6 +206,10 @@ export class BookingsService {
 
     if (!property) throw new NotFoundException('Property not found or not accepting bookings');
 
+    // Reject if guest is blacklisted by this property owner
+    const isBlocked = await this.blacklistService.isBlocked(input.propertyId, input.guestEmail);
+    if (isBlocked) throw new ForbiddenException('Booking not available for this email address');
+
     // Require phone number for manual-payment properties to reduce no-shows
     if (property.paymentMode === 'manual' && !input.guestPhone) {
       throw new BadRequestException('Phone number is required for this property.');
@@ -264,7 +276,27 @@ export class BookingsService {
 
     if (!freeUnit) throw new ConflictException('No availability for the selected dates');
 
-    const totalMinor = room.baseNightlyRateMinor * nights.length;
+    const baseTotalMinor = room.baseNightlyRateMinor * nights.length;
+
+    // Apply promo code if provided
+    let promoCodeId: string | null = null;
+    let discountMinor = 0;
+    let totalMinor = baseTotalMinor;
+    if (input.promoCode) {
+      try {
+        const promo = await this.promoCodesService.validate(
+          input.promoCode,
+          input.propertyId,
+          baseTotalMinor,
+        );
+        promoCodeId = promo.id;
+        discountMinor = promo.discountMinor;
+        totalMinor = promo.finalAmountMinor;
+      } catch {
+        throw new BadRequestException(`Promo code "${input.promoCode}" is invalid or expired`);
+      }
+    }
+
     const referenceCode = generateReferenceCode();
 
     // Insert booking + booking_items in one transaction.
@@ -289,6 +321,8 @@ export class BookingsService {
             status: property.paymentMode === 'stripe' ? 'stripe_pending' : 'manual_pending',
             paymentMode: property.paymentMode,
             totalMinor,
+            discountMinor,
+            promoCodeId: promoCodeId ?? undefined,
             currency: 'PHP',
           })
           .returning();
@@ -427,6 +461,20 @@ export class BookingsService {
               })
             : Promise.resolve(),
         ]);
+
+        // Increment promo code usage if one was applied
+        if (promoCodeId) {
+          void this.promoCodesService.incrementUses(promoCodeId);
+        }
+
+        // Fire webhook for property owner
+        if (prop?.ownerId) {
+          void this.webhooksService.dispatch(prop.ownerId, 'booking.created', {
+            bookingId: result.id,
+            referenceCode: ctx.referenceCode,
+            guestName: ctx.guestName,
+          });
+        }
 
         return result;
       })
@@ -655,6 +703,11 @@ export class BookingsService {
     }
 
     await this.sendStatusEmail(booking, 'cancelled');
+    void this.waitlistService.notifyOnCancellation(
+      booking.roomId,
+      booking.checkIn,
+      booking.checkOut,
+    );
     return booking;
   }
 
@@ -664,6 +717,26 @@ export class BookingsService {
 
   async checkOut(id: string, user: AuthedUser) {
     return this.transitionStatus(id, user, ['checked_in'], 'checked_out');
+  }
+
+  async markIdVerified(id: string, user: AuthedUser) {
+    const [booking] = await db
+      .select({ id: bookings.id, propertyId: bookings.propertyId })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(eq(properties.id, booking.propertyId))
+      .limit(1);
+    if (!prop || prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your booking');
+    await db
+      .update(bookings)
+      .set({ idVerified: true, idVerifiedAt: new Date() })
+      .where(eq(bookings.id, id));
+    return { ok: true };
   }
 
   async cancelByGuest(id: string, guestEmail: string) {

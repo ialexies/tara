@@ -100,6 +100,9 @@ export default function ProfilePage(): React.ReactElement {
         </Link>
 
         <h1 className="mb-6 text-2xl font-bold text-zinc-900 dark:text-zinc-50">Profile</h1>
+        <div className="mb-6">
+          <DarkModeToggle />
+        </div>
 
         <form onSubmit={handleSave} className="space-y-4">
           {success && (
@@ -176,6 +179,42 @@ export default function ProfilePage(): React.ReactElement {
       <footer className="pb-safe border-t border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400 dark:border-zinc-800">
         © {new Date().getFullYear()} Tara · Philippines
       </footer>
+    </div>
+  );
+}
+
+function DarkModeToggle(): React.ReactElement {
+  const [theme, setTheme] = useState<'system' | 'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'system';
+    return (localStorage.getItem('tara_theme') as 'system' | 'light' | 'dark') ?? 'system';
+  });
+
+  function apply(t: 'system' | 'light' | 'dark') {
+    setTheme(t);
+    localStorage.setItem('tara_theme', t);
+    const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+    const useDark = t === 'dark' || (t === 'system' && prefersDark);
+    document.documentElement.classList.toggle('dark', useDark);
+  }
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <p className="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Theme</p>
+      <div className="flex gap-2">
+        {(['system', 'light', 'dark'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => apply(t)}
+            className={`flex h-9 flex-1 items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
+              theme === t
+                ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900'
+                : 'border-zinc-200 text-zinc-500 dark:border-zinc-700'
+            }`}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }

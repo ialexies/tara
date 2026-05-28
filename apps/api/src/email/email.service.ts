@@ -140,6 +140,38 @@ export class EmailService {
     });
   }
 
+  async sendSearchAlert(guestEmail: string, propertyNames: string[]): Promise<void> {
+    const list = propertyNames.map((n) => `<li>${n}</li>`).join('');
+    await this.send({
+      to: guestEmail,
+      subject: `New properties matching your search on Tara`,
+      html: shell(
+        `<p>New properties matching your saved search are now available:</p>
+         <ul style="margin:8px 0;padding-left:20px">${list}</ul>
+         <p><a href="https://tara-stays.com" style="background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Browse properties →</a></p>`,
+      ),
+    });
+  }
+
+  async sendWaitlistAvailable(
+    guestEmail: string,
+    guestName: string,
+    roomName: string,
+    checkIn: string,
+    checkOut: string,
+  ): Promise<void> {
+    await this.send({
+      to: guestEmail,
+      subject: `Good news! ${roomName} is now available`,
+      html: shell(
+        `<p>Hi ${guestName},</p>
+         <p>Great news — <strong>${roomName}</strong> you were waiting for just opened up for <strong>${checkIn}</strong> to <strong>${checkOut}</strong>.</p>
+         <p>Book now before it fills up again!</p>
+         <p><a href="https://tara-stays.com" style="background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Book now →</a></p>`,
+      ),
+    });
+  }
+
   private buildUnsubscribeUrl(email: string): string {
     const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';
     const token = Buffer.from(JSON.stringify({ email, ts: Date.now() })).toString('base64url');

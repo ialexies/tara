@@ -140,6 +140,20 @@ export class AuthService {
     return user ?? null;
   }
 
+  async getOrCreateReferralCode(uid: string): Promise<{ code: string }> {
+    const [user] = await db
+      .select({ referralCode: users.referralCode })
+      .from(users)
+      .where(eq(users.firebaseUid, uid))
+      .limit(1);
+    if (user?.referralCode) return { code: user.referralCode };
+    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+    let code = '';
+    for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
+    await db.update(users).set({ referralCode: code }).where(eq(users.firebaseUid, uid));
+    return { code };
+  }
+
   async listUsers(limit = 100, offset = 0): Promise<User[]> {
     return db.select().from(users).orderBy(users.createdAt).limit(limit).offset(offset);
   }

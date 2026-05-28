@@ -28,6 +28,11 @@ export default function PricingPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('list');
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   function load() {
     setLoading(true);
@@ -73,12 +78,25 @@ export default function PricingPage(): React.ReactElement {
             Override rates or set minimum stays for specific date ranges.
           </p>
         </div>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          + Add rule
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="flex gap-1 rounded-lg border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-700 dark:bg-zinc-800">
+            {(['list', 'calendar'] as const).map((m) => (
+              <button
+                key={m}
+                onClick={() => setViewMode(m)}
+                className={`rounded px-3 py-1 text-xs font-medium transition-colors ${viewMode === m ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-700 dark:text-zinc-50' : 'text-zinc-500'}`}
+              >
+                {m.charAt(0).toUpperCase() + m.slice(1)}
+              </button>
+            ))}
+          </div>
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            + Add rule
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -104,7 +122,11 @@ export default function PricingPage(): React.ReactElement {
         </div>
       )}
 
-      {!loading && rules.length > 0 && (
+      {!loading && rules.length > 0 && viewMode === 'calendar' && (
+        <PricingCalendar rules={rules} month={calendarMonth} onMonthChange={setCalendarMonth} />
+      )}
+
+      {!loading && rules.length > 0 && viewMode === 'list' && (
         <ul className="space-y-3">
           {rules.map((rule) => (
             <li
@@ -309,6 +331,100 @@ function AddRuleForm({
           </button>
         </div>
       </form>
+    </div>
+  );
+}
+
+function PricingCalendar({
+  rules,
+  month,
+  onMonthChange,
+}: {
+  rules: PriceRule[];
+  month: string;
+  onMonthChange: (m: string) => void;
+}): React.ReactElement {
+  const [year, mon] = month.split('-').map(Number) as [number, number];
+  const daysInMonth = new Date(year, mon, 0).getDate();
+  const firstDow = new Date(year, mon - 1, 1).getDay();
+
+  function rulesForDate(day: number): PriceRule[] {
+    const date = `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    return rules.filter((r) => r.startDate <= date && r.endDate >= date);
+  }
+
+  function prevMonth() {
+    const d = new Date(year, mon - 2, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  function nextMonth() {
+    const d = new Date(year, mon, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const monthLabel = new Date(year, mon - 1, 1).toLocaleDateString('en-PH', {
+    month: 'long',
+    year: 'numeric',
+  });
+
+  return (
+    <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+      <div className="mb-4 flex items-center justify-between">
+        <button
+          onClick={prevMonth}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-sm dark:border-zinc-700"
+        >
+          ‹
+        </button>
+        <p className="font-semibold text-zinc-900 dark:text-zinc-50">{monthLabel}</p>
+        <button
+          onClick={nextMonth}
+          className="flex h-8 w-8 items-center justify-center rounded-lg border border-zinc-200 text-sm dark:border-zinc-700"
+        >
+          ›
+        </button>
+      </div>
+      <div className="mb-1 grid grid-cols-7 gap-1 text-center text-[10px] font-medium text-zinc-400">
+        {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map((d) => (
+          <div key={d}>{d}</div>
+        ))}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {Array.from({ length: firstDow }).map((_, i) => (
+          <div key={`e${i}`} />
+        ))}
+        {Array.from({ length: daysInMonth }).map((_, i) => {
+          const day = i + 1;
+          const dayRules = rulesForDate(day);
+          const hasRate = dayRules.some((r) => r.rateOverrideMinor);
+          const hasMin = dayRules.some((r) => r.minNights);
+          return (
+            <div
+              key={day}
+              title={dayRules.map((r) => r.name).join(', ')}
+              className={`relative flex h-9 flex-col items-center justify-center rounded-lg text-xs font-medium transition-colors ${hasRate ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-900 dark:text-emerald-200' : ''} ${hasMin && !hasRate ? 'bg-amber-100 text-amber-800 dark:bg-amber-900 dark:text-amber-200' : ''} ${!hasRate && !hasMin ? 'text-zinc-700 dark:text-zinc-300' : ''} `}
+            >
+              {day}
+              {hasRate && (
+                <span className="text-[8px] text-emerald-600 dark:text-emerald-400">
+                  ₱
+                  {(dayRules.find((r) => r.rateOverrideMinor)!.rateOverrideMinor! / 100).toFixed(0)}
+                </span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+      <div className="mt-3 flex gap-4 text-xs text-zinc-500">
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-3 rounded bg-emerald-100 dark:bg-emerald-900" />
+          Rate override
+        </span>
+        <span className="flex items-center gap-1">
+          <span className="h-3 w-3 rounded bg-amber-100 dark:bg-amber-900" />
+          Min nights
+        </span>
+      </div>
     </div>
   );
 }

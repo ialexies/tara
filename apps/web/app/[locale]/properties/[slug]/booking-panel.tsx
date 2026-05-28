@@ -101,6 +101,14 @@ export function BookingPanel({
   const [guestEmail, setGuestEmail] = useState('');
   const [guestPhone, setGuestPhone] = useState('');
   const [specialRequests, setSpecialRequests] = useState('');
+  const [promoCode, setPromoCode] = useState('');
+  const [promoResult, setPromoResult] = useState<{
+    discountMinor: number;
+    finalAmountMinor: number;
+    code: string;
+  } | null>(null);
+  const [promoError, setPromoError] = useState<string | null>(null);
+  const [checkingPromo, setCheckingPromo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
 
@@ -160,6 +168,7 @@ export function BookingPanel({
           guestEmail,
           guestPhone: guestPhone || undefined,
           specialRequests: specialRequests || undefined,
+          promoCode: promoResult?.code || undefined,
         }),
       });
       if (!res.ok) {
@@ -234,7 +243,8 @@ export function BookingPanel({
           {availability.map((room) => {
             const isSelected = bookingRoom?.roomId === room.roomId;
             const unavailable = room.availableUnits === 0 || !room.meetsMinNights;
-            const total = room.baseNightlyRateMinor * nights;
+            const baseTotal = room.baseNightlyRateMinor * nights;
+            const total = promoResult && isSelected ? promoResult.finalAmountMinor : baseTotal;
 
             return (
               <div
@@ -388,6 +398,61 @@ export function BookingPanel({
                       maxLength={500}
                       className={`${inputClass} resize-none`}
                     />
+                    {/* Promo code */}
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        value={promoCode}
+                        onChange={(e) => {
+                          setPromoCode(e.target.value.toUpperCase());
+                          setPromoResult(null);
+                          setPromoError(null);
+                        }}
+                        placeholder="Promo code (optional)"
+                        className={`${inputClass} flex-1 uppercase`}
+                        maxLength={30}
+                      />
+                      <button
+                        type="button"
+                        disabled={!promoCode || checkingPromo}
+                        onClick={async () => {
+                          setCheckingPromo(true);
+                          setPromoError(null);
+                          try {
+                            const r = await fetch(
+                              `${API_URL}/promo-codes/validate?code=${encodeURIComponent(promoCode)}&propertyId=${property.id}&amount=${room.baseNightlyRateMinor * nights}`,
+                            );
+                            if (!r.ok) {
+                              const b = (await r.json()) as { message?: string };
+                              throw new Error(b.message ?? 'Invalid code');
+                            }
+                            const data = (await r.json()) as {
+                              discountMinor: number;
+                              finalAmountMinor: number;
+                              code: string;
+                            };
+                            setPromoResult(data);
+                          } catch (e) {
+                            setPromoError(e instanceof Error ? e.message : 'Invalid code');
+                          } finally {
+                            setCheckingPromo(false);
+                          }
+                        }}
+                        className="flex h-11 items-center rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300"
+                      >
+                        {checkingPromo ? '…' : 'Apply'}
+                      </button>
+                    </div>
+                    {promoResult && (
+                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
+                        ✓ Code applied — saving ₱
+                        {(promoResult.discountMinor / 100).toLocaleString('en-PH')}
+                      </p>
+                    )}
+                    {promoError && (
+                      <p className="text-sm text-red-600 dark:text-red-400">{promoError}</p>
+                    )}
+
                     {/* Cancellation policy */}
                     <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
                       <p className="font-semibold">Cancellation policy</p>

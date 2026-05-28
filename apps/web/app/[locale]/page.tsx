@@ -5,6 +5,7 @@ import { getSession } from '@/lib/session';
 import { SignOutButton } from './sign-out-button';
 import { DashboardLink } from './dashboard-link';
 import { PropertyListings, type Property } from './property-listings';
+import { RecentBookings } from './recent-bookings';
 
 export async function generateMetadata({
   params,
@@ -127,6 +128,9 @@ export default async function HomePage({
           </h1>
           <p className="mt-2 text-zinc-500 dark:text-zinc-400">{t('subtitle')}</p>
         </div>
+
+        {/* Recent bookings for logged-in guests */}
+        {session && <RecentBookings locale={locale} />}
 
         {/* Property listing with search/filter */}
         <PropertyListings properties={properties} locale={locale} />

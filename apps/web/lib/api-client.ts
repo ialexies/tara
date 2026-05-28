@@ -154,6 +154,8 @@ export const api = {
     cancel: (id: string) => apiFetch<unknown>(`/bookings/${id}/cancel`, { method: 'POST' }),
     checkIn: (id: string) => apiFetch<unknown>(`/bookings/${id}/check-in`, { method: 'POST' }),
     checkOut: (id: string) => apiFetch<unknown>(`/bookings/${id}/check-out`, { method: 'POST' }),
+    verifyId: (id: string) =>
+      apiFetch<{ ok: boolean }>(`/bookings/${id}/verify-id`, { method: 'POST' }),
     cancelByGuest: (id: string, guestEmail: string) =>
       apiFetch<unknown>(`/bookings/${id}/cancel-guest`, {
         method: 'POST',
@@ -208,6 +210,23 @@ export const api = {
       apiFetch<{ data: unknown[] }>(`/auth/admin/audit${limit ? `?limit=${limit}` : ''}`),
     deleteReview: (id: string) => apiFetch<unknown>(`/admin/reviews/${id}`, { method: 'DELETE' }),
   },
+  promoCodes: {
+    list: () => apiFetch<{ data: unknown[] }>('/promo-codes'),
+    create: (body: unknown) =>
+      apiFetch<unknown>('/promo-codes', { method: 'POST', body: JSON.stringify(body) }),
+    deactivate: (id: string) => apiFetch<void>(`/promo-codes/${id}`, { method: 'DELETE' }),
+    validate: (code: string, propertyId: string, amount: number) =>
+      apiFetch<{
+        id: string;
+        code: string;
+        discountType: string;
+        discountValue: number;
+        discountMinor: number;
+        finalAmountMinor: number;
+      }>(
+        `/promo-codes/validate?code=${encodeURIComponent(code)}&propertyId=${propertyId}&amount=${amount}`,
+      ),
+  },
   reviews: {
     replyToReview: (reviewId: string, reply: string) =>
       apiFetch<unknown>(`/reviews/${reviewId}/reply`, {
@@ -251,5 +270,67 @@ export const api = {
       }),
     remove: (propertyId: string, ruleId: string) =>
       apiFetch<unknown>(`/properties/${propertyId}/price-rules/${ruleId}`, { method: 'DELETE' }),
+  },
+  searchAlerts: {
+    save: (body: {
+      guestEmail: string;
+      city?: string;
+      propertyType?: string;
+      maxPriceMinor?: number;
+      amenities?: string[];
+    }) =>
+      apiFetch<{ id: string }>('/search-alerts', { method: 'POST', body: JSON.stringify(body) }),
+    list: (email: string) =>
+      apiFetch<{ data: unknown[] }>(`/search-alerts?email=${encodeURIComponent(email)}`),
+    remove: (id: string, email: string) =>
+      apiFetch<void>(`/search-alerts/${id}?email=${encodeURIComponent(email)}`, {
+        method: 'DELETE',
+      }),
+  },
+  referral: {
+    getMyCode: () => apiFetch<{ code: string }>('/auth/me/referral'),
+  },
+  webhooks: {
+    list: () => apiFetch<{ data: unknown[] }>('/webhooks'),
+    create: (url: string, events: string[]) =>
+      apiFetch<unknown>('/webhooks', { method: 'POST', body: JSON.stringify({ url, events }) }),
+    remove: (id: string) => apiFetch<void>(`/webhooks/${id}`, { method: 'DELETE' }),
+  },
+  propertyStaff: {
+    list: (propertyId: string) => apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/staff`),
+    invite: (propertyId: string, staffEmail: string, role: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/staff`, {
+        method: 'POST',
+        body: JSON.stringify({ staffEmail, role }),
+      }),
+    remove: (propertyId: string, id: string) =>
+      apiFetch<void>(`/properties/${propertyId}/staff/${id}`, { method: 'DELETE' }),
+  },
+  blacklist: {
+    list: (propertyId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/blacklist`),
+    add: (propertyId: string, guestEmail: string, reason?: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/blacklist`, {
+        method: 'POST',
+        body: JSON.stringify({ guestEmail, reason }),
+      }),
+    remove: (propertyId: string, id: string) =>
+      apiFetch<void>(`/properties/${propertyId}/blacklist/${id}`, { method: 'DELETE' }),
+  },
+  waitlist: {
+    join: (body: {
+      roomId: string;
+      propertyId: string;
+      guestEmail: string;
+      guestName: string;
+      checkIn: string;
+      checkOut: string;
+    }) =>
+      apiFetch<{ id?: string; alreadyJoined?: boolean }>('/waitlist', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    listForProperty: (propertyId: string) =>
+      apiFetch<{ data: unknown[] }>(`/waitlist/property/${propertyId}`),
   },
 };

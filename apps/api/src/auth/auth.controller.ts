@@ -62,6 +62,12 @@ export class AuthController {
     };
   }
 
+  @Get('me/referral')
+  @UseGuards(FirebaseGuard)
+  async getReferralCode(@CurrentUser() user: AuthedUser) {
+    return this.auth.getOrCreateReferralCode(user.uid);
+  }
+
   @Get('admin/users')
   @UseGuards(FirebaseGuard, RolesGuard)
   async adminListUsers(@CurrentUser() user: AuthedUser) {

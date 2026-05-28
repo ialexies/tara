@@ -19,7 +19,13 @@ import { PriceRulesModule } from './price-rules/price-rules.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
 import { WishlistModule } from './wishlist/wishlist.module.js';
+import { PromoCodesModule } from './promo-codes/promo-codes.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module.js';
+import { GuestBlacklistModule } from './guest-blacklist/guest-blacklist.module.js';
+import { WaitlistModule } from './waitlist/waitlist.module.js';
+import { SearchAlertsModule } from './search-alerts/search-alerts.module.js';
+import { WebhooksModule } from './webhooks/webhooks.module.js';
+import { PropertyStaffModule } from './property-staff/property-staff.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -43,6 +49,12 @@ import { ScheduleModule } from '@nestjs/schedule';
     MessagesModule,
     WhatsAppModule,
     WishlistModule,
+    PromoCodesModule,
+    GuestBlacklistModule,
+    WaitlistModule,
+    SearchAlertsModule,
+    WebhooksModule,
+    PropertyStaffModule,
     ScheduleModule.forRoot(),
     SchedulerModule,
     AuthModule,

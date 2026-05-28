@@ -341,6 +341,13 @@ export function PropertyListings({
               Clear
             </button>
           )}
+          {hasFilters && (
+            <SaveAlertButton
+              cityFilter={cityFilter}
+              typeFilter={typeFilter}
+              amenities={amenities}
+            />
+          )}
         </div>
       </div>
 
@@ -575,5 +582,92 @@ function MapView({
         ))}
       </ul>
     </div>
+  );
+}
+
+function SaveAlertButton({
+  cityFilter,
+  typeFilter,
+  amenities,
+}: {
+  cityFilter: string;
+  typeFilter: string;
+  amenities: Set<string>;
+}): React.ReactElement {
+  const [email, setEmail] = useState('');
+  const [open, setOpen] = useState(false);
+  const [saved, setSaved] = useState(false);
+  const [saving, setSaving] = useState(false);
+
+  async function handleSave(e: React.FormEvent) {
+    e.preventDefault();
+    setSaving(true);
+    try {
+      await api.searchAlerts.save({
+        guestEmail: email,
+        city: cityFilter || undefined,
+        propertyType: typeFilter || undefined,
+        amenities: amenities.size > 0 ? Array.from(amenities) : undefined,
+      });
+      setSaved(true);
+      setOpen(false);
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (saved) {
+    return <span className="text-xs text-emerald-600 dark:text-emerald-400">✓ Alert saved</span>;
+  }
+
+  return (
+    <>
+      <button
+        onClick={() => setOpen(true)}
+        className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-500 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400"
+      >
+        Save alert
+      </button>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+          <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+          <form
+            onSubmit={handleSave}
+            className="relative w-full max-w-sm rounded-t-2xl bg-white p-6 sm:rounded-2xl dark:bg-zinc-900"
+          >
+            <h3 className="mb-2 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              Save search alert
+            </h3>
+            <p className="mb-4 text-sm text-zinc-500">
+              Get emailed when new matching properties go live.
+            </p>
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              required
+              placeholder="your@email.com"
+              className="mb-3 h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            />
+            <div className="flex gap-2">
+              <button
+                type="submit"
+                disabled={saving}
+                className="flex h-10 flex-1 items-center justify-center rounded-lg bg-zinc-900 text-sm font-semibold text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+              >
+                {saving ? '…' : 'Save alert'}
+              </button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                className="flex h-10 items-center rounded-lg border border-zinc-200 px-4 text-sm text-zinc-500 dark:border-zinc-700"
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
+    </>
   );
 }

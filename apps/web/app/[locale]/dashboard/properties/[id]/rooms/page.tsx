@@ -119,6 +119,18 @@ export default function RoomsPage(): React.ReactElement {
             Pricing
           </Link>
           <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/blacklist`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Blacklist
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/staff`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Staff
+          </Link>
+          <Link
             href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
             className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50"
           >
@@ -176,12 +188,17 @@ export default function RoomsPage(): React.ReactElement {
 
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Rooms</h2>
-        <button
-          onClick={() => setShowForm(true)}
-          className="flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          + Add room
-        </button>
+        <div className="flex items-center gap-2">
+          {rooms.length > 1 && (
+            <BulkPricingButton propertyId={propertyId} rooms={rooms} onDone={loadAll} />
+          )}
+          <button
+            onClick={() => setShowForm(true)}
+            className="flex h-10 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            + Add room
+          </button>
+        </div>
       </div>
 
       {fetchError && (
@@ -902,6 +919,111 @@ function StripeConnectBanner({
       >
         {loading ? 'Redirecting…' : 'Connect Stripe account →'}
       </button>
+    </div>
+  );
+}
+
+function BulkPricingButton({
+  propertyId,
+  rooms,
+  onDone,
+}: {
+  propertyId: string;
+  rooms: { id: string; name: string }[];
+  onDone: () => void;
+}): React.ReactElement {
+  const [open, setOpen] = useState(false);
+  const [rate, setRate] = useState('');
+  const [selected, setSelected] = useState<Set<string>>(new Set(rooms.map((r) => r.id)));
+  const [saving, setSaving] = useState(false);
+
+  function toggle(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
+
+  async function handleApply() {
+    const minor = Math.round(parseFloat(rate) * 100);
+    if (!minor || minor <= 0) return;
+    setSaving(true);
+    try {
+      await Promise.all(
+        [...selected].map((roomId) =>
+          api.rooms.update(propertyId, roomId, { pricePerNightMinor: minor }),
+        ),
+      );
+      setOpen(false);
+      setRate('');
+      onDone();
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  if (!open) {
+    return (
+      <button
+        onClick={() => setOpen(true)}
+        className="flex h-10 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+      >
+        Bulk price
+      </button>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center sm:items-center">
+      <div className="absolute inset-0 bg-black/40" onClick={() => setOpen(false)} />
+      <div className="relative w-full max-w-sm rounded-t-2xl bg-white p-6 shadow-xl sm:rounded-2xl dark:bg-zinc-900">
+        <h3 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+          Bulk price update
+        </h3>
+        <p className="mb-3 text-xs text-zinc-500">Select rooms to update:</p>
+        <div className="mb-4 space-y-2">
+          {rooms.map((r) => (
+            <label key={r.id} className="flex cursor-pointer items-center gap-3">
+              <input
+                type="checkbox"
+                checked={selected.has(r.id)}
+                onChange={() => toggle(r.id)}
+                className="h-4 w-4 rounded"
+              />
+              <span className="text-sm text-zinc-700 dark:text-zinc-300">{r.name}</span>
+            </label>
+          ))}
+        </div>
+        <div className="mb-4">
+          <label className="mb-1 block text-xs font-medium text-zinc-500">
+            New rate per night (₱)
+          </label>
+          <input
+            type="number"
+            value={rate}
+            onChange={(e) => setRate(e.target.value)}
+            min={1}
+            placeholder="e.g. 800"
+            className="h-10 w-full rounded-lg border border-zinc-200 bg-white px-3 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+          />
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={handleApply}
+            disabled={saving || selected.size === 0 || !rate}
+            className="flex h-10 flex-1 items-center justify-center rounded-lg bg-zinc-900 text-sm font-semibold text-white disabled:opacity-50 dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            {saving ? 'Saving…' : `Update ${selected.size} room${selected.size !== 1 ? 's' : ''}`}
+          </button>
+          <button
+            onClick={() => setOpen(false)}
+            className="flex h-10 items-center rounded-lg border border-zinc-200 px-4 text-sm text-zinc-500 dark:border-zinc-700"
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

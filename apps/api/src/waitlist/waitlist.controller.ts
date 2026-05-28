@@ -1,0 +1,37 @@
+import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { WaitlistService } from './waitlist.service.js';
+import { FirebaseGuard } from '../auth/firebase.guard.js';
+import { RolesGuard, Roles } from '../auth/roles.guard.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthedUser } from '../auth/firebase.guard.js';
+import { z } from 'zod';
+
+const JoinSchema = z.object({
+  roomId: z.string().uuid(),
+  propertyId: z.string().uuid(),
+  guestEmail: z.string().email(),
+  guestName: z.string().min(1).max(100),
+  checkIn: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  checkOut: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+});
+
+@Controller('waitlist')
+export class WaitlistController {
+  constructor(private readonly svc: WaitlistService) {}
+
+  /** Public — guest joins waitlist */
+  @Post()
+  @HttpCode(201)
+  async join(@Body() body: unknown) {
+    const d = JoinSchema.parse(body);
+    return this.svc.join(d.roomId, d.propertyId, d.guestEmail, d.guestName, d.checkIn, d.checkOut);
+  }
+
+  /** Owner — see waitlisted guests for their property */
+  @Get('property/:propertyId')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async listForProperty(@Param('propertyId') propertyId: string, @CurrentUser() _user: AuthedUser) {
+    return { data: await this.svc.listForProperty(propertyId) };
+  }
+}

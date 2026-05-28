@@ -85,12 +85,44 @@ export default function DashboardPage(): React.ReactElement {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">My Properties</h1>
-        <Link
-          href={`/${locale}/dashboard/properties/new`}
-          className="flex h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-        >
-          + Add property
-        </Link>
+        <div className="flex items-center gap-2">
+          <Link
+            href={`/${locale}/dashboard/calendar`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Calendar
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/compare`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Compare
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/refer`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Refer
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/webhooks`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Webhooks
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/promo-codes`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Promo codes
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/properties/new`}
+            className="flex h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+          >
+            + Add property
+          </Link>
+        </div>
       </div>
 
       {loading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}

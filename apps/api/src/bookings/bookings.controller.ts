@@ -135,6 +135,15 @@ export class BookingsController {
     return this.svc.checkOut(id, user);
   }
 
+  /** Owner — mark a booking's ID as verified. */
+  @Post('bookings/:id/verify-id')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async verifyId(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
+    return this.svc.markIdVerified(id, user);
+  }
+
   /** Guest — cancel their own booking (verified by email). */
   @Post('bookings/:id/cancel-guest')
   @HttpCode(200)

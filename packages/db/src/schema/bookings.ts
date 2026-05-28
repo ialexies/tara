@@ -1,5 +1,15 @@
 import { sql } from 'drizzle-orm';
-import { date, index, integer, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import {
+  boolean,
+  date,
+  index,
+  integer,
+  pgEnum,
+  pgTable,
+  text,
+  timestamp,
+  uuid,
+} from 'drizzle-orm/pg-core';
 import { properties } from './properties.js';
 import { rooms } from './rooms.js';
 
@@ -56,7 +66,11 @@ export const bookings = pgTable(
     currency: text('currency').notNull().default('PHP'),
 
     stripeSessionId: text('stripe_session_id').unique(),
+    promoCodeId: uuid('promo_code_id'),
+    discountMinor: integer('discount_minor').notNull().default(0),
     ownerNotes: text('owner_notes'),
+    idVerified: boolean('id_verified').notNull().default(false),
+    idVerifiedAt: timestamp('id_verified_at', { withTimezone: true }),
 
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
