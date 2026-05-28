@@ -344,6 +344,13 @@ export class BookingsService {
         ]);
 
         return result;
+      })
+      .catch((err: unknown) => {
+        // Postgres unique violation on booking_items_unit_night_uidx — race condition
+        if (err instanceof Error && 'code' in err && (err as { code: string }).code === '23505') {
+          throw new ConflictException('No availability for the selected dates');
+        }
+        throw err;
       });
   }
 
