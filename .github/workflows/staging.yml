@@ -90,13 +90,19 @@ jobs:
 
       - name: Redeploy staging stack
         run: |
-          # Runner is the home server — images are already built locally.
-          # Env vars are read from the server's .env file (source of truth for all secrets).
+          # Runner runs inside a Docker container — it can't read host paths directly.
+          # Use the same volume-mount trick as "Build Web image" to copy the env file.
+          docker run --rm \
+            -v /home/ialexies/stacks/tara-staging:/env:ro \
+            alpine cat /env/.env > /tmp/staging.env
+
           docker compose \
-            --env-file /home/ialexies/stacks/tara-staging/.env \
+            --env-file /tmp/staging.env \
             -f infra/portainer/stacks/tara-staging.yml \
             -p tara-staging \
             up -d --no-deps --force-recreate api web
+
+          rm -f /tmp/staging.env
 
       - name: Smoke test
         run: |
