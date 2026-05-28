@@ -22,6 +22,53 @@
     "properties": "{count, plural, one {# property} other {# properties}}",
     "page": "page {page} of {total}"
   },
+  "auth": {
+    "login": {
+      "title": "Welcome back",
+      "subtitle": "Sign in to your Tara account",
+      "withGoogle": "Continue with Google",
+      "or": "or",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Forgot password?",
+      "submit": "Sign in",
+      "submitting": "Signing in…",
+      "noAccount": "No account?",
+      "createOne": "Create one",
+      "resetSent": "Password reset email sent to {email}. Check your inbox.",
+      "errors": {
+        "invalidCredentials": "Invalid email or password.",
+        "tooManyRequests": "Too many attempts. Try again in a few minutes.",
+        "cancelled": "Sign-in cancelled.",
+        "forgotPasswordPrompt": "Enter your email above first, then click Forgot password.",
+        "signInFailed": "Sign-in failed",
+        "googleFailed": "Google sign-in failed",
+        "resetFailed": "Could not send reset email"
+      }
+    },
+    "register": {
+      "title": "Join Tara",
+      "subtitle": "Create your free account",
+      "withGoogle": "Continue with Google",
+      "or": "or",
+      "fullName": "Full name",
+      "email": "Email",
+      "password": "Password (min 6 characters)",
+      "roleLabel": "I want to",
+      "guestRole": "Book hostels",
+      "ownerRole": "List a property",
+      "submit": "Create account",
+      "submitting": "Creating…",
+      "hasAccount": "Already have an account?",
+      "signIn": "Sign in",
+      "errors": {
+        "alreadyRegistered": "Email already registered.",
+        "weakPassword": "Password must be at least 6 characters.",
+        "failed": "Could not create account",
+        "googleFailed": "Google sign-in failed"
+      }
+    }
+  },
   "booking": {
     "checkAvailability": "Check availability",
     "checkIn": "Check-in",
@@ -40,11 +87,50 @@
     "payWithCard": "Pay with card",
     "nights": "{count, plural, one {# night} other {# nights}}"
   },
+  "bookings": {
+    "title": "My Bookings",
+    "empty": "No bookings yet.",
+    "browseProperties": "Browse properties",
+    "status": {
+      "stripe_pending": "Payment pending",
+      "manual_pending": "Awaiting payment",
+      "awaiting_verification": "Verifying",
+      "confirmed": "Confirmed",
+      "checked_in": "Checked in",
+      "checked_out": "Completed",
+      "cancelled": "Cancelled",
+      "refunded": "Refunded",
+      "disputed": "Disputed"
+    },
+    "detail": {
+      "property": "Property",
+      "room": "Room",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "nights": "Nights",
+      "total": "Total",
+      "paymentMethod": "Payment",
+      "referenceCode": "Reference",
+      "status": "Status",
+      "specialRequests": "Special requests",
+      "cancelBooking": "Cancel booking",
+      "browseMore": "Browse more properties",
+      "whatHappensNext": "What happens next?",
+      "step1Review": "We review your booking",
+      "step2Confirm": "Owner confirms and sends payment details",
+      "step3Pay": "You pay and get your confirmation"
+    }
+  },
   "property": {
     "location": "Location",
     "openInMaps": "Open in Maps ↗",
     "reviews": "Reviews ({count})",
-    "noReviews": "No reviews yet"
+    "noReviews": "No reviews yet",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "houseRules": "House rules",
+    "amenities": "Amenities",
+    "about": "About"
   },
   "dashboard": {
     "properties": "My Properties",
@@ -55,10 +141,11 @@
     "bookings": "Bookings",
     "blockedDates": "Blocked dates",
     "pricing": "Pricing",
-    "publish": "Publish",
+    "publish": "Submit for review",
     "unpublish": "Unpublish",
     "live": "Live — visible to guests",
-    "draft": "Draft — not visible to guests"
+    "draft": "Draft — not visible to guests",
+    "pendingReview": "Under review — our team will approve shortly"
   },
   "common": {
     "loading": "Loading…",
@@ -69,6 +156,7 @@
     "delete": "Delete",
     "edit": "Edit",
     "active": "active",
-    "inactive": "inactive"
+    "inactive": "inactive",
+    "tara": "Tara"
   }
 }

@@ -20,6 +20,7 @@ import { eq, and, isNull, inArray, notExists, gte, lte } from 'drizzle-orm';
 import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
+import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
 import { StripeService } from '../stripe/stripe.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PriceRulesService } from '../price-rules/price-rules.service.js';
@@ -49,6 +50,7 @@ export class BookingsService {
 
   constructor(
     private readonly emailService: EmailService,
+    private readonly whatsapp: WhatsAppService,
     private readonly stripeService: StripeService,
     private readonly auditService: AuditService,
     private readonly priceRulesService: PriceRulesService,
@@ -179,6 +181,9 @@ export class BookingsService {
         manualPaymentMethods: properties.manualPaymentMethods,
         slug: properties.slug,
         name: properties.name,
+        ownerId: properties.ownerId,
+        stripeConnectAccountId: properties.stripeConnectAccountId,
+        stripeConnectEnabled: properties.stripeConnectEnabled,
       })
       .from(properties)
       .where(
@@ -335,6 +340,9 @@ export class BookingsService {
               roomName: rm?.name ?? '',
               nights: nights.length,
               totalMinor: result.totalMinor,
+              connectAccountId: property.stripeConnectEnabled
+                ? (property.stripeConnectAccountId ?? null)
+                : null,
             });
             await db
               .update(bookings)
@@ -383,8 +391,12 @@ export class BookingsService {
           paymentInstructions: result.paymentInstructions as string | null | undefined,
         };
 
+        const guestPhone = (result as { guestPhone?: string | null }).guestPhone ?? '';
         await Promise.all([
           this.emailService.sendBookingReceived(ctx),
+          guestPhone
+            ? this.whatsapp.sendBookingReceived({ ...ctx, guestPhone })
+            : Promise.resolve(),
           prop?.ownerId
             ? getFirebaseAdmin()
                 .auth()
@@ -658,6 +670,7 @@ export class BookingsService {
       id: string;
       guestName: string;
       guestEmail: string;
+      guestPhone?: string | null;
       referenceCode: string;
       propertyId: string;
       roomId: string;
@@ -696,8 +709,22 @@ export class BookingsService {
         bookingUrl: `${process.env['WEB_URL'] ?? 'http://localhost:3000'}/en/bookings/${booking.id}`,
       };
 
-      if (status === 'confirmed') await this.emailService.sendBookingConfirmed(ctx);
-      else await this.emailService.sendBookingCancelled(ctx);
+      const phone = booking.guestPhone ?? '';
+      if (status === 'confirmed') {
+        await Promise.all([
+          this.emailService.sendBookingConfirmed(ctx),
+          phone
+            ? this.whatsapp.sendBookingConfirmed({ ...ctx, guestPhone: phone })
+            : Promise.resolve(),
+        ]);
+      } else {
+        await Promise.all([
+          this.emailService.sendBookingCancelled(ctx),
+          phone
+            ? this.whatsapp.sendBookingCancelled({ ...ctx, guestPhone: phone })
+            : Promise.resolve(),
+        ]);
+      }
     } catch (err) {
       this.logger.error({
         event: 'email.status_send_failed',

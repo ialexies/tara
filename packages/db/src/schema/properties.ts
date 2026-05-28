@@ -102,6 +102,10 @@ export const properties = pgTable(
     checkOutTime: text('check_out_time'), // e.g. "12:00"
     houseRules: text('house_rules'),
 
+    // Stripe Connect — owner's connected account for direct payouts
+    stripeConnectAccountId: text('stripe_connect_account_id'),
+    stripeConnectEnabled: boolean('stripe_connect_enabled').notNull().default(false),
+
     // Mock data flag — see docs/business/mock-data.md
     isMock: boolean('is_mock').notNull().default(false),
   },

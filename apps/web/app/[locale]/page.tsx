@@ -1,9 +1,61 @@
+import type { Metadata } from 'next';
 import { setRequestLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { SignOutButton } from './sign-out-button';
 import { DashboardLink } from './dashboard-link';
 import { PropertyListings, type Property } from './property-listings';
+
+export async function generateMetadata({
+  params,
+  searchParams,
+}: {
+  params: Promise<{ locale: string }>;
+  searchParams: Promise<Record<string, string>>;
+}): Promise<Metadata> {
+  const { city, type } = await searchParams;
+  const base = 'Tara — Hostels in the Philippines';
+
+  if (city && type) {
+    const label = type.charAt(0).toUpperCase() + type.slice(1) + 's';
+    return {
+      title: `${label} in ${city} | Tara`,
+      description: `Book ${type}s in ${city}, Philippines. Find available rooms, dorms, and beds on Tara.`,
+      openGraph: {
+        title: `${label} in ${city}`,
+        description: `Book ${type}s in ${city}, Philippines.`,
+      },
+    };
+  }
+  if (city) {
+    return {
+      title: `Hostels in ${city} | Tara`,
+      description: `Find and book hostels, guesthouses, and rooms in ${city}, Philippines on Tara.`,
+      openGraph: {
+        title: `Hostels in ${city}`,
+        description: `Book accommodation in ${city}, Philippines.`,
+      },
+    };
+  }
+  if (type) {
+    const label = type.charAt(0).toUpperCase() + type.slice(1) + 's';
+    return {
+      title: `${label} in the Philippines | Tara`,
+      description: `Browse ${type}s across the Philippines. Book beds, dorms, and private rooms on Tara.`,
+      openGraph: { title: label + ' in the Philippines', description: `Browse ${type}s on Tara.` },
+    };
+  }
+  return {
+    title: base,
+    description:
+      'Tara, na! Book beds, dorms, and private rooms at handpicked hostels across the Philippines.',
+    openGraph: {
+      title: base,
+      description: 'Book hostels across the Philippines.',
+      url: 'https://tara-stays.com/en',
+    },
+  };
+}
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 

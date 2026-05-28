@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleInit, ServiceUnavailableException } from '@nestjs/common';
 import Stripe from 'stripe';
 import { db, bookings, properties, rooms } from '@tara/db';
+// properties is used for Stripe Connect account lookup/creation
 import { eq, and } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -36,6 +37,7 @@ export class StripeService implements OnModuleInit {
     roomName: string;
     nights: number;
     totalMinor: number;
+    connectAccountId?: string | null;
   }): Promise<{ url: string; sessionId: string }> {
     if (!this.client) throw new ServiceUnavailableException('Stripe is not configured');
 
@@ -65,11 +67,98 @@ export class StripeService implements OnModuleInit {
         bookingId: params.bookingId,
         referenceCode: params.referenceCode,
       },
+      // Route payment to the property owner's connected account
+      // Platform keeps STRIPE_PLATFORM_FEE_PERCENT % (default 5%)
+      ...(params.connectAccountId
+        ? {
+            payment_intent_data: {
+              application_fee_amount: Math.round(
+                params.totalMinor *
+                  (parseFloat(process.env['STRIPE_PLATFORM_FEE_PERCENT'] ?? '5') / 100),
+              ),
+              transfer_data: { destination: params.connectAccountId },
+            },
+          }
+        : {}),
     });
 
     if (!session.url) throw new ServiceUnavailableException('Stripe did not return a checkout URL');
 
     return { url: session.url, sessionId: session.id };
+  }
+
+  /** Start Stripe Connect onboarding for a property owner. Returns a one-time onboarding URL. */
+  async createConnectOnboardingLink(params: {
+    propertyId: string;
+    ownerId: string;
+    returnUrl: string;
+    refreshUrl: string;
+  }): Promise<{ url: string; accountId: string }> {
+    if (!this.client) throw new ServiceUnavailableException('Stripe is not configured');
+
+    // Look up or create the connected account
+    const [prop] = await db
+      .select({ stripeConnectAccountId: properties.stripeConnectAccountId })
+      .from(properties)
+      .where(eq(properties.id, params.propertyId))
+      .limit(1);
+
+    let accountId = prop?.stripeConnectAccountId;
+
+    if (!accountId) {
+      const account = await this.client.accounts.create({
+        type: 'express',
+        country: 'PH',
+        capabilities: { transfers: { requested: true } },
+        metadata: { propertyId: params.propertyId, ownerId: params.ownerId },
+      });
+      accountId = account.id;
+
+      await db
+        .update(properties)
+        .set({ stripeConnectAccountId: accountId, updatedAt: new Date() })
+        .where(eq(properties.id, params.propertyId));
+    }
+
+    const link = await this.client.accountLinks.create({
+      account: accountId,
+      refresh_url: params.refreshUrl,
+      return_url: params.returnUrl,
+      type: 'account_onboarding',
+    });
+
+    this.logger.log({
+      event: 'stripe.connect.onboarding_link_created',
+      propertyId: params.propertyId,
+      accountId,
+    });
+    return { url: link.url, accountId };
+  }
+
+  /** Mark Connect account as enabled after successful onboarding return. */
+  async finalizeConnectOnboarding(propertyId: string): Promise<void> {
+    const [prop] = await db
+      .select({ stripeConnectAccountId: properties.stripeConnectAccountId })
+      .from(properties)
+      .where(eq(properties.id, propertyId))
+      .limit(1);
+
+    if (!prop?.stripeConnectAccountId || !this.client) return;
+
+    const account = await this.client.accounts.retrieve(prop.stripeConnectAccountId);
+    const enabled = account.charges_enabled && account.payouts_enabled;
+
+    await db
+      .update(properties)
+      .set({ stripeConnectEnabled: enabled, updatedAt: new Date() })
+      .where(eq(properties.id, propertyId));
+
+    this.logger.log({
+      event: 'stripe.connect.onboarding_finalized',
+      propertyId,
+      accountId: prop.stripeConnectAccountId,
+      enabled,
+    });
   }
 
   async handleWebhookEvent(rawBody: Buffer | string, signature: string) {

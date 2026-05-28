@@ -18,14 +18,37 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: 'Tara — Hostels in the Philippines',
+  title: {
+    default: 'Tara — Hostels in the Philippines',
+    template: '%s | Tara',
+  },
   description:
-    'Tara, na! A booking marketplace for Philippine hostels and tours. Launching in Zambales.',
+    'Tara, na! Book beds, dorms, and private rooms at handpicked hostels across the Philippines.',
   manifest: '/manifest.json',
+  icons: {
+    icon: [
+      { url: '/icons/icon-32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'default',
     title: 'Tara',
+  },
+  openGraph: {
+    siteName: 'Tara',
+    type: 'website',
+    locale: 'en_PH',
+    images: [{ url: '/icons/icon-512.png', width: 512, height: 512, alt: 'Tara' }],
+  },
+  twitter: {
+    card: 'summary',
+    title: 'Tara — Hostels in the Philippines',
+    description:
+      'Book beds, dorms, and private rooms at handpicked hostels across the Philippines.',
+    images: ['/icons/icon-512.png'],
   },
 };
 

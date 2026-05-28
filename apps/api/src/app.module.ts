@@ -16,6 +16,7 @@ import { AuditModule } from './audit/audit.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { PriceRulesModule } from './price-rules/price-rules.module.js';
 import { MessagesModule } from './messages/messages.module.js';
+import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -38,6 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     ReviewsModule,
     PriceRulesModule,
     MessagesModule,
+    WhatsAppModule,
     ScheduleModule.forRoot(),
     SchedulerModule,
     AuthModule,

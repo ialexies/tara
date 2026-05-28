@@ -22,6 +22,53 @@
     "properties": "{count, plural, one {# property} other {# properties}}",
     "page": "pahina {page} ng {total}"
   },
+  "auth": {
+    "login": {
+      "title": "Maligayang pagbabalik",
+      "subtitle": "Mag-sign in sa iyong Tara account",
+      "withGoogle": "Magpatuloy gamit ang Google",
+      "or": "o",
+      "email": "Email",
+      "password": "Password",
+      "forgotPassword": "Nakalimutan ang password?",
+      "submit": "Mag-sign in",
+      "submitting": "Nag-sign in…",
+      "noAccount": "Wala pang account?",
+      "createOne": "Gumawa ng isa",
+      "resetSent": "Napadala ang email para sa pag-reset ng password sa {email}. Tingnan ang iyong inbox.",
+      "errors": {
+        "invalidCredentials": "Mali ang email o password.",
+        "tooManyRequests": "Masyadong maraming pagtatangka. Subukan muli sa ilang minuto.",
+        "cancelled": "Nakansela ang pag-sign in.",
+        "forgotPasswordPrompt": "Ilagay muna ang iyong email sa itaas, pagkatapos ay i-click ang Nakalimutan ang password.",
+        "signInFailed": "Nabigo ang pag-sign in",
+        "googleFailed": "Nabigo ang pag-sign in gamit ang Google",
+        "resetFailed": "Hindi mapadala ang reset email"
+      }
+    },
+    "register": {
+      "title": "Sumali sa Tara",
+      "subtitle": "Gumawa ng libreng account",
+      "withGoogle": "Magpatuloy gamit ang Google",
+      "or": "o",
+      "fullName": "Buong pangalan",
+      "email": "Email",
+      "password": "Password (min 6 na karakter)",
+      "roleLabel": "Gusto kong",
+      "guestRole": "Mag-book ng hostel",
+      "ownerRole": "Mag-list ng property",
+      "submit": "Gumawa ng account",
+      "submitting": "Ginagawa…",
+      "hasAccount": "Mayroon nang account?",
+      "signIn": "Mag-sign in",
+      "errors": {
+        "alreadyRegistered": "Ang email ay nakarehistrong na.",
+        "weakPassword": "Ang password ay dapat may hindi bababa sa 6 na karakter.",
+        "failed": "Hindi malikha ang account",
+        "googleFailed": "Nabigo ang pag-sign in gamit ang Google"
+      }
+    }
+  },
   "booking": {
     "checkAvailability": "Tingnan ang availability",
     "checkIn": "Check-in",
@@ -40,11 +87,50 @@
     "payWithCard": "Magbayad gamit ang card",
     "nights": "{count, plural, one {# gabi} other {# gabi}}"
   },
+  "bookings": {
+    "title": "Aking Mga Booking",
+    "empty": "Wala pang mga booking.",
+    "browseProperties": "Mag-browse ng mga property",
+    "status": {
+      "stripe_pending": "Naghihintay ng bayad",
+      "manual_pending": "Naghihintay ng bayad",
+      "awaiting_verification": "Bine-verify",
+      "confirmed": "Nakumpirma",
+      "checked_in": "Naka-check in",
+      "checked_out": "Natapos na",
+      "cancelled": "Nakansela",
+      "refunded": "Na-refund",
+      "disputed": "May dispute"
+    },
+    "detail": {
+      "property": "Property",
+      "room": "Kwarto",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out",
+      "nights": "Mga gabi",
+      "total": "Kabuuan",
+      "paymentMethod": "Paraan ng bayad",
+      "referenceCode": "Reference",
+      "status": "Status",
+      "specialRequests": "Espesyal na kahilingan",
+      "cancelBooking": "Kanselahin ang booking",
+      "browseMore": "Mag-browse ng mga property",
+      "whatHappensNext": "Ano ang susunod?",
+      "step1Review": "Sini-review namin ang iyong booking",
+      "step2Confirm": "Kinukumpirma ng may-ari at nagpapadala ng detalye ng pagbabayad",
+      "step3Pay": "Magbabayad ka at makakatanggap ng kumpirmasyon"
+    }
+  },
   "property": {
     "location": "Lokasyon",
     "openInMaps": "Buksan sa Maps ↗",
     "reviews": "Mga Review ({count})",
-    "noReviews": "Wala pang mga review"
+    "noReviews": "Wala pang mga review",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "houseRules": "Mga patakaran ng bahay",
+    "amenities": "Mga pasilidad",
+    "about": "Tungkol dito"
   },
   "dashboard": {
     "properties": "Aking mga Property",
@@ -55,10 +141,11 @@
     "bookings": "Mga Booking",
     "blockedDates": "Mga Naharang na Petsa",
     "pricing": "Pagpepresyo",
-    "publish": "I-publish",
-    "unpublish": "Alisin sa objek",
+    "publish": "Isumite para sa pagsusuri",
+    "unpublish": "I-unpublish",
     "live": "Live — makikita ng mga bisita",
-    "draft": "Draft — hindi makikita ng mga bisita"
+    "draft": "Draft — hindi makikita ng mga bisita",
+    "pendingReview": "Nasa pagsusuri — aabisuhan ka kapag naaprubahan"
   },
   "common": {
     "loading": "Naglo-load…",
@@ -69,6 +156,7 @@
     "delete": "Tanggalin",
     "edit": "I-edit",
     "active": "aktibo",
-    "inactive": "hindi aktibo"
+    "inactive": "hindi aktibo",
+    "tara": "Tara"
   }
 }

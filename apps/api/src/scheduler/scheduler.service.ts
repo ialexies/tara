@@ -3,12 +3,16 @@ import { Cron } from '@nestjs/schedule';
 import { db, bookings, properties, rooms } from '@tara/db';
 import { eq, and, inArray } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
+import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
 
 @Injectable()
 export class SchedulerService {
   private readonly logger = new Logger(SchedulerService.name);
 
-  constructor(private readonly email: EmailService) {}
+  constructor(
+    private readonly email: EmailService,
+    private readonly whatsapp: WhatsAppService,
+  ) {}
 
   /** Runs daily at 08:00 PHT (UTC+8 = 00:00 UTC). */
   @Cron('0 0 * * *', { timeZone: 'Asia/Manila' })
@@ -23,6 +27,7 @@ export class SchedulerService {
         referenceCode: bookings.referenceCode,
         guestName: bookings.guestName,
         guestEmail: bookings.guestEmail,
+        guestPhone: bookings.guestPhone,
         checkIn: bookings.checkIn,
         checkOut: bookings.checkOut,
         nights: bookings.nights,
@@ -76,8 +81,11 @@ export class SchedulerService {
         bookingUrl: `${webUrl}/en/bookings/${row.bookingId}`,
       };
 
-      // Guest reminder
+      // Guest reminder — email + WhatsApp if phone on file
       void this.email.sendBookingReminder(ctx, row.guestEmail, false);
+      if (row.guestPhone) {
+        void this.whatsapp.sendBookingReminder({ ...ctx, guestPhone: row.guestPhone });
+      }
 
       this.logger.log({
         event: 'scheduler.reminder.sent',

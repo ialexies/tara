@@ -202,6 +202,19 @@ export const api = {
     listReviews: () => apiFetch<{ data: unknown[] }>('/admin/reviews'),
     deleteReview: (id: string) => apiFetch<unknown>(`/admin/reviews/${id}`, { method: 'DELETE' }),
   },
+  stripeConnect: {
+    status: (propertyId: string) =>
+      apiFetch<{ connected: boolean; enabled: boolean; accountId: string | null }>(
+        `/stripe/connect/${propertyId}/status`,
+      ),
+    startOnboarding: (propertyId: string, returnUrl: string, refreshUrl: string) =>
+      apiFetch<{ url: string; accountId: string }>(`/stripe/connect/${propertyId}/onboard`, {
+        method: 'POST',
+        body: JSON.stringify({ returnUrl, refreshUrl }),
+      }),
+    finalizeOnboarding: (propertyId: string) =>
+      apiFetch<{ ok: boolean }>(`/stripe/connect/${propertyId}/finalize`, { method: 'POST' }),
+  },
   priceRules: {
     list: (propertyId: string) =>
       apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/price-rules`),

@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   onAuthStateChanged,
   sendPasswordResetEmail,
@@ -17,6 +18,7 @@ import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
 export default function LoginPage(): React.ReactElement {
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
+  const t = useTranslations('auth.login');
   const [error, setError] = useState<string | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -70,7 +72,7 @@ export default function LoginPage(): React.ReactElement {
       const cred = await signInWithEmailAndPassword(firebaseAuth, email, password);
       await finishSignIn(cred.user);
     } catch (err: unknown) {
-      setError(friendlyError((err as { code?: string }).code) ?? 'Sign-in failed');
+      setError(friendlyError((err as { code?: string }).code, t) ?? t('errors.signInFailed'));
     } finally {
       signingIn.current = false;
       setPending(false);
@@ -92,7 +94,7 @@ export default function LoginPage(): React.ReactElement {
       if (code !== 'auth/popup-closed-by-user' && code !== 'auth/cancelled-popup-request') {
         console.error('[google sign-in]', err);
       }
-      setError(friendlyError(code) ?? 'Google sign-in failed');
+      setError(friendlyError(code, t) ?? t('errors.googleFailed'));
       setPending(false);
     } finally {
       signingIn.current = false;
@@ -103,14 +105,14 @@ export default function LoginPage(): React.ReactElement {
     setError(null);
     setInfo(null);
     if (!email) {
-      setError('Enter your email above first, then click Forgot password.');
+      setError(t('errors.forgotPasswordPrompt'));
       return;
     }
     try {
       await sendPasswordResetEmail(firebaseAuth, email);
-      setInfo(`Password reset email sent to ${email}. Check your inbox.`);
+      setInfo(t('resetSent', { email }));
     } catch (err: unknown) {
-      setError(friendlyError((err as { code?: string }).code) ?? 'Could not send reset email');
+      setError(friendlyError((err as { code?: string }).code, t) ?? t('errors.resetFailed'));
     }
   }
 
@@ -118,11 +120,9 @@ export default function LoginPage(): React.ReactElement {
     <main className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-4 py-8 dark:bg-black">
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-3xl font-bold tracking-tight text-black dark:text-zinc-50">
-          Welcome back
+          {t('title')}
         </h1>
-        <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">
-          Sign in to your Tara account
-        </p>
+        <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">{t('subtitle')}</p>
 
         {hydrated && isFirebaseConfigured && (
           <>
@@ -133,12 +133,12 @@ export default function LoginPage(): React.ReactElement {
               className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
             >
               <GoogleIcon />
-              Continue with Google
+              {t('withGoogle')}
             </button>
 
             <div className="my-4 flex items-center gap-3">
               <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-              <span className="text-xs uppercase tracking-wider text-zinc-400">or</span>
+              <span className="text-xs uppercase tracking-wider text-zinc-400">{t('or')}</span>
               <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
             </div>
           </>
@@ -158,7 +158,7 @@ export default function LoginPage(): React.ReactElement {
 
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
+              {t('email')}
             </label>
             <input
               id="email"
@@ -179,14 +179,14 @@ export default function LoginPage(): React.ReactElement {
                 htmlFor="password"
                 className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
               >
-                Password
+                {t('password')}
               </label>
               <button
                 type="button"
                 onClick={handlePasswordReset}
                 className="text-xs font-medium text-zinc-600 underline-offset-4 hover:underline dark:text-zinc-400"
               >
-                Forgot password?
+                {t('forgotPassword')}
               </button>
             </div>
             <input
@@ -205,17 +205,17 @@ export default function LoginPage(): React.ReactElement {
             disabled={pending || !hydrated}
             className="mt-2 flex h-12 items-center justify-center rounded-lg bg-zinc-900 text-base font-semibold text-white transition-opacity disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
           >
-            {pending ? 'Signing in…' : 'Sign in'}
+            {pending ? t('submitting') : t('submit')}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          No account?{' '}
+          {t('noAccount')}{' '}
           <Link
             href={`/${locale}/register`}
             className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50"
           >
-            Create one
+            {t('createOne')}
           </Link>
         </p>
       </div>
@@ -223,17 +223,17 @@ export default function LoginPage(): React.ReactElement {
   );
 }
 
-function friendlyError(code: string | undefined): string | null {
+function friendlyError(code: string | undefined, t: (key: string) => string): string | null {
   switch (code) {
     case 'auth/invalid-credential':
     case 'auth/invalid-email':
     case 'auth/wrong-password':
     case 'auth/user-not-found':
-      return 'Invalid email or password.';
+      return t('errors.invalidCredentials');
     case 'auth/too-many-requests':
-      return 'Too many attempts. Try again in a few minutes.';
+      return t('errors.tooManyRequests');
     case 'auth/popup-closed-by-user':
-      return 'Sign-in cancelled.';
+      return t('errors.cancelled');
     default:
       return null;
   }

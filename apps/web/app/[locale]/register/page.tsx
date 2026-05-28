@@ -5,6 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
+import { useTranslations } from 'next-intl';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -18,6 +19,7 @@ import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
 export default function RegisterPage(): React.ReactElement {
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
+  const t = useTranslations('auth.register');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
   const [hydrated, setHydrated] = useState(false);
@@ -67,7 +69,7 @@ export default function RegisterPage(): React.ReactElement {
       await finishSignIn(cred.user, { fullName: fullName || undefined, role });
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
-      setError(friendlyError(code) ?? 'Could not create account');
+      setError(friendlyError(code, t) ?? t('errors.failed'));
     } finally {
       signingIn.current = false;
       setPending(false);
@@ -88,7 +90,7 @@ export default function RegisterPage(): React.ReactElement {
     } catch (err: unknown) {
       console.error('[google sign-in]', err);
       const code = (err as { code?: string }).code;
-      setError(friendlyError(code) ?? 'Google sign-in failed');
+      setError(friendlyError(code, t) ?? t('errors.googleFailed'));
       setPending(false);
     } finally {
       signingIn.current = false;
@@ -118,11 +120,9 @@ export default function RegisterPage(): React.ReactElement {
     <main className="flex min-h-dvh flex-col items-center justify-center bg-zinc-50 px-4 py-8 dark:bg-black">
       <div className="w-full max-w-sm">
         <h1 className="mb-1 text-3xl font-bold tracking-tight text-black dark:text-zinc-50">
-          Join Tara
+          {t('title')}
         </h1>
-        <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">
-          Find hostels or list your property
-        </p>
+        <p className="mb-8 text-sm text-zinc-500 dark:text-zinc-400">{t('subtitle')}</p>
 
         {hydrated && isFirebaseConfigured && (
           <>
@@ -133,12 +133,12 @@ export default function RegisterPage(): React.ReactElement {
               className="mb-4 flex h-12 w-full items-center justify-center gap-3 rounded-lg border border-zinc-300 bg-white text-base font-medium text-zinc-900 transition-opacity hover:bg-zinc-50 disabled:opacity-60 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:hover:bg-zinc-800"
             >
               <GoogleIcon />
-              Continue with Google
+              {t('withGoogle')}
             </button>
 
             <div className="my-4 flex items-center gap-3">
               <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
-              <span className="text-xs uppercase tracking-wider text-zinc-400">or</span>
+              <span className="text-xs uppercase tracking-wider text-zinc-400">{t('or')}</span>
               <div className="h-px flex-1 bg-zinc-200 dark:bg-zinc-800" />
             </div>
           </>
@@ -153,7 +153,7 @@ export default function RegisterPage(): React.ReactElement {
 
           <fieldset className="flex gap-3">
             <legend className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              I want to…
+              {t('roleLabel')}…
             </legend>
             <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 has-[:checked]:border-zinc-900 has-[:checked]:ring-2 has-[:checked]:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:has-[:checked]:border-zinc-100">
               <input
@@ -164,7 +164,7 @@ export default function RegisterPage(): React.ReactElement {
                 className="accent-zinc-900 dark:accent-zinc-50"
               />
               <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                Book hostels
+                {t('guestRole')}
               </span>
             </label>
             <label className="flex flex-1 cursor-pointer items-center gap-3 rounded-lg border border-zinc-300 bg-white px-4 py-3 has-[:checked]:border-zinc-900 has-[:checked]:ring-2 has-[:checked]:ring-zinc-900/10 dark:border-zinc-700 dark:bg-zinc-900 dark:has-[:checked]:border-zinc-100">
@@ -175,7 +175,7 @@ export default function RegisterPage(): React.ReactElement {
                 className="accent-zinc-900 dark:accent-zinc-50"
               />
               <span className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
-                List a property
+                {t('ownerRole')}
               </span>
             </label>
           </fieldset>
@@ -185,7 +185,7 @@ export default function RegisterPage(): React.ReactElement {
               htmlFor="fullName"
               className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Full name <span className="font-normal text-zinc-400">(optional)</span>
+              {t('fullName')} <span className="font-normal text-zinc-400">(optional)</span>
             </label>
             <input
               id="fullName"
@@ -199,7 +199,7 @@ export default function RegisterPage(): React.ReactElement {
 
           <div className="flex flex-col gap-1">
             <label htmlFor="email" className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Email
+              {t('email')}
             </label>
             <input
               id="email"
@@ -217,7 +217,7 @@ export default function RegisterPage(): React.ReactElement {
               htmlFor="password"
               className="text-sm font-medium text-zinc-700 dark:text-zinc-300"
             >
-              Password
+              {t('password')}
             </label>
             <input
               id="password"
@@ -236,17 +236,17 @@ export default function RegisterPage(): React.ReactElement {
             disabled={pending || !hydrated}
             className="mt-2 flex h-12 items-center justify-center rounded-lg bg-zinc-900 text-base font-semibold text-white transition-opacity disabled:opacity-60 dark:bg-zinc-50 dark:text-zinc-900"
           >
-            {pending ? 'Creating account…' : 'Create account'}
+            {pending ? t('submitting') : t('submit')}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-zinc-500 dark:text-zinc-400">
-          Already have an account?{' '}
+          {t('hasAccount')}{' '}
           <Link
             href={`/${locale}/login`}
             className="font-medium text-zinc-900 underline-offset-4 hover:underline dark:text-zinc-50"
           >
-            Sign in
+            {t('signIn')}
           </Link>
         </p>
       </div>
@@ -254,16 +254,12 @@ export default function RegisterPage(): React.ReactElement {
   );
 }
 
-function friendlyError(code: string | undefined): string | null {
+function friendlyError(code: string | undefined, t: (key: string) => string): string | null {
   switch (code) {
     case 'auth/email-already-in-use':
-      return 'That email is already registered. Try signing in instead.';
-    case 'auth/invalid-email':
-      return 'That email looks invalid.';
+      return t('errors.alreadyRegistered');
     case 'auth/weak-password':
-      return 'Password must be at least 6 characters.';
-    case 'auth/popup-closed-by-user':
-      return 'Sign-in cancelled.';
+      return t('errors.weakPassword');
     default:
       return null;
   }

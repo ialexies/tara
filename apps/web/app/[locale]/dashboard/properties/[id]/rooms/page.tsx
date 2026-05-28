@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useParams } from 'next/navigation';
+import { useParams, useSearchParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { ImageUploader } from '@/components/image-uploader';
 
@@ -28,6 +28,9 @@ type Property = {
   id: string;
   name: string;
   status: string;
+  paymentMode?: string;
+  stripeConnectEnabled?: boolean;
+  stripeConnectAccountId?: string | null;
 };
 
 const ROOM_TYPES = ['dorm', 'private'] as const;
@@ -36,6 +39,7 @@ const GENDER_POLICIES = ['mixed', 'female', 'male'] as const;
 
 export default function RoomsPage(): React.ReactElement {
   const { locale, id: propertyId } = useParams<{ locale: string; id: string }>();
+  const searchParams = useSearchParams();
 
   const [property, setProperty] = useState<Property | null>(null);
   const [rooms, setRooms] = useState<Room[]>([]);
@@ -48,6 +52,13 @@ export default function RoomsPage(): React.ReactElement {
 
   useEffect(() => {
     loadAll();
+    // Finalize Stripe Connect onboarding when owner returns from Stripe
+    if (searchParams.get('connect') === 'success') {
+      api.stripeConnect
+        .finalizeOnboarding(propertyId)
+        .then(() => loadAll())
+        .catch(() => {});
+    }
   }, [propertyId]);
 
   function loadAll() {
@@ -158,6 +169,10 @@ export default function RoomsPage(): React.ReactElement {
           )}
         </div>
       </div>
+
+      {property?.paymentMode === 'stripe' && (
+        <StripeConnectBanner propertyId={propertyId} enabled={property.stripeConnectEnabled} />
+      )}
 
       <div className="flex items-center justify-between gap-4">
         <h2 className="text-base font-semibold text-zinc-700 dark:text-zinc-300">Rooms</h2>
@@ -830,5 +845,63 @@ function Field({
       {children}
       {hint && <p className="text-xs text-zinc-400">{hint}</p>}
     </label>
+  );
+}
+
+function StripeConnectBanner({
+  propertyId,
+  enabled,
+}: {
+  propertyId: string;
+  enabled?: boolean;
+}): React.ReactElement {
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleConnect() {
+    setLoading(true);
+    setError(null);
+    try {
+      const origin = window.location.origin;
+      const returnUrl = `${origin}/en/dashboard/properties/${propertyId}/rooms?connect=success`;
+      const refreshUrl = `${origin}/en/dashboard/properties/${propertyId}/rooms?connect=refresh`;
+      const { url } = await api.stripeConnect.startOnboarding(propertyId, returnUrl, refreshUrl);
+      window.location.href = url;
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'Failed to start onboarding');
+      setLoading(false);
+    }
+  }
+
+  if (enabled) {
+    return (
+      <div className="flex items-center gap-3 rounded-xl border border-emerald-200 bg-emerald-50 px-4 py-3 dark:border-emerald-900 dark:bg-emerald-950">
+        <span className="text-emerald-600 dark:text-emerald-400">✓</span>
+        <div className="flex-1 text-sm text-emerald-700 dark:text-emerald-300">
+          <span className="font-semibold">Stripe payouts connected.</span> Card payments go directly
+          to your Stripe account.
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">
+      <p className="text-sm font-semibold text-amber-800 dark:text-amber-200">
+        Connect Stripe to receive card payments
+      </p>
+      <p className="mt-1 text-sm text-amber-700 dark:text-amber-300">
+        Your property accepts card payments but payouts go to the platform account until you connect
+        your own Stripe account. Takes ~5 minutes.
+      </p>
+      {error && <p className="mt-2 text-xs text-red-600 dark:text-red-400">{error}</p>}
+      <button
+        onClick={handleConnect}
+        disabled={loading}
+        className="mt-3 flex h-9 items-center rounded-lg bg-amber-700 px-4 text-sm font-semibold text-white hover:bg-amber-800 disabled:opacity-50"
+      >
+        {loading ? 'Redirecting…' : 'Connect Stripe account →'}
+      </button>
+    </div>
   );
 }
