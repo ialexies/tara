@@ -76,6 +76,40 @@ export class EmailService {
     });
   }
 
+  async sendBookingReminder(
+    ctx: BookingEmailContext,
+    recipientEmail: string,
+    isOwner: boolean,
+  ): Promise<void> {
+    await this.send({
+      to: recipientEmail,
+      subject: isOwner
+        ? `Guest arriving tomorrow at ${ctx.propertyName} – ${ctx.referenceCode}`
+        : `Your stay at ${ctx.propertyName} is tomorrow – ${ctx.referenceCode}`,
+      html: bookingReminderHtml(ctx, isOwner),
+    });
+  }
+
+  async sendPropertyApproved(
+    ownerEmail: string,
+    propertyName: string,
+    propertyUrl: string,
+  ): Promise<void> {
+    await this.send({
+      to: ownerEmail,
+      subject: `Your property "${propertyName}" is now live on Tara`,
+      html: propertyApprovedHtml(propertyName, propertyUrl),
+    });
+  }
+
+  async sendPropertyRejected(ownerEmail: string, propertyName: string): Promise<void> {
+    await this.send({
+      to: ownerEmail,
+      subject: `Update on your property "${propertyName}"`,
+      html: propertyRejectedHtml(propertyName),
+    });
+  }
+
   private async send(params: { to: string; subject: string; html: string }): Promise<void> {
     if (!this.resend) return;
     try {
@@ -179,6 +213,55 @@ function bookingCancelledHtml(ctx: BookingEmailContext) {
     <p style="color:#71717a;font-size:14px;margin:0 0 4px">Booking ${ctx.referenceCode} at ${ctx.propertyName} has been cancelled.</p>
     ${summaryTable(ctx)}
     <p style="font-size:14px;color:#71717a;margin-top:16px">If you have questions, please contact the property directly.</p>
+  `,
+  );
+}
+
+function bookingReminderHtml(ctx: BookingEmailContext, isOwner: boolean) {
+  return shell(
+    'Stay reminder',
+    isOwner
+      ? `
+    <span class="badge badge-confirmed">Tomorrow</span>
+    <h2 style="margin:16px 0 4px">Guest arriving tomorrow</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 4px">Guest <strong>${ctx.guestName}</strong> checks in tomorrow at ${ctx.propertyName}.</p>
+    ${summaryTable(ctx)}
+    <a href="${ctx.bookingUrl}" class="btn">View booking</a>
+  `
+      : `
+    <span class="badge badge-confirmed">Tomorrow</span>
+    <h2 style="margin:16px 0 4px">Your stay is tomorrow, ${ctx.guestName.split(' ')[0]}!</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 4px">You check in tomorrow at ${ctx.propertyName}. Have a great stay!</p>
+    ${summaryTable(ctx)}
+    <a href="${ctx.bookingUrl}" class="btn">View booking</a>
+  `,
+  );
+}
+
+function propertyApprovedHtml(propertyName: string, propertyUrl: string) {
+  return shell(
+    'Property approved',
+    `
+    <span class="badge badge-confirmed">Approved</span>
+    <h2 style="margin:16px 0 4px">Your property is now live!</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 4px">
+      <strong>${propertyName}</strong> has been reviewed and approved. Guests can now find and book your property on Tara.
+    </p>
+    <a href="${propertyUrl}" class="btn">View your listing</a>
+  `,
+  );
+}
+
+function propertyRejectedHtml(propertyName: string) {
+  return shell(
+    'Property update',
+    `
+    <span class="badge badge-cancelled">Needs changes</span>
+    <h2 style="margin:16px 0 4px">Your property needs some changes</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 4px">
+      Thank you for listing <strong>${propertyName}</strong> on Tara. Our team has reviewed your listing and it needs a few updates before it can go live.
+    </p>
+    <p style="font-size:14px;color:#71717a;margin-top:16px">Please log in to your dashboard to make the necessary changes, then resubmit for review.</p>
   `,
   );
 }

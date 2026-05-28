@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { CancelBookingButton } from './cancel-button';
 import { ReviewForm } from './review-form';
 import { DateChangeForm } from './date-change-form';
+import { MessageThread } from './message-thread';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -284,6 +285,10 @@ export default async function BookingConfirmationPage({
             <ReviewForm bookingId={booking.id} />
           </div>
         )}
+
+        <div className="mt-6">
+          <MessageThread bookingId={booking.id} guestName={booking.guestName} />
+        </div>
       </main>
     </div>
   );

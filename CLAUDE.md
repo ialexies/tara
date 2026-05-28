@@ -24,6 +24,38 @@ The majority of Tara's users are on mobile. Every UI decision must start from mo
 - `packages/db` — Drizzle ORM, postgres client
 - Shared types flow: schema → API → web (never web → API)
 
+### Key API modules
+
+| Module        | Responsibility                                                |
+| ------------- | ------------------------------------------------------------- |
+| `auth`        | Firebase token verification, user sync, custom claims         |
+| `properties`  | Listings, approval flow, revenue summary, server-side filters |
+| `rooms`       | Room + unit management                                        |
+| `bookings`    | Booking lifecycle, payments, check-in/out                     |
+| `messages`    | Guest↔owner thread per booking (`messages` table)             |
+| `reviews`     | Post-checkout guest reviews                                   |
+| `price-rules` | Seasonal / date-range pricing overrides                       |
+| `stripe`      | Checkout sessions, webhook, refunds                           |
+| `scheduler`   | Daily cron jobs (booking reminders via `@nestjs/schedule`)    |
+| `email`       | Transactional emails via Resend                               |
+| `uploads`     | R2 presigned upload URLs                                      |
+
+### Property status flow
+
+```
+draft → pending (owner submits) → active (admin approves)
+                                 → suspended (admin rejects)
+active → draft (owner unpublishes)
+```
+
+Owners see a **"Submit for review"** button; admin approves in `/admin`. Email is sent on approval or rejection.
+
+### Messaging
+
+- Table: `messages(id, booking_id, sender_uid, sender_name, body, is_read, created_at)`
+- Endpoints: `GET /bookings/:id/messages`, `POST /bookings/:id/messages`
+- UI: message thread on guest booking page + owner booking card. Polls every 15 s.
+
 ## Code style
 
 - No comments unless the WHY is non-obvious
@@ -46,6 +78,19 @@ Structured logging via `nestjs-pino`. Every log line is JSON in production and a
 - Staging: `staging.tara-stays.com` — auto-deploys on push to `main` via GitHub Actions self-hosted runner
 - Home server: `ialexies@192.168.0.253` — Portainer manages Docker stacks
 - Cloudflare Tunnel: routes `tara-stays.com` subdomains to home server
+
+## Docker API build — tsbuildinfo gotcha
+
+The API Dockerfile must delete `*.tsbuildinfo` files before running `nest build`. If these incremental cache files are copied from the local dev tree into the builder stage, TypeScript skips emission (thinks output is up to date) and the dist is never created, causing `Cannot find module '.../dist/main.js'` at container start.
+
+Fixed in `apps/api/Dockerfile`:
+
+```dockerfile
+RUN find . -name "*.tsbuildinfo" -delete
+RUN pnpm --filter @tara/api build
+```
+
+**If the API container fails to start with `Cannot find module dist/main.js`**: the tsbuildinfo fix is the first thing to check. Run `docker run --rm tara-dev-api:latest ls /app/apps/api/dist/` — if the directory is missing, rebuild with `--no-cache`.
 
 ## Image uploads (R2) — checklist every time
 
@@ -99,3 +144,9 @@ curl -si https://api-staging.tara-stays.com/properties/<id>/upload-url \
 | `R2_PUBLIC_URL`        | same — must be `https://`, not `http://` (CORS)          |
 
 `NEXT_PUBLIC_SENTRY_DSN` is a build arg for the web image — it must be in `.env` at project root and passed via `--build-arg` in the Dockerfile / `docker-compose.dev.yml`.
+
+## Scheduler (booking reminders)
+
+`SchedulerService` runs a daily cron at **08:00 PHT** (midnight UTC) via `@nestjs/schedule`. It queries bookings with `checkIn = tomorrow` and sends reminder emails to guests. No env var needed — fires automatically when the API starts.
+
+To verify the scheduler is registered: check API startup logs for `SchedulerService` initialization. To test a reminder manually in dev, call `schedulerService.sendBookingReminders()` directly (not exposed as an HTTP endpoint by design).

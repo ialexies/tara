@@ -15,6 +15,9 @@ import { StripeModule } from './stripe/stripe.module.js';
 import { AuditModule } from './audit/audit.module.js';
 import { ReviewsModule } from './reviews/reviews.module.js';
 import { PriceRulesModule } from './price-rules/price-rules.module.js';
+import { MessagesModule } from './messages/messages.module.js';
+import { SchedulerModule } from './scheduler/scheduler.module.js';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
@@ -34,6 +37,9 @@ import { PriceRulesModule } from './price-rules/price-rules.module.js';
     BookingsModule,
     ReviewsModule,
     PriceRulesModule,
+    MessagesModule,
+    ScheduleModule.forRoot(),
+    SchedulerModule,
     AuthModule,
   ],
   providers: [

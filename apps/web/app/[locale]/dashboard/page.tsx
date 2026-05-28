@@ -45,18 +45,31 @@ type Property = {
 const PROPERTY_TYPES = ['hostel', 'hotel', 'guesthouse', 'apartment', 'resort'] as const;
 const PAYMENT_MODES = ['manual', 'stripe'] as const;
 
+type RevenueRow = {
+  propertyId: string;
+  propertyName: string;
+  currency: string;
+  totalMinor: number;
+  bookingCount: number;
+};
+
 export default function DashboardPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
   const [properties, setProperties] = useState<Property[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [revenue, setRevenue] = useState<RevenueRow[]>([]);
 
   function load() {
     setLoading(true);
-    api.properties
-      .list()
-      .then((res) => setProperties(res.data as Property[]))
+    Promise.all([
+      api.properties.list().then((res) => setProperties(res.data as Property[])),
+      api.properties
+        .revenue()
+        .then((res) => setRevenue(res.data as RevenueRow[]))
+        .catch(() => {}),
+    ])
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }
@@ -83,6 +96,41 @@ export default function DashboardPage(): React.ReactElement {
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
           {error}
         </div>
+      )}
+
+      {!loading && revenue.length > 0 && (
+        <section>
+          <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-500">
+            Revenue (confirmed bookings)
+          </h2>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            {revenue.map((r) => (
+              <div
+                key={r.propertyId}
+                className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+              >
+                <p className="truncate text-sm font-medium text-zinc-500">{r.propertyName}</p>
+                <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  ₱{(r.totalMinor / 100).toLocaleString('en-PH')}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-400">
+                  {r.bookingCount} confirmed booking{r.bookingCount !== 1 ? 's' : ''}
+                </p>
+              </div>
+            ))}
+            {revenue.length > 1 && (
+              <div className="rounded-xl border border-zinc-100 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900/50">
+                <p className="text-sm font-medium text-zinc-400">Total</p>
+                <p className="mt-1 text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+                  ₱{(revenue.reduce((s, r) => s + r.totalMinor, 0) / 100).toLocaleString('en-PH')}
+                </p>
+                <p className="mt-0.5 text-xs text-zinc-400">
+                  {revenue.reduce((s, r) => s + r.bookingCount, 0)} total bookings
+                </p>
+              </div>
+            )}
+          </div>
+        </section>
       )}
 
       {!loading && !error && properties.length === 0 && (

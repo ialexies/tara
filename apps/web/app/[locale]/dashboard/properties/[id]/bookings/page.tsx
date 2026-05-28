@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
+import { MessageThread } from '@/app/[locale]/bookings/[id]/message-thread';
 
 type Booking = {
   id: string;
@@ -546,6 +547,10 @@ function BookingCard({
       {booking.status === 'confirmed' && (
         <ModificationRequests bookingId={booking.id} onResolved={onRefresh} />
       )}
+
+      <div className="mt-3">
+        <MessageThread bookingId={booking.id} guestName={booking.guestName} />
+      </div>
 
       {(canConfirm || canCancel || canCheckIn || canCheckOut) && (
         <div className="mt-3 flex gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">

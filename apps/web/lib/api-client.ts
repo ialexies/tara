@@ -64,6 +64,7 @@ export const api = {
       }),
     publish: (id: string) => apiFetch<unknown>(`/properties/${id}/publish`, { method: 'POST' }),
     unpublish: (id: string) => apiFetch<unknown>(`/properties/${id}/unpublish`, { method: 'POST' }),
+    revenue: () => apiFetch<{ data: unknown[] }>('/properties/revenue'),
     adminListAll: () => apiFetch<{ data: unknown[] }>('/properties/admin/all'),
     adminSetStatus: (id: string, status: string) =>
       apiFetch<unknown>(`/properties/admin/${id}/status`, {
@@ -183,6 +184,13 @@ export const api = {
       }),
     deleteOwnerBlock: (propertyId: string, date: string) =>
       apiFetch<unknown>(`/properties/${propertyId}/owner-blocks/${date}`, { method: 'DELETE' }),
+    listMessages: (bookingId: string) =>
+      apiFetch<{ data: unknown[] }>(`/bookings/${bookingId}/messages`),
+    sendMessage: (bookingId: string, body: string, senderName: string) =>
+      apiFetch<unknown>(`/bookings/${bookingId}/messages`, {
+        method: 'POST',
+        body: JSON.stringify({ body, senderName }),
+      }),
   },
   admin: {
     listUsers: () => apiFetch<{ data: unknown[] }>('/auth/admin/users'),

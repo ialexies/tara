@@ -83,6 +83,7 @@ export default function RoomsPage(): React.ReactElement {
   }
 
   const isActive = property?.status === 'active';
+  const isPending = property?.status === 'pending';
 
   return (
     <div className="space-y-6">
@@ -122,13 +123,17 @@ export default function RoomsPage(): React.ReactElement {
           </h1>
           {property && (
             <p className="mt-0.5 text-sm text-zinc-500">
-              {isActive ? 'Live — visible to guests' : 'Draft — not visible to guests'}
+              {isActive
+                ? 'Live — visible to guests'
+                : isPending
+                  ? 'Under review — our team will approve shortly'
+                  : 'Draft — not visible to guests'}
             </p>
           )}
         </div>
 
         <div className="flex shrink-0 flex-col items-end gap-2">
-          {property && (
+          {property && !isPending && (
             <button
               onClick={handlePublish}
               disabled={publishing}
@@ -138,8 +143,13 @@ export default function RoomsPage(): React.ReactElement {
                   : 'bg-emerald-600 text-white hover:bg-emerald-700'
               }`}
             >
-              {publishing ? '…' : isActive ? 'Unpublish' : 'Publish'}
+              {publishing ? '…' : isActive ? 'Unpublish' : 'Submit for review'}
             </button>
+          )}
+          {isPending && (
+            <span className="flex h-11 items-center rounded-lg bg-amber-100 px-4 text-sm font-medium text-amber-700 dark:bg-amber-900 dark:text-amber-300">
+              Pending review
+            </span>
           )}
           {publishError && (
             <p className="max-w-xs text-right text-xs text-red-600 dark:text-red-400">

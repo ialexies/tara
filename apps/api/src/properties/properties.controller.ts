@@ -31,13 +31,28 @@ export class PropertiesController {
     private readonly uploads: UploadsService,
   ) {}
 
-  /** Public — active properties for the guest listing page. Optionally filter by date availability. */
+  /** Public — active properties for the guest listing page. Supports date, amenity, and price filters. */
   @Get()
-  async list(@Query('checkIn') checkIn?: string, @Query('checkOut') checkOut?: string) {
+  async list(
+    @Query('checkIn') checkIn?: string,
+    @Query('checkOut') checkOut?: string,
+    @Query('amenities') amenities?: string,
+    @Query('minPrice') minPrice?: string,
+    @Query('maxPrice') maxPrice?: string,
+    @Query('city') city?: string,
+    @Query('propertyType') propertyType?: string,
+  ) {
+    const filters = {
+      amenities: amenities ? amenities.split(',').filter(Boolean) : undefined,
+      minPrice: minPrice ? parseInt(minPrice, 10) : undefined,
+      maxPrice: maxPrice ? parseInt(maxPrice, 10) : undefined,
+      city: city || undefined,
+      propertyType: propertyType || undefined,
+    };
     const items =
       checkIn && checkOut
-        ? await this.svc.listActiveWithAvailability(checkIn, checkOut)
-        : await this.svc.listActive();
+        ? await this.svc.listActiveWithAvailability(checkIn, checkOut, filters)
+        : await this.svc.listActive(filters);
     return { data: items, meta: { count: items.length } };
   }
 
@@ -48,6 +63,15 @@ export class PropertiesController {
   async listMine(@CurrentUser() user: AuthedUser) {
     const items = await this.svc.listByOwner(user);
     return { data: items, meta: { count: items.length } };
+  }
+
+  /** Owner — revenue summary across all owned properties. */
+  @Get('revenue')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async getRevenue(@CurrentUser() user: AuthedUser) {
+    const data = await this.svc.getRevenueSummary(user);
+    return { data };
   }
 
   /** Public — property detail by slug (active only). */

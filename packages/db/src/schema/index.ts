@@ -11,3 +11,4 @@ export * from './reviews.js';
 export * from './property-images.js';
 export * from './price-rules.js';
 export * from './booking-date-changes.js';
+export * from './messages.js';

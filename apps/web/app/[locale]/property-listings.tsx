@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
@@ -30,6 +30,16 @@ export type Property = {
 };
 
 const TYPES = ['hostel', 'hotel', 'guesthouse', 'apartment', 'resort'] as const;
+const AMENITY_OPTIONS = [
+  { key: 'wifi', label: 'WiFi' },
+  { key: 'parking', label: 'Parking' },
+  { key: 'pool', label: 'Pool' },
+  { key: 'aircon', label: 'AC' },
+  { key: 'restaurant', label: 'Restaurant' },
+  { key: 'gym', label: 'Gym' },
+] as const;
+
+const PAGE_SIZE = 12;
 
 export function PropertyListings({
   properties: initialProperties,
@@ -42,20 +52,84 @@ export function PropertyListings({
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
-  // Read initial state from URL params
   const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
   const [typeFilter, setTypeFilter] = useState(() => searchParams.get('type') ?? '');
   const [cityFilter, setCityFilter] = useState(() => searchParams.get('city') ?? '');
   const [maxPrice, setMaxPrice] = useState(() => searchParams.get('maxPrice') ?? '');
   const [checkIn, setCheckIn] = useState(() => searchParams.get('checkIn') ?? '');
   const [checkOut, setCheckOut] = useState(() => searchParams.get('checkOut') ?? '');
+  const [amenities, setAmenities] = useState<Set<string>>(() => {
+    const raw = searchParams.get('amenities') ?? '';
+    return raw ? new Set(raw.split(',')) : new Set();
+  });
   const [view, setView] = useState<'grid' | 'map'>(() =>
     searchParams.get('view') === 'map' ? 'map' : 'grid',
   );
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') ?? '1') || 1);
-  const PAGE_SIZE = 12;
 
-  // Sync filters to URL so links are shareable and back button works
+  const [serverProps, setServerProps] = useState<Property[] | null>(null);
+  const [loading, setLoading] = useState(false);
+  const fetchRef = useRef(0);
+
+  const fetchProperties = useCallback(
+    async (params: {
+      checkIn?: string;
+      checkOut?: string;
+      amenities?: Set<string>;
+      maxPrice?: string;
+      typeFilter?: string;
+      cityFilter?: string;
+    }) => {
+      const id = ++fetchRef.current;
+      setLoading(true);
+      try {
+        const qs = new URLSearchParams();
+        if (params.checkIn) qs.set('checkIn', params.checkIn);
+        if (params.checkOut) qs.set('checkOut', params.checkOut);
+        if (params.amenities && params.amenities.size > 0)
+          qs.set('amenities', [...params.amenities].join(','));
+        if (params.maxPrice) qs.set('maxPrice', String(parseInt(params.maxPrice) * 100));
+        if (params.typeFilter) qs.set('propertyType', params.typeFilter);
+        if (params.cityFilter) qs.set('city', params.cityFilter);
+        const res = await fetch(`${API_URL}/properties?${qs.toString()}`);
+        if (!res.ok) throw new Error();
+        const json = (await res.json()) as { data: Property[] };
+        if (fetchRef.current === id) setServerProps(json.data);
+      } catch {
+        if (fetchRef.current === id) setServerProps(null);
+      } finally {
+        if (fetchRef.current === id) setLoading(false);
+      }
+    },
+    [],
+  );
+
+  // Fetch whenever server-side filters change
+  const hasServerFilters =
+    !!(checkIn && checkOut && checkOut > checkIn) ||
+    amenities.size > 0 ||
+    !!maxPrice ||
+    !!typeFilter ||
+    !!cityFilter;
+
+  useEffect(() => {
+    if (hasServerFilters) {
+      void fetchProperties({ checkIn, checkOut, amenities, maxPrice, typeFilter, cityFilter });
+    } else {
+      setServerProps(null);
+    }
+  }, [
+    checkIn,
+    checkOut,
+    amenities,
+    maxPrice,
+    typeFilter,
+    cityFilter,
+    hasServerFilters,
+    fetchProperties,
+  ]);
+
+  // Sync filters to URL
   useEffect(() => {
     const params = new URLSearchParams();
     if (search) params.set('q', search);
@@ -64,71 +138,53 @@ export function PropertyListings({
     if (maxPrice) params.set('maxPrice', maxPrice);
     if (checkIn) params.set('checkIn', checkIn);
     if (checkOut) params.set('checkOut', checkOut);
+    if (amenities.size > 0) params.set('amenities', [...amenities].join(','));
     if (view === 'map') params.set('view', 'map');
     if (page > 1) params.set('page', String(page));
     const qs = params.toString();
     router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
-  }, [search, typeFilter, cityFilter, maxPrice, checkIn, checkOut, view, page, pathname, router]);
+  }, [
+    search,
+    typeFilter,
+    cityFilter,
+    maxPrice,
+    checkIn,
+    checkOut,
+    amenities,
+    view,
+    page,
+    pathname,
+    router,
+  ]);
 
-  const [dateFilteredProps, setDateFilteredProps] = useState<Property[] | null>(null);
-  const [dateLoading, setDateLoading] = useState(false);
+  const baseProps = serverProps ?? initialProperties;
 
-  const properties = dateFilteredProps ?? initialProperties;
-
-  const fetchByDates = useCallback(async (ci: string, co: string) => {
-    setDateLoading(true);
-    try {
-      const res = await fetch(`${API_URL}/properties?checkIn=${ci}&checkOut=${co}`);
-      if (!res.ok) throw new Error();
-      const json = (await res.json()) as { data: Property[] };
-      setDateFilteredProps(json.data);
-    } catch {
-      setDateFilteredProps(null);
-    } finally {
-      setDateLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (checkIn && checkOut && checkOut > checkIn) {
-      void fetchByDates(checkIn, checkOut);
-    } else {
-      setDateFilteredProps(null);
-    }
-  }, [checkIn, checkOut, fetchByDates]);
+  // Text search is still client-side (fast, no round-trip needed)
+  const filtered = useMemo(() => {
+    if (!search) return baseProps;
+    const q = search.toLowerCase();
+    return baseProps.filter(
+      (p) =>
+        p.name.toLowerCase().includes(q) ||
+        p.city.toLowerCase().includes(q) ||
+        p.region.toLowerCase().includes(q),
+    );
+  }, [baseProps, search]);
 
   const cities = useMemo(() => {
-    const s = new Set(properties.map((p) => p.city));
+    const s = new Set(initialProperties.map((p) => p.city));
     return Array.from(s).sort();
-  }, [properties]);
+  }, [initialProperties]);
 
-  const filtered = useMemo(() => {
-    const q = search.toLowerCase();
-    const max = maxPrice ? parseInt(maxPrice) * 100 : null;
-    return properties.filter((p) => {
-      if (
-        q &&
-        !p.name.toLowerCase().includes(q) &&
-        !p.city.toLowerCase().includes(q) &&
-        !p.region.toLowerCase().includes(q)
-      )
-        return false;
-      if (typeFilter && p.propertyType !== typeFilter) return false;
-      if (cityFilter && p.city !== cityFilter) return false;
-      if (max && p.priceFrom != null && p.priceFrom > max) return false;
-      return true;
-    });
-  }, [properties, search, typeFilter, maxPrice]);
-
-  const hasFilters = search || typeFilter || cityFilter || maxPrice || checkIn;
+  const hasFilters =
+    search || typeFilter || cityFilter || maxPrice || checkIn || amenities.size > 0;
 
   const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
   const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
 
-  // Reset to page 1 whenever filters change
   useEffect(() => {
     setPage(1);
-  }, [search, typeFilter, cityFilter, maxPrice]);
+  }, [search, typeFilter, cityFilter, maxPrice, amenities]);
 
   const [wishlist, setWishlist] = useState<Set<string>>(() => {
     if (typeof window === 'undefined') return new Set();
@@ -152,10 +208,28 @@ export function PropertyListings({
     });
   }
 
+  function toggleAmenity(key: string) {
+    setAmenities((prev) => {
+      const next = new Set(prev);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      return next;
+    });
+  }
+
+  function clearAll() {
+    setSearch('');
+    setTypeFilter('');
+    setCityFilter('');
+    setMaxPrice('');
+    setCheckIn('');
+    setCheckOut('');
+    setAmenities(new Set());
+  }
+
   return (
-    <div className="space-y-5">
-      {/* Filter bar */}
-      {/* Date availability row */}
+    <div className="space-y-4">
+      {/* Date row */}
       <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3 sm:flex-row sm:items-center dark:border-zinc-700 dark:bg-zinc-900">
         <div className="flex flex-1 items-center gap-2">
           <span className="text-xs font-medium text-zinc-500">Check-in</span>
@@ -181,14 +255,16 @@ export function PropertyListings({
             className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
           />
         </div>
-        {dateLoading && <span className="text-xs text-zinc-400">Checking…</span>}
-        {checkIn && checkOut && !dateLoading && dateFilteredProps !== null && (
+        {loading && <span className="text-xs text-zinc-400">Loading…</span>}
+        {!loading && serverProps !== null && checkIn && checkOut && (
           <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            {dateFilteredProps.length} available
+            {serverProps.length} available
           </span>
         )}
       </div>
-      <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+
+      {/* Search + type + city + price row */}
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
         <input
           type="search"
           value={search}
@@ -196,7 +272,7 @@ export function PropertyListings({
           placeholder="Search by name, city, region…"
           className="h-11 flex-1 rounded-xl border border-zinc-200 bg-white px-4 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-600"
         />
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <select
             value={typeFilter}
             onChange={(e) => setTypeFilter(e.target.value)}
@@ -238,20 +314,33 @@ export function PropertyListings({
           </div>
           {hasFilters && (
             <button
-              onClick={() => {
-                setSearch('');
-                setTypeFilter('');
-                setCityFilter('');
-                setMaxPrice('');
-                setCheckIn('');
-                setCheckOut('');
-              }}
+              onClick={clearAll}
               className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-500 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
             >
               Clear
             </button>
           )}
         </div>
+      </div>
+
+      {/* Amenity chips */}
+      <div className="flex flex-wrap gap-2">
+        {AMENITY_OPTIONS.map(({ key, label }) => {
+          const active = amenities.has(key);
+          return (
+            <button
+              key={key}
+              onClick={() => toggleAmenity(key)}
+              className={`flex h-9 items-center rounded-full border px-3 text-sm font-medium transition-colors ${
+                active
+                  ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900'
+                  : 'border-zinc-200 bg-white text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300'
+              }`}
+            >
+              {label}
+            </button>
+          );
+        })}
       </div>
 
       {filtered.length === 0 ? (
@@ -263,14 +352,7 @@ export function PropertyListings({
           </p>
           {hasFilters && (
             <button
-              onClick={() => {
-                setSearch('');
-                setTypeFilter('');
-                setCityFilter('');
-                setMaxPrice('');
-                setCheckIn('');
-                setCheckOut('');
-              }}
+              onClick={clearAll}
               className="text-sm text-zinc-700 underline dark:text-zinc-300"
             >
               Clear filters
@@ -301,10 +383,8 @@ export function PropertyListings({
             </div>
           </div>
 
-          {/* Map view */}
           {view === 'map' && <MapView properties={filtered} locale={locale} />}
 
-          {/* Grid view */}
           {view === 'grid' && (
             <>
               <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
@@ -417,7 +497,6 @@ function MapView({
     );
   }
 
-  // Compute bounding box
   const lats = mapped.map((p) => p.latitude!);
   const lngs = mapped.map((p) => p.longitude!);
   const minLat = Math.min(...lats);
@@ -427,8 +506,6 @@ function MapView({
   const padLat = Math.max((maxLat - minLat) * 0.3, 0.01);
   const padLng = Math.max((maxLng - minLng) * 0.3, 0.01);
   const bbox = `${minLng - padLng},${minLat - padLat},${maxLng + padLng},${maxLat + padLat}`;
-
-  // Build markers param (OpenStreetMap doesn't support multi-markers natively, use first property centroid)
   const centerLat = (minLat + maxLat) / 2;
   const centerLng = (minLng + maxLng) / 2;
   const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}`;

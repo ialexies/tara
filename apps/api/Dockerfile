@@ -10,6 +10,8 @@ RUN pnpm install --frozen-lockfile --filter @tara/api...
 RUN pnpm --filter @tara/schemas build
 RUN pnpm --filter @tara/db build
 RUN pnpm --filter @tara/auth build
+# Remove incremental cache files so tsc always emits fresh output
+RUN find . -name "*.tsbuildinfo" -delete
 RUN pnpm --filter @tara/api build
 
 FROM node:22-alpine AS runner

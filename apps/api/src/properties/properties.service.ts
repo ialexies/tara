@@ -14,10 +14,23 @@ import {
   bookings,
   propertyImages,
   ownerBlocks,
+  users,
 } from '@tara/db';
-import { eq, and, isNull, count, min, getTableColumns, asc, inArray, notExists } from 'drizzle-orm';
+import {
+  eq,
+  and,
+  isNull,
+  count,
+  sum,
+  min,
+  getTableColumns,
+  asc,
+  inArray,
+  notExists,
+} from 'drizzle-orm';
 import type { CreateProperty, UpdateProperty } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
+import { EmailService } from '../email/email.service.js';
 
 function slugify(text: string): string {
   return text
@@ -30,7 +43,15 @@ function slugify(text: string): string {
 export class PropertiesService {
   private readonly logger = new Logger(PropertiesService.name);
 
-  async listActive() {
+  constructor(private readonly email: EmailService) {}
+
+  async listActive(filters?: {
+    amenities?: string[];
+    minPrice?: number;
+    maxPrice?: number;
+    city?: string;
+    propertyType?: string;
+  }) {
     const priceFromSq = db
       .select({
         propertyId: rooms.propertyId,
@@ -41,16 +62,42 @@ export class PropertiesService {
       .groupBy(rooms.propertyId)
       .as('price_from');
 
-    return db
+    const rows = await db
       .select({ ...getTableColumns(properties), priceFrom: priceFromSq.priceFrom })
       .from(properties)
       .leftJoin(priceFromSq, eq(properties.id, priceFromSq.propertyId))
       .where(and(eq(properties.status, 'active'), isNull(properties.deletedAt)))
       .orderBy(properties.publishedAt)
-      .limit(100);
+      .limit(200);
+
+    if (!filters) return rows;
+
+    return rows.filter((p) => {
+      if (filters.city && !p.city.toLowerCase().includes(filters.city.toLowerCase())) return false;
+      if (filters.propertyType && p.propertyType !== filters.propertyType) return false;
+      if (filters.minPrice != null && p.priceFrom != null && p.priceFrom < filters.minPrice)
+        return false;
+      if (filters.maxPrice != null && p.priceFrom != null && p.priceFrom > filters.maxPrice)
+        return false;
+      if (filters.amenities && filters.amenities.length > 0) {
+        const a = (p.amenities ?? {}) as Record<string, boolean>;
+        if (!filters.amenities.every((k) => a[k] === true)) return false;
+      }
+      return true;
+    });
   }
 
-  async listActiveWithAvailability(checkIn: string, checkOut: string) {
+  async listActiveWithAvailability(
+    checkIn: string,
+    checkOut: string,
+    filters?: {
+      amenities?: string[];
+      minPrice?: number;
+      maxPrice?: number;
+      city?: string;
+      propertyType?: string;
+    },
+  ) {
     if (checkOut <= checkIn) return [];
 
     // Build the list of nights between checkIn and checkOut
@@ -64,7 +111,7 @@ export class PropertiesService {
     if (nights.length === 0) return [];
 
     // Get all active properties first
-    const allActive = await this.listActive();
+    const allActive = await this.listActive(filters);
     if (allActive.length === 0) return [];
 
     // For each property check if any unit is fully free for all nights
@@ -261,7 +308,7 @@ export class PropertiesService {
   async publish(id: string, user: AuthedUser) {
     const prop = await this.getOwnedById(id, user);
 
-    if (prop.status === 'active') return prop;
+    if (prop.status === 'active' || prop.status === 'pending') return prop;
 
     const [result] = await db
       .select({ roomCount: count() })
@@ -276,12 +323,12 @@ export class PropertiesService {
 
     const [updated] = await db
       .update(properties)
-      .set({ status: 'active', publishedAt: new Date() })
+      .set({ status: 'pending', updatedAt: new Date() })
       .where(eq(properties.id, id))
       .returning();
 
     this.logger.log({
-      event: 'property.published',
+      event: 'property.submitted_for_review',
       propertyId: id,
       ownerId: user.uid,
       tenantId: user.tenantId,
@@ -348,6 +395,44 @@ export class PropertiesService {
     await db.delete(propertyImages).where(eq(propertyImages.id, imageId));
   }
 
+  async getRevenueSummary(user: AuthedUser) {
+    const owned = await db
+      .select({ id: properties.id, name: properties.name, currency: properties.currency })
+      .from(properties)
+      .where(and(eq(properties.tenantId, user.tenantId), isNull(properties.deletedAt)));
+
+    if (owned.length === 0) return [];
+
+    const propertyIds = owned.map((p) => p.id);
+    const rows = await db
+      .select({
+        propertyId: bookings.propertyId,
+        total: sum(bookings.totalMinor).as('total'),
+        count: count().as('count'),
+      })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.propertyId, propertyIds),
+          inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+        ),
+      )
+      .groupBy(bookings.propertyId);
+
+    const revenueMap = new Map(rows.map((r) => [r.propertyId, r]));
+
+    return owned.map((p) => {
+      const rev = revenueMap.get(p.id);
+      return {
+        propertyId: p.id,
+        propertyName: p.name,
+        currency: p.currency,
+        totalMinor: rev?.total ? parseInt(String(rev.total)) : 0,
+        bookingCount: rev?.count ?? 0,
+      };
+    });
+  }
+
   async adminListAll() {
     return db
       .select({
@@ -367,7 +452,13 @@ export class PropertiesService {
 
   async adminSetStatus(id: string, status: 'active' | 'suspended' | 'paused' | 'pending') {
     const [prop] = await db
-      .select({ id: properties.id })
+      .select({
+        id: properties.id,
+        name: properties.name,
+        slug: properties.slug,
+        ownerId: properties.ownerId,
+        previousStatus: properties.status,
+      })
       .from(properties)
       .where(eq(properties.id, id))
       .limit(1);
@@ -375,11 +466,38 @@ export class PropertiesService {
 
     const [updated] = await db
       .update(properties)
-      .set({ status, updatedAt: new Date() })
+      .set({
+        status,
+        publishedAt:
+          status === 'active' && prop.previousStatus !== 'active' ? new Date() : undefined,
+        updatedAt: new Date(),
+      })
       .where(eq(properties.id, id))
       .returning();
 
     this.logger.log({ event: 'admin.property.status_changed', propertyId: id, status });
+
+    // Notify owner by email when transitioning to active or suspended
+    if (status === 'active' || status === 'suspended') {
+      const [owner] = await db
+        .select({ email: users.email })
+        .from(users)
+        .where(eq(users.firebaseUid, prop.ownerId))
+        .limit(1);
+      if (owner?.email) {
+        const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';
+        if (status === 'active') {
+          void this.email.sendPropertyApproved(
+            owner.email,
+            prop.name,
+            `${webUrl}/en/properties/${prop.slug}`,
+          );
+        } else {
+          void this.email.sendPropertyRejected(owner.email, prop.name);
+        }
+      }
+    }
+
     return updated!;
   }
 }
