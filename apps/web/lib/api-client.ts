@@ -184,6 +184,14 @@ export const api = {
     deleteOwnerBlock: (propertyId: string, date: string) =>
       apiFetch<unknown>(`/properties/${propertyId}/owner-blocks/${date}`, { method: 'DELETE' }),
   },
+  admin: {
+    listUsers: () => apiFetch<{ data: unknown[] }>('/auth/admin/users'),
+    setUserRole: (id: string, role: string) =>
+      apiFetch<unknown>(`/auth/admin/users/${id}/role`, {
+        method: 'POST',
+        body: JSON.stringify({ role }),
+      }),
+  },
   priceRules: {
     list: (propertyId: string) =>
       apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/price-rules`),

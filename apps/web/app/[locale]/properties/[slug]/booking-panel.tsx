@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIdToken } from 'firebase/auth';
+import Image from 'next/image';
 import { firebaseAuth } from '@/lib/firebase-client';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 
@@ -19,6 +20,7 @@ type Room = {
   hasOutletPerBed: boolean;
   description: string | null;
   baseNightlyRateMinor: number;
+  coverImageUrl?: string | null;
 };
 
 function AmenityBadges({ room }: { room: Room | null }): React.ReactElement | null {
@@ -224,13 +226,27 @@ export function BookingPanel({
             return (
               <div
                 key={room.roomId}
-                className={`rounded-xl border bg-white p-4 dark:bg-zinc-900 ${
+                className={`overflow-hidden rounded-xl border bg-white dark:bg-zinc-900 ${
                   isSelected
                     ? 'border-zinc-900 dark:border-zinc-50'
                     : 'border-zinc-200 dark:border-zinc-800'
                 }`}
               >
-                <div className="flex items-start justify-between gap-4">
+                {(() => {
+                  const coverImg = property.rooms.find((r) => r.id === room.roomId)?.coverImageUrl;
+                  return coverImg ? (
+                    <div className="relative h-36 w-full">
+                      <Image
+                        src={coverImg}
+                        alt={room.roomName}
+                        fill
+                        className="object-cover"
+                        sizes="(max-width:768px) 100vw, 672px"
+                      />
+                    </div>
+                  ) : null;
+                })()}
+                <div className="flex items-start justify-between gap-4 p-4">
                   <div className="min-w-0">
                     <p className="font-semibold text-zinc-900 dark:text-zinc-50">{room.roomName}</p>
                     <p className="mt-0.5 text-sm text-zinc-500">
@@ -273,23 +289,25 @@ export function BookingPanel({
                 </div>
 
                 {!unavailable && (
-                  <button
-                    onClick={() => setBookingRoom(isSelected ? null : room)}
-                    className={`mt-3 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                      isSelected
-                        ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-                        : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                    }`}
-                  >
-                    {isSelected ? 'Cancel' : 'Book this room'}
-                  </button>
+                  <div className="px-4 pb-4">
+                    <button
+                      onClick={() => setBookingRoom(isSelected ? null : room)}
+                      className={`mt-3 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
+                        isSelected
+                          ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+                          : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
+                      }`}
+                    >
+                      {isSelected ? 'Cancel' : 'Book this room'}
+                    </button>
+                  </div>
                 )}
 
                 {/* Inline booking form */}
                 {isSelected && (
                   <form
                     onSubmit={handleBook}
-                    className="mt-4 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800"
+                    className="mx-4 mb-4 mt-0 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800"
                   >
                     <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Your details

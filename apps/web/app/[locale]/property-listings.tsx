@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -28,6 +28,8 @@ export function PropertyListings({
   const [typeFilter, setTypeFilter] = useState('');
   const [cityFilter, setCityFilter] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
+  const [page, setPage] = useState(1);
+  const PAGE_SIZE = 12;
 
   const cities = useMemo(() => {
     const s = new Set(properties.map((p) => p.city));
@@ -53,6 +55,14 @@ export function PropertyListings({
   }, [properties, search, typeFilter, maxPrice]);
 
   const hasFilters = search || typeFilter || cityFilter || maxPrice;
+
+  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const paginated = filtered.slice((page - 1) * PAGE_SIZE, page * PAGE_SIZE);
+
+  // Reset to page 1 whenever filters change
+  useEffect(() => {
+    setPage(1);
+  }, [search, typeFilter, cityFilter, maxPrice]);
 
   return (
     <div className="space-y-5">
@@ -144,13 +154,12 @@ export function PropertyListings({
         </div>
       ) : (
         <>
-          {hasFilters && (
-            <p className="text-sm text-zinc-500">
-              {filtered.length} propert{filtered.length === 1 ? 'y' : 'ies'}
-            </p>
-          )}
+          <p className="text-sm text-zinc-500">
+            {filtered.length} propert{filtered.length === 1 ? 'y' : 'ies'}
+            {totalPages > 1 && ` · page ${page} of ${totalPages}`}
+          </p>
           <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((p) => (
+            {paginated.map((p) => (
               <li key={p.id}>
                 <Link
                   href={`/${locale}/properties/${p.slug}`}
@@ -195,6 +204,37 @@ export function PropertyListings({
               </li>
             ))}
           </ul>
+          {totalPages > 1 && (
+            <div className="flex items-center justify-center gap-2 pt-2">
+              <button
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-sm text-zinc-600 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400"
+              >
+                ‹
+              </button>
+              {Array.from({ length: totalPages }, (_, i) => i + 1).map((n) => (
+                <button
+                  key={n}
+                  onClick={() => setPage(n)}
+                  className={`flex h-10 w-10 items-center justify-center rounded-xl border text-sm font-medium ${
+                    n === page
+                      ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900'
+                      : 'border-zinc-200 text-zinc-600 dark:border-zinc-700 dark:text-zinc-400'
+                  }`}
+                >
+                  {n}
+                </button>
+              ))}
+              <button
+                onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
+                disabled={page === totalPages}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-zinc-200 text-sm text-zinc-600 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-400"
+              >
+                ›
+              </button>
+            </div>
+          )}
         </>
       )}
     </div>

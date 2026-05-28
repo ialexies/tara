@@ -139,6 +139,20 @@ async function fetchReviews(propertyId: string): Promise<Review[]> {
   }
 }
 
+async function fetchReviewStats(
+  propertyId: string,
+): Promise<{ avg: number | null; count: number }> {
+  try {
+    const res = await fetch(`${API_URL}/properties/${propertyId}/reviews/stats`, {
+      cache: 'no-store',
+    });
+    if (!res.ok) return { avg: null, count: 0 };
+    return (await res.json()) as { avg: number | null; count: number };
+  } catch {
+    return { avg: null, count: 0 };
+  }
+}
+
 export default async function PropertyPage({
   params,
 }: {
@@ -150,9 +164,10 @@ export default async function PropertyPage({
   const property = await fetchProperty(slug);
   if (!property) notFound();
 
-  const [propertyReviews, galleryImages] = await Promise.all([
+  const [propertyReviews, galleryImages, reviewStats] = await Promise.all([
     fetchReviews(property.id),
     fetchPropertyImages(property.id),
+    fetchReviewStats(property.id),
   ]);
 
   const cheapestRoom = property.rooms.reduce<Room | null>(
@@ -219,10 +234,23 @@ export default async function PropertyPage({
               <h1 className="text-2xl font-bold text-zinc-900 sm:text-3xl dark:text-zinc-50">
                 {property.name}
               </h1>
-              <p className="mt-1 text-zinc-500">
-                {property.city}, {property.region}
-                {property.addressLine && ` · ${property.addressLine}`}
-              </p>
+              <div className="mt-1 flex flex-wrap items-center gap-2">
+                <p className="text-zinc-500">
+                  {property.city}, {property.region}
+                  {property.addressLine && ` · ${property.addressLine}`}
+                </p>
+                {reviewStats.count > 0 && (
+                  <a
+                    href="#reviews"
+                    className="flex items-center gap-1 text-sm font-medium text-amber-600 hover:underline dark:text-amber-400"
+                  >
+                    <span>★ {reviewStats.avg!.toFixed(1)}</span>
+                    <span className="font-normal text-zinc-500">
+                      ({reviewStats.count} review{reviewStats.count !== 1 ? 's' : ''})
+                    </span>
+                  </a>
+                )}
+              </div>
             </div>
             {cheapestRoom && (
               <div className="shrink-0 text-right">
@@ -272,7 +300,7 @@ export default async function PropertyPage({
         <BookingPanel property={property} locale={locale} />
 
         {propertyReviews.length > 0 && (
-          <section className="mt-8">
+          <section id="reviews" className="mt-8">
             <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
               Reviews ({propertyReviews.length})
             </h2>

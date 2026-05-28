@@ -1,13 +1,74 @@
 {
+  "nav": {
+    "dashboard": "Dashboard",
+    "myBookings": "My bookings",
+    "signIn": "Sign in",
+    "signOut": "Sign out"
+  },
   "home": {
-    "title": "Tara",
-    "tagline": "Tara, na! Find your next hostel in the Philippines.",
-    "subtitle": "A booking marketplace for hostels and tours. Launching in Zambales.",
-    "comingSoon": "We're building. Follow along.",
-    "apiStatus": "API status"
+    "title": "Hostels in the Philippines",
+    "subtitle": "Book beds, dorms, and private rooms at handpicked hostels.",
+    "searchPlaceholder": "Search by name, city, region…",
+    "allTypes": "All types",
+    "allCities": "All cities",
+    "maxPerNight": "Max/night",
+    "clear": "Clear",
+    "noResults": "No properties match your filters.",
+    "noProperties": "No properties listed yet — check back soon.",
+    "clearFilters": "Clear filters",
+    "priceOnRequest": "Price on request",
+    "from": "From",
+    "perNight": "/night",
+    "properties": "{count, plural, one {# property} other {# properties}}",
+    "page": "page {page} of {total}"
+  },
+  "booking": {
+    "checkAvailability": "Check availability",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "rooms": "Rooms",
+    "available": "{count} of {total} available",
+    "soldOut": "Sold out",
+    "minNights": "Min. {nights} nights required for these dates",
+    "bookThisRoom": "Book this room",
+    "cancel": "Cancel",
+    "yourDetails": "Your details",
+    "fullName": "Full name",
+    "emailAddress": "Email address",
+    "specialRequests": "Special requests (optional)",
+    "confirmBooking": "Confirm booking",
+    "payWithCard": "Pay with card",
+    "nights": "{count, plural, one {# night} other {# nights}}"
+  },
+  "property": {
+    "location": "Location",
+    "openInMaps": "Open in Maps ↗",
+    "reviews": "Reviews ({count})",
+    "noReviews": "No reviews yet"
+  },
+  "dashboard": {
+    "properties": "My Properties",
+    "newProperty": "+ New property",
+    "noProperties": "No properties yet.",
+    "addFirst": "Add your first property",
+    "rooms": "Rooms",
+    "bookings": "Bookings",
+    "blockedDates": "Blocked dates",
+    "pricing": "Pricing",
+    "publish": "Publish",
+    "unpublish": "Unpublish",
+    "live": "Live — visible to guests",
+    "draft": "Draft — not visible to guests"
   },
   "common": {
-    "loading": "Loading...",
-    "error": "Something went wrong"
+    "loading": "Loading…",
+    "error": "Something went wrong",
+    "save": "Save changes",
+    "saving": "Saving…",
+    "back": "Back",
+    "delete": "Delete",
+    "edit": "Edit",
+    "active": "active",
+    "inactive": "inactive"
   }
 }

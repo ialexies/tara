@@ -75,12 +75,20 @@ export default function MyBookingsPage(): React.ReactElement {
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">My Bookings</h1>
-        <Link
-          href={`/${locale}`}
-          className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-        >
-          Browse properties →
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link
+            href={`/${locale}/bookings/profile`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Profile
+          </Link>
+          <Link
+            href={`/${locale}`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Browse →
+          </Link>
+        </div>
       </div>
 
       {loading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}

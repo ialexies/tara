@@ -1,13 +1,74 @@
 {
+  "nav": {
+    "dashboard": "Dashboard",
+    "myBookings": "Aking mga booking",
+    "signIn": "Mag-sign in",
+    "signOut": "Mag-sign out"
+  },
   "home": {
-    "title": "Tara",
-    "tagline": "Tara, na! Hanapin ang susunod mong hostel sa Pilipinas.",
-    "subtitle": "Booking marketplace para sa mga hostel at tour. Sisimulan sa Zambales.",
-    "comingSoon": "Ginagawa pa namin. Sumama ka sa amin.",
-    "apiStatus": "Estado ng API"
+    "title": "Mga Hostel sa Pilipinas",
+    "subtitle": "Mag-book ng higaan, dorm, at pribadong kwarto sa mga piling hostel.",
+    "searchPlaceholder": "Maghanap ayon sa pangalan, lungsod, rehiyon…",
+    "allTypes": "Lahat ng uri",
+    "allCities": "Lahat ng lungsod",
+    "maxPerNight": "Pinakamataas/gabi",
+    "clear": "I-clear",
+    "noResults": "Walang properties na tumutugma sa iyong mga filter.",
+    "noProperties": "Wala pang properties — bumalik ka mamaya.",
+    "clearFilters": "I-clear ang mga filter",
+    "priceOnRequest": "Presyo sa kahilingan",
+    "from": "Mula",
+    "perNight": "/gabi",
+    "properties": "{count, plural, one {# property} other {# properties}}",
+    "page": "pahina {page} ng {total}"
+  },
+  "booking": {
+    "checkAvailability": "Tingnan ang availability",
+    "checkIn": "Check-in",
+    "checkOut": "Check-out",
+    "rooms": "Mga Kwarto",
+    "available": "{count} ng {total} available",
+    "soldOut": "Sold out",
+    "minNights": "Min. {nights} gabi ang kailangan para sa mga petsang ito",
+    "bookThisRoom": "I-book ang kwartong ito",
+    "cancel": "Kanselahin",
+    "yourDetails": "Iyong mga detalye",
+    "fullName": "Buong pangalan",
+    "emailAddress": "Email address",
+    "specialRequests": "Espesyal na kahilingan (opsyonal)",
+    "confirmBooking": "Kumpirmahin ang booking",
+    "payWithCard": "Magbayad gamit ang card",
+    "nights": "{count, plural, one {# gabi} other {# gabi}}"
+  },
+  "property": {
+    "location": "Lokasyon",
+    "openInMaps": "Buksan sa Maps ↗",
+    "reviews": "Mga Review ({count})",
+    "noReviews": "Wala pang mga review"
+  },
+  "dashboard": {
+    "properties": "Aking mga Property",
+    "newProperty": "+ Bagong property",
+    "noProperties": "Wala pang mga property.",
+    "addFirst": "Magdagdag ng iyong unang property",
+    "rooms": "Mga Kwarto",
+    "bookings": "Mga Booking",
+    "blockedDates": "Mga Naharang na Petsa",
+    "pricing": "Pagpepresyo",
+    "publish": "I-publish",
+    "unpublish": "Alisin sa objek",
+    "live": "Live — makikita ng mga bisita",
+    "draft": "Draft — hindi makikita ng mga bisita"
   },
   "common": {
-    "loading": "Naglo-load...",
-    "error": "May nagkaproblema"
+    "loading": "Naglo-load…",
+    "error": "May nagkaproblema",
+    "save": "I-save ang mga pagbabago",
+    "saving": "Sino-save…",
+    "back": "Bumalik",
+    "delete": "Tanggalin",
+    "edit": "I-edit",
+    "active": "aktibo",
+    "inactive": "hindi aktibo"
   }
 }

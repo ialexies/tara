@@ -19,6 +19,14 @@ type PropertyRow = {
   createdAt: string;
 };
 
+type UserRow = {
+  id: string;
+  email: string;
+  fullName: string | null;
+  role: string;
+  createdAt: string;
+};
+
 const STATUS_COLOURS: Record<string, string> = {
   draft: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
   pending: 'bg-amber-100 text-amber-700 dark:bg-amber-900 dark:text-amber-300',
@@ -28,31 +36,69 @@ const STATUS_COLOURS: Record<string, string> = {
   archived: 'bg-zinc-100 text-zinc-400 dark:bg-zinc-800 dark:text-zinc-500',
 };
 
+const ROLE_COLOURS: Record<string, string> = {
+  guest: 'bg-zinc-100 text-zinc-500 dark:bg-zinc-800 dark:text-zinc-400',
+  owner: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
+  admin: 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300',
+};
+
 export default function AdminPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
+  const [tab, setTab] = useState<'properties' | 'users'>('properties');
+
   const [properties, setProperties] = useState<PropertyRow[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [propsLoading, setPropsLoading] = useState(true);
+  const [propsError, setPropsError] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
 
-  function load() {
-    setLoading(true);
+  const [users, setUsers] = useState<UserRow[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const [userSearch, setUserSearch] = useState('');
+
+  function loadProperties() {
+    setPropsLoading(true);
     api.properties
       .adminListAll()
       .then((res) => setProperties(res.data as PropertyRow[]))
-      .catch((e: Error) => setError(e.message))
-      .finally(() => setLoading(false));
+      .catch((e: Error) => setPropsError(e.message))
+      .finally(() => setPropsLoading(false));
+  }
+
+  function loadUsers() {
+    setUsersLoading(true);
+    api.admin
+      .listUsers()
+      .then((res) => setUsers(res.data as UserRow[]))
+      .catch((e: Error) => setUsersError(e.message))
+      .finally(() => setUsersLoading(false));
   }
 
   useEffect(() => {
-    load();
+    loadProperties();
   }, []);
+
+  useEffect(() => {
+    if (tab === 'users' && users.length === 0) loadUsers();
+  }, [tab]);
 
   async function handleSetStatus(id: string, status: string) {
     setActing(id);
     try {
       await api.properties.adminSetStatus(id, status);
-      load();
+      loadProperties();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function handleSetRole(id: string, role: string) {
+    setActing(id);
+    try {
+      await api.admin.setUserRole(id, role);
+      loadUsers();
     } catch (e: unknown) {
       alert(e instanceof Error ? e.message : 'Failed');
     } finally {
@@ -63,10 +109,18 @@ export default function AdminPage(): React.ReactElement {
   const pending = properties.filter((p) => p.status === 'pending');
   const others = properties.filter((p) => p.status !== 'pending');
 
+  const filteredUsers = userSearch
+    ? users.filter(
+        (u) =>
+          u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
+          (u.fullName ?? '').toLowerCase().includes(userSearch.toLowerCase()),
+      )
+    : users;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
-        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Admin — Properties</h1>
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Admin</h1>
         <Link
           href={`/${locale}/dashboard`}
           className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
@@ -75,46 +129,121 @@ export default function AdminPage(): React.ReactElement {
         </Link>
       </div>
 
-      {error && (
-        <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
-          {error} — you may not have admin access.
-        </div>
+      {/* Tabs */}
+      <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+        {(['properties', 'users'] as const).map((t) => (
+          <button
+            key={t}
+            onClick={() => setTab(t)}
+            className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${
+              tab === t
+                ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
+                : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+            }`}
+          >
+            {t.charAt(0).toUpperCase() + t.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      {/* Properties tab */}
+      {tab === 'properties' && (
+        <>
+          {propsError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+              {propsError} — you may not have admin access.
+            </div>
+          )}
+          {propsLoading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}
+          {!propsLoading && pending.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Pending review ({pending.length})
+              </h2>
+              {pending.map((p) => (
+                <PropertyAdminCard
+                  key={p.id}
+                  property={p}
+                  locale={locale}
+                  acting={acting}
+                  onSetStatus={handleSetStatus}
+                />
+              ))}
+            </section>
+          )}
+          {!propsLoading && others.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                All properties ({others.length})
+              </h2>
+              {others.map((p) => (
+                <PropertyAdminCard
+                  key={p.id}
+                  property={p}
+                  locale={locale}
+                  acting={acting}
+                  onSetStatus={handleSetStatus}
+                />
+              ))}
+            </section>
+          )}
+        </>
       )}
 
-      {loading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}
-
-      {!loading && pending.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Pending review ({pending.length})
-          </h2>
-          {pending.map((p) => (
-            <PropertyAdminCard
-              key={p.id}
-              property={p}
-              locale={locale}
-              acting={acting}
-              onSetStatus={handleSetStatus}
-            />
-          ))}
-        </section>
-      )}
-
-      {!loading && others.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            All properties ({others.length})
-          </h2>
-          {others.map((p) => (
-            <PropertyAdminCard
-              key={p.id}
-              property={p}
-              locale={locale}
-              acting={acting}
-              onSetStatus={handleSetStatus}
-            />
-          ))}
-        </section>
+      {/* Users tab */}
+      {tab === 'users' && (
+        <>
+          {usersError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+              {usersError}
+            </div>
+          )}
+          {usersLoading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}
+          {!usersLoading && (
+            <>
+              <input
+                type="search"
+                value={userSearch}
+                onChange={(e) => setUserSearch(e.target.value)}
+                placeholder="Search by email or name…"
+                className="h-10 w-full rounded-xl border border-zinc-200 bg-white px-4 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+              />
+              <p className="text-sm text-zinc-500">{filteredUsers.length} users</p>
+              <ul className="space-y-2">
+                {filteredUsers.map((u) => (
+                  <li
+                    key={u.id}
+                    className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                        {u.fullName ?? u.email}
+                      </p>
+                      {u.fullName && <p className="truncate text-xs text-zinc-500">{u.email}</p>}
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span
+                        className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${ROLE_COLOURS[u.role] ?? ''}`}
+                      >
+                        {u.role}
+                      </span>
+                      <select
+                        value={u.role}
+                        disabled={acting === u.id}
+                        onChange={(e) => handleSetRole(u.id, e.target.value)}
+                        className="h-8 rounded-lg border border-zinc-200 bg-white px-2 text-xs text-zinc-700 focus:outline-none disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+                      >
+                        <option value="guest">guest</option>
+                        <option value="owner">owner</option>
+                        <option value="admin">admin</option>
+                      </select>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
       )}
     </div>
   );

@@ -1,4 +1,4 @@
-import { setRequestLocale } from 'next-intl/server';
+import { setRequestLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { SignOutButton } from './sign-out-button';
@@ -25,7 +25,12 @@ export default async function HomePage({
   const { locale } = await params;
   setRequestLocale(locale);
 
-  const [properties, session] = await Promise.all([fetchActiveProperties(), getSession()]);
+  const [properties, session, t, nav] = await Promise.all([
+    fetchActiveProperties(),
+    getSession(),
+    getTranslations('home'),
+    getTranslations('nav'),
+  ]);
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -43,14 +48,14 @@ export default async function HomePage({
                     href={`/${locale}/dashboard`}
                     className="flex h-9 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
                   >
-                    Dashboard
+                    {nav('dashboard')}
                   </Link>
                 )}
                 <Link
                   href={`/${locale}/bookings`}
                   className="text-sm text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-50"
                 >
-                  My bookings
+                  {nav('myBookings')}
                 </Link>
                 <SignOutButton />
               </>
@@ -59,7 +64,7 @@ export default async function HomePage({
                 href={`/${locale}/login`}
                 className="flex h-9 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
               >
-                Sign in
+                {nav('signIn')}
               </Link>
             )}
           </nav>
@@ -70,11 +75,9 @@ export default async function HomePage({
         {/* Hero */}
         <div className="mb-8">
           <h1 className="text-3xl font-bold tracking-tight text-zinc-900 sm:text-4xl dark:text-zinc-50">
-            Hostels in the Philippines
+            {t('title')}
           </h1>
-          <p className="mt-2 text-zinc-500 dark:text-zinc-400">
-            Book beds, dorms, and private rooms at handpicked hostels.
-          </p>
+          <p className="mt-2 text-zinc-500 dark:text-zinc-400">{t('subtitle')}</p>
         </div>
 
         {/* Property listing with search/filter */}

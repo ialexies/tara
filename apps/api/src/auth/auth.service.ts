@@ -139,4 +139,18 @@ export class AuthService {
     const [user] = await db.select().from(users).where(eq(users.firebaseUid, uid)).limit(1);
     return user ?? null;
   }
+
+  async listUsers(limit = 100, offset = 0): Promise<User[]> {
+    return db.select().from(users).orderBy(users.createdAt).limit(limit).offset(offset);
+  }
+
+  async setUserRole(userId: string, role: 'guest' | 'owner' | 'admin'): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({ role, updatedAt: new Date() })
+      .where(eq(users.id, userId))
+      .returning();
+    if (!updated) throw new Error('User not found');
+    return updated;
+  }
 }
