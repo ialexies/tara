@@ -21,10 +21,12 @@ test.describe('Property listing page', () => {
     await page.goto('/en');
     const searchInput = page.getByPlaceholder(/search by name/i);
     await searchInput.fill('test');
-    await expect(page.getByRole('button', { name: /clear/i })).toBeVisible();
-    await page.getByRole('button', { name: /clear/i }).click();
+    // Use exact match — the filter bar has "Clear", the empty-state has "Clear filters"
+    const clearBtn = page.getByRole('button', { name: 'Clear', exact: true });
+    await expect(clearBtn).toBeVisible();
+    await clearBtn.click();
     await expect(searchInput).toHaveValue('');
-    await expect(page.getByRole('button', { name: /clear/i })).not.toBeVisible();
+    await expect(clearBtn).not.toBeVisible();
   });
 
   test('header shows sign in button when logged out', async ({ page }) => {
