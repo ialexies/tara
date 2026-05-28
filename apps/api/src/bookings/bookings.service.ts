@@ -91,6 +91,7 @@ export class BookingsService {
                       eq(bookingItems.unitId, units.id),
                       inArray(bookingItems.night, nights),
                       inArray(bookings.status, [
+                        'stripe_pending',
                         'manual_pending',
                         'awaiting_verification',
                         'confirmed',
