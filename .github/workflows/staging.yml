@@ -88,22 +88,40 @@ jobs:
             fi
           done
 
-      - name: Redeploy staging stack
+      - name: Redeploy staging stack via Portainer
         run: |
-          # Read all secrets from host .env into an env file the runner can use.
-          # The runner is containerised (Docker socket mounted) so host paths are
-          # accessed via a temporary alpine sidecar.
-          docker run --rm \
-            -v /home/ialexies/stacks/tara-staging:/env:ro \
-            alpine sh -c "cat /env/.env" > /tmp/staging-secrets.env
+          PORTAINER_URL="https://192.168.0.253:9443"
+          PORTAINER_TOKEN="ptr_ejo0JsEI7qy5b90GsEpDrPPUX9Wu6kwWXRYiDWc8ndA="
 
-          docker compose \
-            -p tara-staging \
-            -f infra/portainer/stacks/tara-staging.yml \
-            --env-file /tmp/staging-secrets.env \
-            up -d --force-recreate web api cloudflared
+          # Find the tara-staging stack ID and endpoint ID
+          STACK_JSON=$(curl -sk -H "X-API-Key: $PORTAINER_TOKEN" "$PORTAINER_URL/api/stacks")
+          STACK_ID=$(echo "$STACK_JSON" | python3 -c "
+          import json,sys
+          s = next(s for s in json.load(sys.stdin) if s['Name']=='tara-staging')
+          print(s['Id'])
+          ")
+          ENDPOINT_ID=$(echo "$STACK_JSON" | python3 -c "
+          import json,sys
+          s = next(s for s in json.load(sys.stdin) if s['Name']=='tara-staging')
+          print(s['EndpointId'])
+          ")
 
-          rm -f /tmp/staging-secrets.env
+          # Fetch current env vars from Portainer so we don't lose any set via the UI
+          CURRENT_ENV=$(curl -sk -H "X-API-Key: $PORTAINER_TOKEN" \
+            "$PORTAINER_URL/api/stacks/$STACK_ID" | \
+            python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin).get('Env', [])))")
+
+          # Update stack with latest compose file, preserving env vars from Portainer UI
+          COMPOSE=$(python3 -c "import json; print(json.dumps(open('infra/portainer/stacks/tara-staging.yml').read()))")
+
+          HTTP_STATUS=$(curl -sk -o /dev/null -w "%{http_code}" -X PUT \
+            -H "X-API-Key: $PORTAINER_TOKEN" \
+            -H "Content-Type: application/json" \
+            "$PORTAINER_URL/api/stacks/$STACK_ID?endpointId=$ENDPOINT_ID" \
+            -d "{\"stackFileContent\": $COMPOSE, \"env\": $CURRENT_ENV, \"prune\": false}")
+
+          echo "Portainer redeploy status: $HTTP_STATUS"
+          [ "$HTTP_STATUS" = "200" ] || (echo "Portainer redeploy failed" && exit 1)
 
       - name: Smoke test
         run: |
