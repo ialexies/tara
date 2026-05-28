@@ -7,7 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { db, reviews, bookings, properties } from '@tara/db';
-import { eq, and, avg, count } from 'drizzle-orm';
+import { eq, and, avg, count, desc } from 'drizzle-orm';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
 @Injectable()
@@ -74,6 +74,18 @@ export class ReviewsService {
       propertyId: booking.propertyId,
     });
     return review!;
+  }
+
+  async listAll() {
+    return db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(200);
+  }
+
+  async delete(id: string) {
+    const [deleted] = await db
+      .delete(reviews)
+      .where(eq(reviews.id, id))
+      .returning({ id: reviews.id });
+    if (!deleted) throw new NotFoundException('Review not found');
   }
 
   async approve(id: string, user: AuthedUser) {

@@ -58,6 +58,9 @@ export const UpdatePropertySchema = z.object({
       bank: z.string().optional(),
     })
     .optional(),
+  checkInTime: z.string().max(10).optional(),
+  checkOutTime: z.string().max(10).optional(),
+  houseRules: z.string().max(3000).optional(),
 });
 
 export type UpdateProperty = z.infer<typeof UpdatePropertySchema>;

@@ -2,6 +2,7 @@ import { setRequestLocale, getTranslations } from 'next-intl/server';
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { SignOutButton } from './sign-out-button';
+import { DashboardLink } from './dashboard-link';
 import { PropertyListings, type Property } from './property-listings';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
@@ -44,12 +45,7 @@ export default async function HomePage({
             {session ? (
               <>
                 {(session.role === 'owner' || session.role === 'admin') && (
-                  <Link
-                    href={`/${locale}/dashboard`}
-                    className="flex h-9 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-                  >
-                    {nav('dashboard')}
-                  </Link>
+                  <DashboardLink locale={locale} label={nav('dashboard')} />
                 )}
                 <Link
                   href={`/${locale}/bookings`}

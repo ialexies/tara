@@ -6,7 +6,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { db, properties, rooms, units, roomImages } from '@tara/db';
-import { eq, and, isNull, asc } from 'drizzle-orm';
+import { eq, and, isNull, asc, inArray } from 'drizzle-orm';
 import type { CreateRoom, UpdateRoom } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
@@ -114,6 +114,34 @@ export class RoomsService {
       })
       .where(eq(rooms.id, roomId))
       .returning();
+
+    // Sync unit count when capacity changes (dorm rooms only)
+    if (input.capacity !== undefined && updated?.roomType === 'dorm') {
+      const existingUnits = await db
+        .select({ id: units.id })
+        .from(units)
+        .where(and(eq(units.roomId, roomId), isNull(units.deletedAt)));
+
+      const existing = existingUnits.length;
+      const target = input.capacity;
+
+      if (target > existing) {
+        const newUnits = Array.from({ length: target - existing }, (_, i) => ({
+          roomId,
+          tenantId: updated.tenantId,
+          label: `Bed ${existing + i + 1}`,
+          position: existing + i,
+          isMock: false,
+        }));
+        await db.insert(units).values(newUnits);
+      } else if (target < existing) {
+        const toRemove = existingUnits.slice(target).map((u) => u.id);
+        await db
+          .update(units)
+          .set({ isActive: false, deletedAt: new Date() })
+          .where(inArray(units.id, toRemove));
+      }
+    }
 
     this.logger.log({ event: 'room.updated', roomId, propertyId, tenantId: user.tenantId });
     return updated!;

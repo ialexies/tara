@@ -33,8 +33,9 @@ export const RoomSchema = CreateRoomSchema.extend({
 
 export type Room = z.infer<typeof RoomSchema>;
 
-// capacity and roomType are intentionally excluded — changing them would invalidate units
+// roomType is excluded — changing it would invalidate units in complex ways
 export const UpdateRoomSchema = z.object({
+  capacity: z.number().int().min(1).max(100).optional(),
   coverImageUrl: z.string().url().nullable().optional(),
   name: z.string().min(2).max(120).optional(),
   baseNightlyRateMinor: z.number().int().min(1).optional(),

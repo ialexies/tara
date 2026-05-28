@@ -29,11 +29,16 @@ type Property = {
   status: string;
   propertyType: string;
   addressLine?: string | null;
+  latitude?: number | null;
+  longitude?: number | null;
   description?: string | null;
   coverImageUrl?: string | null;
   paymentMode: string;
   manualPaymentMethods?: { gcash?: string; maya?: string; bank?: string } | null;
   amenities?: Amenities | null;
+  checkInTime?: string | null;
+  checkOutTime?: string | null;
+  houseRules?: string | null;
   createdAt: string;
 };
 
@@ -153,6 +158,8 @@ function EditPropertyForm({
   const [city, setCity] = useState(property.city);
   const [region, setRegion] = useState(property.region);
   const [addressLine, setAddressLine] = useState(property.addressLine ?? '');
+  const [latitude, setLatitude] = useState(property.latitude?.toString() ?? '');
+  const [longitude, setLongitude] = useState(property.longitude?.toString() ?? '');
   const [paymentMode, setPaymentMode] = useState(property.paymentMode);
   const [description, setDescription] = useState(property.description ?? '');
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(property.coverImageUrl ?? null);
@@ -160,6 +167,9 @@ function EditPropertyForm({
   const [maya, setMaya] = useState(property.manualPaymentMethods?.maya ?? '');
   const [bank, setBank] = useState(property.manualPaymentMethods?.bank ?? '');
   const [amenities, setAmenities] = useState<Amenities>(property.amenities ?? {});
+  const [checkInTime, setCheckInTime] = useState(property.checkInTime ?? '');
+  const [checkOutTime, setCheckOutTime] = useState(property.checkOutTime ?? '');
+  const [houseRules, setHouseRules] = useState(property.houseRules ?? '');
   const [propImgs, setPropImgs] = useState<{ id: string; url: string }[]>([]);
   const [imgUploading, setImgUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -190,6 +200,8 @@ function EditPropertyForm({
         city,
         region,
         addressLine: addressLine || undefined,
+        latitude: latitude ? parseFloat(latitude) : undefined,
+        longitude: longitude ? parseFloat(longitude) : undefined,
         description: description || undefined,
         paymentMode,
         manualPaymentMethods:
@@ -197,6 +209,9 @@ function EditPropertyForm({
             ? { gcash: gcash || undefined, maya: maya || undefined, bank: bank || undefined }
             : undefined,
         amenities,
+        checkInTime: checkInTime || undefined,
+        checkOutTime: checkOutTime || undefined,
+        houseRules: houseRules || undefined,
       });
       onSuccess();
     } catch (e: unknown) {
@@ -386,6 +401,47 @@ function EditPropertyForm({
           />
         </Field>
 
+        <div>
+          <p className="mb-1 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Map coordinates{' '}
+            <span className="font-normal text-zinc-400">(optional — enables map view)</span>
+          </p>
+          <p className="mb-2 text-xs text-zinc-400">
+            Find your coordinates at{' '}
+            <a
+              href="https://www.latlong.net/"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline"
+            >
+              latlong.net
+            </a>{' '}
+            or right-click your location on Google Maps.
+          </p>
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Latitude">
+              <input
+                type="number"
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                step="any"
+                placeholder="e.g. 15.3510"
+                className={inputClass}
+              />
+            </Field>
+            <Field label="Longitude">
+              <input
+                type="number"
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                step="any"
+                placeholder="e.g. 119.9762"
+                className={inputClass}
+              />
+            </Field>
+          </div>
+        </div>
+
         <Field label="Description (optional)">
           <textarea
             value={description}
@@ -467,6 +523,36 @@ function EditPropertyForm({
           </div>
         )}
 
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Check-in time" hint="e.g. 14:00">
+            <input
+              type="time"
+              value={checkInTime}
+              onChange={(e) => setCheckInTime(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Check-out time" hint="e.g. 12:00">
+            <input
+              type="time"
+              value={checkOutTime}
+              onChange={(e) => setCheckOutTime(e.target.value)}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <Field label="House rules (optional)">
+          <textarea
+            value={houseRules}
+            onChange={(e) => setHouseRules(e.target.value)}
+            rows={3}
+            maxLength={3000}
+            placeholder="No smoking indoors · Quiet hours after 10pm · No outside guests"
+            className={`${inputClass} resize-none`}
+          />
+        </Field>
+
         <div className="flex gap-3 pt-1">
           <button
             type="button"
@@ -494,10 +580,12 @@ const inputClass =
 function Field({
   label,
   required,
+  hint,
   children,
 }: {
   label: string;
   required?: boolean;
+  hint?: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
@@ -507,6 +595,7 @@ function Field({
         {required && <span className="ml-0.5 text-red-500">*</span>}
       </span>
       {children}
+      {hint && <p className="text-xs text-zinc-400">{hint}</p>}
     </label>
   );
 }

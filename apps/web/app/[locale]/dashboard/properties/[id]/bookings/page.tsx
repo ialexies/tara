@@ -156,20 +156,63 @@ export default function BookingsInboxPage(): React.ReactElement {
 
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bookings</h1>
-        <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-          {(['list', 'calendar'] as const).map((t) => (
-            <button
-              key={t}
-              onClick={() => setTab(t)}
-              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                tab === t
-                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
-                  : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
-              }`}
-            >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => {
+              const headers = [
+                'Ref',
+                'Guest',
+                'Email',
+                'Room',
+                'Check-in',
+                'Check-out',
+                'Nights',
+                'Total (PHP)',
+                'Status',
+                'Created',
+              ];
+              const csvRows = rows.map(({ booking, roomName }) => [
+                booking.referenceCode,
+                booking.guestName,
+                booking.guestEmail,
+                roomName,
+                booking.checkIn,
+                booking.checkOut,
+                booking.nights,
+                (booking.totalMinor / 100).toFixed(2),
+                booking.status,
+                new Date(booking.createdAt).toLocaleDateString('en-PH'),
+              ]);
+              const csv = [headers, ...csvRows]
+                .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(','))
+                .join('\n');
+              const blob = new Blob([csv], { type: 'text/csv' });
+              const url = URL.createObjectURL(blob);
+              const a = document.createElement('a');
+              a.href = url;
+              a.download = `bookings-${new Date().toISOString().slice(0, 10)}.csv`;
+              a.click();
+              URL.revokeObjectURL(url);
+            }}
+            className="flex h-9 items-center gap-1.5 rounded-lg border border-zinc-200 px-3 text-xs font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400 dark:hover:bg-zinc-800"
+          >
+            ↓ CSV
+          </button>
+          <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+            {(['list', 'calendar'] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => setTab(t)}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  tab === t
+                    ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
+                    : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+                }`}
+              >
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 

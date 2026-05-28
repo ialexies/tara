@@ -301,6 +301,7 @@ function EditRoomForm({
   onCancel: () => void;
 }): React.ReactElement {
   const [name, setName] = useState(room.name);
+  const [capacity, setCapacity] = useState(room.capacity);
   const [rateInput, setRateInput] = useState(String(room.baseNightlyRateMinor / 100));
   const [bathroomType, setBathroomType] = useState(room.bathroomType ?? 'shared');
   const [gender, setGender] = useState(room.gender ?? '');
@@ -340,6 +341,7 @@ function EditRoomForm({
     try {
       await api.rooms.update(propertyId, room.id, {
         name,
+        capacity: room.roomType === 'dorm' ? capacity : undefined,
         baseNightlyRateMinor: Math.round(ratePesos * 100),
         bathroomType: bathroomType || undefined,
         gender: gender || null,
@@ -461,6 +463,19 @@ function EditRoomForm({
             className={inputClass}
           />
         </Field>
+
+        {room.roomType === 'dorm' && (
+          <Field label="Number of beds" hint="Changing this adds or removes bed units">
+            <input
+              type="number"
+              value={capacity}
+              onChange={(e) => setCapacity(Number(e.target.value))}
+              min={1}
+              max={100}
+              className={inputClass}
+            />
+          </Field>
+        )}
 
         <Field label="Nightly rate (₱)" required>
           <div className="relative">
@@ -788,10 +803,12 @@ const inputClass =
 function Field({
   label,
   required,
+  hint,
   children,
 }: {
   label: string;
   required?: boolean;
+  hint?: string;
   children: React.ReactNode;
 }): React.ReactElement {
   return (
@@ -801,6 +818,7 @@ function Field({
         {required && <span className="ml-0.5 text-red-500">*</span>}
       </span>
       {children}
+      {hint && <p className="text-xs text-zinc-400">{hint}</p>}
     </label>
   );
 }

@@ -1,7 +1,21 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Req, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  Req,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { ReviewsService } from './reviews.service.js';
+import { FirebaseGuard } from '../auth/firebase.guard.js';
+import { RolesGuard, Roles } from '../auth/roles.guard.js';
+import { CurrentUser } from '../auth/current-user.decorator.js';
+import type { AuthedUser } from '../auth/firebase.guard.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 import { z } from 'zod';
 
@@ -37,6 +51,24 @@ export class ReviewsController {
     const input = CreateReviewSchema.parse(body);
     const guestUid = await this.extractOptionalUid(req);
     return this.svc.create(input, guestUid);
+  }
+
+  /** Admin — list all reviews. */
+  @Get('admin/reviews')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminListAll(@CurrentUser() _user: AuthedUser) {
+    const data = await this.svc.listAll();
+    return { data };
+  }
+
+  /** Admin — delete a review. */
+  @Delete('admin/reviews/:id')
+  @HttpCode(204)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminDelete(@Param('id') id: string, @CurrentUser() _user: AuthedUser) {
+    await this.svc.delete(id);
   }
 
   private async extractOptionalUid(req: FastifyRequest): Promise<string | undefined> {

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useMemo, useEffect, useCallback } from 'react';
+import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 
@@ -37,15 +38,37 @@ export function PropertyListings({
   properties: Property[];
   locale: string;
 }) {
-  const [search, setSearch] = useState('');
-  const [typeFilter, setTypeFilter] = useState('');
-  const [cityFilter, setCityFilter] = useState('');
-  const [maxPrice, setMaxPrice] = useState('');
-  const [checkIn, setCheckIn] = useState('');
-  const [checkOut, setCheckOut] = useState('');
-  const [view, setView] = useState<'grid' | 'map'>('grid');
-  const [page, setPage] = useState(1);
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  // Read initial state from URL params
+  const [search, setSearch] = useState(() => searchParams.get('q') ?? '');
+  const [typeFilter, setTypeFilter] = useState(() => searchParams.get('type') ?? '');
+  const [cityFilter, setCityFilter] = useState(() => searchParams.get('city') ?? '');
+  const [maxPrice, setMaxPrice] = useState(() => searchParams.get('maxPrice') ?? '');
+  const [checkIn, setCheckIn] = useState(() => searchParams.get('checkIn') ?? '');
+  const [checkOut, setCheckOut] = useState(() => searchParams.get('checkOut') ?? '');
+  const [view, setView] = useState<'grid' | 'map'>(() =>
+    searchParams.get('view') === 'map' ? 'map' : 'grid',
+  );
+  const [page, setPage] = useState(() => parseInt(searchParams.get('page') ?? '1') || 1);
   const PAGE_SIZE = 12;
+
+  // Sync filters to URL so links are shareable and back button works
+  useEffect(() => {
+    const params = new URLSearchParams();
+    if (search) params.set('q', search);
+    if (typeFilter) params.set('type', typeFilter);
+    if (cityFilter) params.set('city', cityFilter);
+    if (maxPrice) params.set('maxPrice', maxPrice);
+    if (checkIn) params.set('checkIn', checkIn);
+    if (checkOut) params.set('checkOut', checkOut);
+    if (view === 'map') params.set('view', 'map');
+    if (page > 1) params.set('page', String(page));
+    const qs = params.toString();
+    router.replace(qs ? `${pathname}?${qs}` : pathname, { scroll: false });
+  }, [search, typeFilter, cityFilter, maxPrice, checkIn, checkOut, view, page, pathname, router]);
 
   const [dateFilteredProps, setDateFilteredProps] = useState<Property[] | null>(null);
   const [dateLoading, setDateLoading] = useState(false);

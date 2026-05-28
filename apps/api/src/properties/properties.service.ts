@@ -246,6 +246,9 @@ export class PropertiesService {
         ...(input.description !== undefined && { description: input.description }),
         ...(input.coverImageUrl !== undefined && { coverImageUrl: input.coverImageUrl }),
         ...(input.amenities !== undefined && { amenities: input.amenities }),
+        ...(input.checkInTime !== undefined && { checkInTime: input.checkInTime }),
+        ...(input.checkOutTime !== undefined && { checkOutTime: input.checkOutTime }),
+        ...(input.houseRules !== undefined && { houseRules: input.houseRules }),
         updatedAt: new Date(),
       })
       .where(eq(properties.id, id))

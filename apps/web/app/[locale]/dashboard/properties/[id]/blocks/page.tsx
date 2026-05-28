@@ -38,6 +38,9 @@ export default function BlockedDatesPage(): React.ReactElement {
   const [loading, setLoading] = useState(true);
   const [acting, setActing] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [rangeFrom, setRangeFrom] = useState('');
+  const [rangeTo, setRangeTo] = useState('');
+  const [ranging, setRanging] = useState(false);
 
   const from = isoDate(monthStart);
   const to = isoDate(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0));
@@ -101,9 +104,59 @@ export default function BlockedDatesPage(): React.ReactElement {
         <div>
           <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Blocked dates</h1>
           <p className="mt-1 text-sm text-zinc-500">
-            Tap a date to block or unblock it. Blocked dates won't accept new bookings.
+            Tap a date or block a range. Blocked dates won't accept new bookings.
           </p>
         </div>
+      </div>
+
+      {/* Range block */}
+      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <div className="flex-1 space-y-1">
+          <p className="text-xs font-medium text-zinc-500">Block a date range</p>
+          <div className="flex gap-2">
+            <input
+              type="date"
+              value={rangeFrom}
+              min={today}
+              onChange={(e) => setRangeFrom(e.target.value)}
+              className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            />
+            <span className="flex items-center text-zinc-400">→</span>
+            <input
+              type="date"
+              value={rangeTo}
+              min={rangeFrom || today}
+              onChange={(e) => setRangeTo(e.target.value)}
+              className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+            />
+          </div>
+        </div>
+        <button
+          disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom || ranging}
+          onClick={async () => {
+            setRanging(true);
+            try {
+              const dates: string[] = [];
+              const cursor = new Date(rangeFrom);
+              const end = new Date(rangeTo);
+              while (cursor <= end) {
+                dates.push(isoDate(cursor));
+                cursor.setDate(cursor.getDate() + 1);
+              }
+              await Promise.all(dates.map((d) => api.bookings.setOwnerBlock(propertyId, d)));
+              setBlocked((prev) => new Set([...prev, ...dates]));
+              setRangeFrom('');
+              setRangeTo('');
+            } catch (e: unknown) {
+              setError(e instanceof Error ? e.message : 'Failed');
+            } finally {
+              setRanging(false);
+            }
+          }}
+          className="flex h-9 items-center rounded-lg bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+        >
+          {ranging ? '…' : 'Block range'}
+        </button>
       </div>
 
       {error && (

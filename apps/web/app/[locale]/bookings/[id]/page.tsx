@@ -200,6 +200,32 @@ export default async function BookingConfirmationPage({
           </dl>
         </div>
 
+        {/* What's next steps for new manual bookings */}
+        {isPending && (
+          <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <h2 className="mb-3 text-sm font-semibold uppercase tracking-wide text-zinc-400">
+              What happens next
+            </h2>
+            <ol className="space-y-3">
+              {[
+                {
+                  step: '1',
+                  text: 'Send payment using the details below and include your reference code',
+                },
+                { step: '2', text: "The property confirms your booking — you'll get an email" },
+                { step: '3', text: 'Show your booking confirmation at check-in' },
+              ].map((s) => (
+                <li key={s.step} className="flex items-start gap-3">
+                  <span className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-zinc-900 text-xs font-bold text-white dark:bg-zinc-50 dark:text-zinc-900">
+                    {s.step}
+                  </span>
+                  <p className="text-sm text-zinc-600 dark:text-zinc-400">{s.text}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+        )}
+
         {/* Payment instructions */}
         {isPending && hasPaymentInfo && (
           <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950">

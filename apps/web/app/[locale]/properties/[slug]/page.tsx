@@ -21,6 +21,7 @@ type Room = {
   hasOutletPerBed: boolean;
   description: string | null;
   baseNightlyRateMinor: number;
+  coverImageUrl?: string | null;
 };
 
 type Amenities = {
@@ -49,6 +50,9 @@ type Property = {
   longitude: number | null;
   manualPaymentMethods: { gcash?: string; maya?: string; bank?: string } | null;
   amenities: Amenities | null;
+  checkInTime: string | null;
+  checkOutTime: string | null;
+  houseRules: string | null;
   rooms: Room[];
 };
 
@@ -221,7 +225,19 @@ export default async function PropertyPage({
                   key={img.id}
                   className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
                 >
-                  <Image src={img.url} alt="" fill className="object-cover" sizes="112px" />
+                  <div className="absolute inset-0 animate-pulse bg-zinc-200 dark:bg-zinc-700" />
+                  <Image
+                    src={img.url}
+                    alt=""
+                    fill
+                    className="object-cover"
+                    sizes="112px"
+                    loading="lazy"
+                    onLoad={(e) => {
+                      const el = e.currentTarget.previousSibling as HTMLElement;
+                      if (el) el.style.display = 'none';
+                    }}
+                  />
                 </div>
               ))}
             </div>
@@ -293,8 +309,76 @@ export default async function PropertyPage({
           )}
         </div>
 
+        {/* Check-in / house rules */}
+        {(property.checkInTime || property.checkOutTime || property.houseRules) && (
+          <div className="mb-8 space-y-3">
+            {(property.checkInTime || property.checkOutTime) && (
+              <div className="flex flex-wrap gap-4 rounded-xl border border-zinc-200 bg-zinc-50 px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+                {property.checkInTime && (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      Check-in
+                    </p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                      {property.checkInTime}
+                    </p>
+                  </div>
+                )}
+                {property.checkOutTime && (
+                  <div>
+                    <p className="text-xs font-medium uppercase tracking-wide text-zinc-400">
+                      Check-out
+                    </p>
+                    <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                      {property.checkOutTime}
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+            {property.houseRules && (
+              <div className="rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                  House rules
+                </p>
+                <p className="whitespace-pre-line text-sm text-zinc-600 dark:text-zinc-400">
+                  {property.houseRules}
+                </p>
+              </div>
+            )}
+          </div>
+        )}
+
         {property.latitude && property.longitude && (
           <PropertyMap lat={property.latitude} lng={property.longitude} name={property.name} />
+        )}
+
+        {/* Room previews */}
+        {property.rooms.some((r) => r.coverImageUrl) && (
+          <section className="mb-8">
+            <h2 className="mb-3 text-base font-semibold text-zinc-900 dark:text-zinc-50">Rooms</h2>
+            <div className="flex gap-3 overflow-x-auto pb-1">
+              {property.rooms
+                .filter((r) => r.coverImageUrl)
+                .map((r) => (
+                  <div key={r.id} className="shrink-0 space-y-1">
+                    <div className="relative h-32 w-44 overflow-hidden rounded-xl bg-zinc-100 dark:bg-zinc-800">
+                      <Image
+                        src={r.coverImageUrl!}
+                        alt={r.name}
+                        fill
+                        className="object-cover"
+                        sizes="176px"
+                      />
+                    </div>
+                    <p className="text-xs font-medium text-zinc-700 dark:text-zinc-300">{r.name}</p>
+                    <p className="text-xs text-zinc-400">
+                      ₱{(r.baseNightlyRateMinor / 100).toLocaleString('en-PH')}/night
+                    </p>
+                  </div>
+                ))}
+            </div>
+          </section>
         )}
 
         <BookingPanel property={property} locale={locale} />

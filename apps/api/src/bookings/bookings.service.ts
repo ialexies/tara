@@ -192,6 +192,11 @@ export class BookingsService {
 
     if (!property) throw new NotFoundException('Property not found or not accepting bookings');
 
+    // Require phone number for manual-payment properties to reduce no-shows
+    if (property.paymentMode === 'manual' && !input.guestPhone) {
+      throw new BadRequestException('Phone number is required for this property.');
+    }
+
     // Verify room belongs to property.
     const [room] = await db
       .select({ id: rooms.id, baseNightlyRateMinor: rooms.baseNightlyRateMinor })

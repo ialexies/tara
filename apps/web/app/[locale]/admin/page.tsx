@@ -44,7 +44,7 @@ const ROLE_COLOURS: Record<string, string> = {
 
 export default function AdminPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
-  const [tab, setTab] = useState<'properties' | 'users'>('properties');
+  const [tab, setTab] = useState<'properties' | 'users' | 'reviews'>('properties');
 
   const [properties, setProperties] = useState<PropertyRow[]>([]);
   const [propsLoading, setPropsLoading] = useState(true);
@@ -55,6 +55,19 @@ export default function AdminPage(): React.ReactElement {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
+
+  type ReviewRow = {
+    id: string;
+    propertyId: string;
+    guestName: string;
+    rating: number;
+    body: string | null;
+    status: string;
+    createdAt: string;
+  };
+  const [reviewList, setReviewList] = useState<ReviewRow[]>([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [reviewsError, setReviewsError] = useState<string | null>(null);
 
   function loadProperties() {
     setPropsLoading(true);
@@ -78,8 +91,18 @@ export default function AdminPage(): React.ReactElement {
     loadProperties();
   }, []);
 
+  function loadReviews() {
+    setReviewsLoading(true);
+    api.admin
+      .listReviews()
+      .then((res) => setReviewList(res.data as ReviewRow[]))
+      .catch((e: Error) => setReviewsError(e.message))
+      .finally(() => setReviewsLoading(false));
+  }
+
   useEffect(() => {
     if (tab === 'users' && users.length === 0) loadUsers();
+    if (tab === 'reviews' && reviewList.length === 0) loadReviews();
   }, [tab]);
 
   async function handleSetStatus(id: string, status: string) {
@@ -131,7 +154,7 @@ export default function AdminPage(): React.ReactElement {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-        {(['properties', 'users'] as const).map((t) => (
+        {(['properties', 'users', 'reviews'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -238,6 +261,66 @@ export default function AdminPage(): React.ReactElement {
                         <option value="admin">admin</option>
                       </select>
                     </div>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
+        </>
+      )}
+
+      {/* Reviews tab */}
+      {tab === 'reviews' && (
+        <>
+          {reviewsError && (
+            <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
+              {reviewsError}
+            </div>
+          )}
+          {reviewsLoading && (
+            <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>
+          )}
+          {!reviewsLoading && (
+            <>
+              <p className="text-sm text-zinc-500">{reviewList.length} reviews</p>
+              <ul className="space-y-3">
+                {reviewList.map((r) => (
+                  <li
+                    key={r.id}
+                    className="flex items-start justify-between gap-4 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-900"
+                  >
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-medium text-zinc-900 dark:text-zinc-50">
+                          {r.guestName}
+                        </p>
+                        <span className="text-xs text-amber-500">{'★'.repeat(r.rating)}</span>
+                        <span
+                          className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${r.status === 'published' ? 'bg-emerald-100 text-emerald-700' : 'bg-zinc-100 text-zinc-500'}`}
+                        >
+                          {r.status}
+                        </span>
+                      </div>
+                      {r.body && <p className="mt-0.5 truncate text-xs text-zinc-500">{r.body}</p>}
+                      <p className="mt-0.5 text-[10px] text-zinc-400">
+                        {r.propertyId.slice(0, 8)}… ·{' '}
+                        {new Date(r.createdAt).toLocaleDateString('en-PH')}
+                      </p>
+                    </div>
+                    <button
+                      onClick={async () => {
+                        if (!confirm('Delete this review?')) return;
+                        try {
+                          await api.admin.deleteReview(r.id);
+                          setReviewList((prev) => prev.filter((x) => x.id !== r.id));
+                        } catch {
+                          alert('Failed to delete');
+                        }
+                      }}
+                      className="shrink-0 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                    >
+                      Delete
+                    </button>
                   </li>
                 ))}
               </ul>

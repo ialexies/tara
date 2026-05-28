@@ -370,9 +370,14 @@ export function BookingPanel({
                     />
                     <input
                       type="tel"
-                      placeholder="Phone / WhatsApp (optional)"
+                      placeholder={
+                        property.paymentMode === 'manual'
+                          ? 'Phone / WhatsApp *'
+                          : 'Phone / WhatsApp (optional)'
+                      }
                       value={guestPhone}
                       onChange={(e) => setGuestPhone(e.target.value)}
+                      required={property.paymentMode === 'manual'}
                       className={inputClass}
                     />
                     <textarea

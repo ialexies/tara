@@ -191,6 +191,8 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ role }),
       }),
+    listReviews: () => apiFetch<{ data: unknown[] }>('/admin/reviews'),
+    deleteReview: (id: string) => apiFetch<unknown>(`/admin/reviews/${id}`, { method: 'DELETE' }),
   },
   priceRules: {
     list: (propertyId: string) =>

@@ -97,6 +97,11 @@ export const properties = pgTable(
     amenities: jsonb('amenities'),
     // ^ shape: { wifi?, parking?, pool?, aircon?, restaurant?, bar?, laundry?, gym? }
 
+    // Policies
+    checkInTime: text('check_in_time'), // e.g. "14:00"
+    checkOutTime: text('check_out_time'), // e.g. "12:00"
+    houseRules: text('house_rules'),
+
     // Mock data flag — see docs/business/mock-data.md
     isMock: boolean('is_mock').notNull().default(false),
   },
