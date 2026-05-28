@@ -21,6 +21,29 @@ type Room = {
   baseNightlyRateMinor: number;
 };
 
+function AmenityBadges({ room }: { room: Room | null }): React.ReactElement | null {
+  if (!room) return null;
+  const badges: string[] = [];
+  if (room.bathroomType) badges.push(`${room.bathroomType} bathroom`);
+  if (room.hasAircon) badges.push('Aircon');
+  if (room.hasWindow) badges.push('Window');
+  if (room.hasLocker) badges.push('Locker');
+  if (room.hasOutletPerBed) badges.push('Outlet/bed');
+  if (badges.length === 0) return null;
+  return (
+    <div className="mt-2 flex flex-wrap gap-1">
+      {badges.map((b) => (
+        <span
+          key={b}
+          className="rounded-full bg-zinc-100 px-2 py-0.5 text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400"
+        >
+          {b}
+        </span>
+      ))}
+    </div>
+  );
+}
+
 type Property = {
   id: string;
   slug: string;
@@ -219,6 +242,9 @@ export function BookingPanel({
                         {room.availableUnits} of {room.totalUnits} available
                       </p>
                     )}
+                    <AmenityBadges
+                      room={property.rooms.find((r) => r.id === room.roomId) ?? null}
+                    />
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="font-bold text-zinc-900 dark:text-zinc-50">

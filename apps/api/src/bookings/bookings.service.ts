@@ -6,8 +6,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { db, properties, rooms, units, bookings, bookingItems } from '@tara/db';
-import { eq, and, isNull, inArray, notExists } from 'drizzle-orm';
+import { db, properties, rooms, units, bookings, bookingItems, ownerBlocks } from '@tara/db';
+import { eq, and, isNull, inArray, notExists, gte, lte } from 'drizzle-orm';
 import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
@@ -444,13 +444,79 @@ export class BookingsService {
     }
 
     const unitIdSet = new Set(unitIds);
-    return nights.filter((night) => {
+    const bookingBlocked = nights.filter((night) => {
       const booked = bookedByNight.get(night);
       if (!booked) return false;
       let count = 0;
       for (const uid of unitIdSet) if (booked.has(uid)) count++;
       return count >= allUnits.length;
     });
+
+    const ownerBlockedRows = await db
+      .select({ date: ownerBlocks.date })
+      .from(ownerBlocks)
+      .where(
+        and(
+          eq(ownerBlocks.propertyId, propertyId),
+          gte(ownerBlocks.date, from),
+          lte(ownerBlocks.date, to),
+        ),
+      );
+
+    const ownerBlockedSet = new Set(ownerBlockedRows.map((r) => r.date));
+    const allBlocked = new Set([...bookingBlocked, ...ownerBlockedSet]);
+    return nights.filter((n) => allBlocked.has(n));
+  }
+
+  async getOwnerBlocks(propertyId: string, from: string, to: string, user: AuthedUser) {
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(and(eq(properties.id, propertyId), isNull(properties.deletedAt)))
+      .limit(1);
+    if (!prop) throw new NotFoundException('Property not found');
+    if (prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your property');
+
+    const rows = await db
+      .select({ date: ownerBlocks.date })
+      .from(ownerBlocks)
+      .where(
+        and(
+          eq(ownerBlocks.propertyId, propertyId),
+          gte(ownerBlocks.date, from),
+          lte(ownerBlocks.date, to),
+        ),
+      );
+    return rows.map((r) => r.date);
+  }
+
+  async setOwnerBlock(propertyId: string, date: string, user: AuthedUser) {
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(and(eq(properties.id, propertyId), isNull(properties.deletedAt)))
+      .limit(1);
+    if (!prop) throw new NotFoundException('Property not found');
+    if (prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your property');
+
+    await db
+      .insert(ownerBlocks)
+      .values({ propertyId, tenantId: user.tenantId, date })
+      .onConflictDoNothing();
+  }
+
+  async deleteOwnerBlock(propertyId: string, date: string, user: AuthedUser) {
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(and(eq(properties.id, propertyId), isNull(properties.deletedAt)))
+      .limit(1);
+    if (!prop) throw new NotFoundException('Property not found');
+    if (prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your property');
+
+    await db
+      .delete(ownerBlocks)
+      .where(and(eq(ownerBlocks.propertyId, propertyId), eq(ownerBlocks.date, date)));
   }
 
   async listByGuest(guestUid: string) {

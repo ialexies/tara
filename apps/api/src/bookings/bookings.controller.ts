@@ -1,6 +1,7 @@
 import {
   Body,
   Controller,
+  Delete,
   Get,
   HttpCode,
   Param,
@@ -102,5 +103,47 @@ export class BookingsController {
   @Roles('owner', 'admin')
   async cancel(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
     return this.svc.cancel(id, user);
+  }
+
+  /** Owner — list owner-blocked dates for a property. */
+  @Get('properties/:propertyId/owner-blocks')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async getOwnerBlocks(
+    @Param('propertyId') propertyId: string,
+    @Query('from') from: string,
+    @Query('to') to: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    const data = await this.svc.getOwnerBlocks(propertyId, from, to, user);
+    return { data };
+  }
+
+  /** Owner — block a date. */
+  @Post('properties/:propertyId/owner-blocks')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async setOwnerBlock(
+    @Param('propertyId') propertyId: string,
+    @Body() body: { date: string },
+    @CurrentUser() user: AuthedUser,
+  ) {
+    await this.svc.setOwnerBlock(propertyId, body.date, user);
+    return { ok: true };
+  }
+
+  /** Owner — unblock a date. */
+  @Delete('properties/:propertyId/owner-blocks/:date')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async deleteOwnerBlock(
+    @Param('propertyId') propertyId: string,
+    @Param('date') date: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    await this.svc.deleteOwnerBlock(propertyId, date, user);
+    return { ok: true };
   }
 }

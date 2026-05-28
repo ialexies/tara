@@ -92,12 +92,20 @@ export default function RoomsPage(): React.ReactElement {
         >
           ← Properties
         </Link>
-        <Link
-          href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
-          className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50"
-        >
-          Bookings →
-        </Link>
+        <div className="flex items-center gap-4">
+          <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/blocks`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Blocked dates
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
+            className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50"
+          >
+            Bookings →
+          </Link>
+        </div>
       </div>
 
       <div className="flex items-start justify-between gap-4">

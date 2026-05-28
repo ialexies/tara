@@ -102,5 +102,14 @@ export const api = {
       apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/bookings`),
     confirm: (id: string) => apiFetch<unknown>(`/bookings/${id}/confirm`, { method: 'POST' }),
     cancel: (id: string) => apiFetch<unknown>(`/bookings/${id}/cancel`, { method: 'POST' }),
+    ownerBlocks: (propertyId: string, from: string, to: string) =>
+      apiFetch<{ data: string[] }>(`/properties/${propertyId}/owner-blocks?from=${from}&to=${to}`),
+    setOwnerBlock: (propertyId: string, date: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/owner-blocks`, {
+        method: 'POST',
+        body: JSON.stringify({ date }),
+      }),
+    deleteOwnerBlock: (propertyId: string, date: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/owner-blocks/${date}`, { method: 'DELETE' }),
   },
 };

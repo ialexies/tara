@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from 'next/font/google';
 import { NextIntlClientProvider, hasLocale } from 'next-intl';
 import { setRequestLocale } from 'next-intl/server';
 import { notFound } from 'next/navigation';
+import { headers } from 'next/headers';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
 
@@ -55,6 +56,11 @@ export default async function LocaleLayout({
     notFound();
   }
   setRequestLocale(locale);
+
+  const nonce = (await headers()).get('x-nonce') ?? '';
+
+  // nonce is available here for <Script nonce={nonce}> when adding third-party scripts.
+  void nonce;
 
   return (
     <html

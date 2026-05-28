@@ -3,12 +3,8 @@ import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
-// API origin allowed in connect-src — includes localhost in dev/Docker, prod URL in production.
-const apiPublicUrl = (process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000').replace(
-  /\/$/,
-  '',
-);
-
+// CSP is set per-request in middleware.ts (nonce-based).
+// Only static security headers live here.
 const securityHeaders = [
   { key: 'X-DNS-Prefetch-Control', value: 'on' },
   { key: 'X-Frame-Options', value: 'DENY' },
@@ -20,24 +16,6 @@ const securityHeaders = [
   {
     key: 'Strict-Transport-Security',
     value: 'max-age=63072000; includeSubDomains; preload',
-  },
-  {
-    key: 'Content-Security-Policy',
-    // unsafe-inline + unsafe-eval required by Next.js App Router hydration.
-    // Firebase Auth domains allow Google sign-in popup and Identity Toolkit calls.
-    // Migrate to nonce-based CSP when moving to production.
-    value: [
-      "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
-      "style-src 'self' 'unsafe-inline'",
-      "img-src 'self' data: blob: https:",
-      `connect-src 'self' ${apiPublicUrl} ${process.env.NODE_ENV === 'development' ? 'ws://localhost:3000 ws://localhost:4000' : ''} https://staging.tara-stays.com https://tara-stays.com https://*.googleapis.com https://*.firebaseapp.com https://accounts.google.com https://securetoken.googleapis.com https://*.r2.cloudflarestorage.com https://*.r2.dev`,
-      'frame-src https://tara-stays.firebaseapp.com https://accounts.google.com https://*.firebaseapp.com',
-      "font-src 'self'",
-      "frame-ancestors 'none'",
-      "base-uri 'self'",
-      "form-action 'self'",
-    ].join('; '),
   },
 ];
 

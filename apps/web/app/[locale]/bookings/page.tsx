@@ -25,7 +25,20 @@ type BookingRow = {
   roomName: string;
 };
 
+const STATUS_LABELS: Record<string, string> = {
+  stripe_pending: 'Awaiting payment',
+  manual_pending: 'Awaiting payment',
+  awaiting_verification: 'Verifying',
+  confirmed: 'Confirmed',
+  checked_in: 'Checked in',
+  checked_out: 'Completed',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+  disputed: 'Disputed',
+};
+
 const STATUS_COLOURS: Record<string, string> = {
+  stripe_pending: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   manual_pending: 'bg-yellow-100 text-yellow-700 dark:bg-yellow-900 dark:text-yellow-300',
   awaiting_verification: 'bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300',
   confirmed: 'bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-300',
@@ -108,7 +121,7 @@ export default function MyBookingsPage(): React.ReactElement {
                   <span
                     className={`flex-shrink-0 rounded-full px-2.5 py-1 text-xs font-medium ${STATUS_COLOURS[booking.status] ?? STATUS_COLOURS.manual_pending}`}
                   >
-                    {booking.status.replace('_', ' ')}
+                    {STATUS_LABELS[booking.status] ?? booking.status}
                   </span>
                 </div>
                 <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">

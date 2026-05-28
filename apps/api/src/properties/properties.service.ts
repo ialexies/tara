@@ -2,7 +2,6 @@ import {
   Injectable,
   Logger,
   NotFoundException,
-  ConflictException,
   UnprocessableEntityException,
 } from '@nestjs/common';
 import { db, properties, rooms } from '@tara/db';
@@ -92,15 +91,18 @@ export class PropertiesService {
 
   async create(input: CreateProperty, user: AuthedUser) {
     const baseSlug = slugify(input.name);
-    const slug = `${baseSlug}-${Date.now()}`;
 
-    const [existing] = await db
-      .select({ id: properties.id })
-      .from(properties)
-      .where(eq(properties.slug, slug))
-      .limit(1);
-
-    if (existing) throw new ConflictException('A property with this slug already exists');
+    let slug = baseSlug;
+    let suffix = 2;
+    while (true) {
+      const [existing] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(eq(properties.slug, slug))
+        .limit(1);
+      if (!existing) break;
+      slug = `${baseSlug}-${suffix++}`;
+    }
 
     const [created] = await db
       .insert(properties)

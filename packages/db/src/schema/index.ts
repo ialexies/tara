@@ -5,3 +5,4 @@ export * from './units.js';
 export * from './bookings.js';
 export * from './booking-items.js';
 export * from './audit-log.js';
+export * from './owner-blocks.js';
