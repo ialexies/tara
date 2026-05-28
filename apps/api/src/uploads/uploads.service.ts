@@ -24,6 +24,10 @@ export class UploadsService {
         region: 'auto',
         endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
         credentials: { accessKeyId, secretAccessKey },
+        // Disable SDK v3 automatic checksums — they add x-amz-checksum-* headers
+        // that R2 does not advertise in CORS allowed headers, breaking preflight.
+        requestChecksumCalculation: 'WHEN_REQUIRED',
+        responseChecksumValidation: 'WHEN_REQUIRED',
       });
     } else {
       this.client = null;
@@ -34,7 +38,6 @@ export class UploadsService {
   async presignUpload(params: {
     key: string;
     contentType: string;
-    contentLength: number;
   }): Promise<{ uploadUrl: string; publicUrl: string }> {
     if (!this.client) {
       throw new ServiceUnavailableException('Image uploads are not configured');
@@ -43,15 +46,11 @@ export class UploadsService {
     if (!ALLOWED_TYPES.includes(params.contentType)) {
       throw new Error(`Unsupported image type: ${params.contentType}`);
     }
-    if (params.contentLength > MAX_BYTES) {
-      throw new Error('Image must be under 10 MB');
-    }
 
     const command = new PutObjectCommand({
       Bucket: this.bucket,
       Key: params.key,
       ContentType: params.contentType,
-      ContentLength: params.contentLength,
     });
 
     const uploadUrl = await getSignedUrl(this.client, command, { expiresIn: 300 });

@@ -79,10 +79,10 @@ export class PropertiesController {
     @CurrentUser() user: AuthedUser,
   ) {
     await this.svc.getOwnedById(id, user);
-    const { contentType, contentLength } = UploadUrlSchema.parse(body);
+    const { contentType } = UploadUrlSchema.parse(body);
     const ext = contentType.split('/')[1] ?? 'jpg';
     const key = `properties/${id}/cover.${ext}`;
-    return this.uploads.presignUpload({ key, contentType, contentLength });
+    return this.uploads.presignUpload({ key, contentType });
   }
 
   /** Owner — save cover image URL after upload. */

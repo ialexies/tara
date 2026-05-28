@@ -68,10 +68,10 @@ export class RoomsController {
     @CurrentUser() user: AuthedUser,
   ) {
     await this.svc.assertOwned(propertyId, roomId, user);
-    const { contentType, contentLength } = UploadUrlSchema.parse(body);
+    const { contentType } = UploadUrlSchema.parse(body);
     const ext = contentType.split('/')[1] ?? 'jpg';
     const key = `rooms/${roomId}/cover.${ext}`;
-    return this.uploads.presignUpload({ key, contentType, contentLength });
+    return this.uploads.presignUpload({ key, contentType });
   }
 
   @Patch(':roomId/cover-image')
