@@ -1,9 +1,14 @@
 import { getIdToken, onAuthStateChanged } from 'firebase/auth';
-import { firebaseAuth } from './firebase-client';
+import { firebaseAuth, isFirebaseConfigured } from './firebase-client';
 
 const API_URL = process.env['NEXT_PUBLIC_API_URL'] ?? 'http://localhost:4000';
 
 function getToken(): Promise<string> {
+  if (!isFirebaseConfigured) {
+    return Promise.reject(
+      new Error('Firebase is not configured — check NEXT_PUBLIC_FIREBASE_* env vars'),
+    );
+  }
   // firebaseAuth.currentUser is null until Firebase restores the session.
   // onAuthStateChanged fires once immediately with the resolved user.
   return new Promise((resolve, reject) => {
