@@ -23,6 +23,7 @@ import {
   count,
   sum,
   min,
+  sql,
   getTableColumns,
   asc,
   inArray,
@@ -393,6 +394,72 @@ export class PropertiesService {
       .limit(1);
     if (!img || img.propertyId !== propertyId) throw new NotFoundException('Image not found');
     await db.delete(propertyImages).where(eq(propertyImages.id, imageId));
+  }
+
+  async getOccupancyReport(propertyId: string, user: AuthedUser, months = 3) {
+    await this.getOwnedById(propertyId, user);
+
+    // Total units in this property
+    const [totals] = await db
+      .select({ unitCount: count(units.id) })
+      .from(units)
+      .innerJoin(rooms, eq(units.roomId, rooms.id))
+      .where(
+        and(
+          eq(rooms.propertyId, propertyId),
+          eq(rooms.isActive, true),
+          eq(units.isActive, true),
+          isNull(rooms.deletedAt),
+          isNull(units.deletedAt),
+        ),
+      );
+
+    const totalUnits = totals?.unitCount ?? 0;
+
+    // Build month buckets
+    const result: {
+      month: string;
+      soldNights: number;
+      totalNights: number;
+      occupancyPct: number;
+    }[] = [];
+    const now = new Date();
+
+    for (let i = months - 1; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+      const year = d.getFullYear();
+      const month = d.getMonth();
+      const daysInMonth = new Date(year, month + 1, 0).getDate();
+      const firstDay = `${year}-${String(month + 1).padStart(2, '0')}-01`;
+      const lastDay = `${year}-${String(month + 1).padStart(2, '0')}-${String(daysInMonth).padStart(2, '0')}`;
+      const label = d.toLocaleDateString('en-PH', { month: 'short', year: 'numeric' });
+
+      const [sold] = await db
+        .select({ nights: count(bookingItems.night) })
+        .from(bookingItems)
+        .innerJoin(bookings, eq(bookingItems.bookingId, bookings.id))
+        .innerJoin(units, eq(bookingItems.unitId, units.id))
+        .innerJoin(rooms, eq(units.roomId, rooms.id))
+        .where(
+          and(
+            eq(rooms.propertyId, propertyId),
+            inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+            sql`${bookingItems.night} >= ${firstDay}`,
+            sql`${bookingItems.night} <= ${lastDay}`,
+          ),
+        );
+
+      const soldNights = sold?.nights ?? 0;
+      const totalNights = totalUnits * daysInMonth;
+      result.push({
+        month: label,
+        soldNights,
+        totalNights,
+        occupancyPct: totalNights > 0 ? Math.round((soldNights / totalNights) * 100) : 0,
+      });
+    }
+
+    return result;
   }
 
   async getRevenueSummary(user: AuthedUser) {

@@ -4,6 +4,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 import { BookingPanel } from './booking-panel';
+import { EnquiryForm } from './enquiry-form';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 const WEB_URL = process.env.WEB_URL ?? 'http://localhost:3000';
@@ -53,6 +54,9 @@ type Property = {
   checkInTime: string | null;
   checkOutTime: string | null;
   houseRules: string | null;
+  contactPhone: string | null;
+  freeCancelDays: number;
+  partialRefundPercent: number;
   rooms: Room[];
 };
 
@@ -118,6 +122,8 @@ type Review = {
   guestName: string;
   rating: number;
   body: string | null;
+  ownerReply: string | null;
+  ownerRepliedAt: string | null;
   createdAt: string;
 };
 
@@ -346,6 +352,19 @@ export default async function PropertyPage({
                 </p>
               </div>
             )}
+            <div className="rounded-xl border border-zinc-200 px-4 py-3 dark:border-zinc-700">
+              <p className="mb-1.5 text-xs font-medium uppercase tracking-wide text-zinc-400">
+                Cancellation policy
+              </p>
+              <p className="text-sm text-zinc-600 dark:text-zinc-400">
+                {property.freeCancelDays > 0
+                  ? `Free cancellation up to ${property.freeCancelDays} day${property.freeCancelDays !== 1 ? 's' : ''} before check-in.`
+                  : 'No free cancellation.'}{' '}
+                {property.partialRefundPercent > 0
+                  ? `${property.partialRefundPercent}% refund after that.`
+                  : 'Non-refundable after the free period.'}
+              </p>
+            </div>
           </div>
         )}
 
@@ -406,6 +425,12 @@ export default async function PropertyPage({
                       {r.body}
                     </p>
                   )}
+                  {r.ownerReply && (
+                    <div className="mt-3 rounded-lg bg-zinc-50 px-3 py-2.5 dark:bg-zinc-800">
+                      <p className="mb-1 text-xs font-medium text-zinc-500">Owner response</p>
+                      <p className="text-sm text-zinc-700 dark:text-zinc-300">{r.ownerReply}</p>
+                    </div>
+                  )}
                   <p className="mt-2 text-xs text-zinc-400">
                     {new Date(r.createdAt).toLocaleDateString('en-PH', {
                       year: 'numeric',
@@ -417,6 +442,7 @@ export default async function PropertyPage({
             </ul>
           </section>
         )}
+        <EnquiryForm slug={property.slug} />
       </main>
 
       <footer className="pb-safe border-t border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400 dark:border-zinc-800">

@@ -4,6 +4,8 @@ import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
+import { api } from '@/lib/api-client';
+import { isFirebaseConfigured } from '@/lib/firebase-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -196,11 +198,30 @@ export function PropertyListings({
     }
   });
 
+  // Sync with DB if user is logged in
+  useEffect(() => {
+    if (!isFirebaseConfigured) return;
+    api.wishlist
+      .list()
+      .then((res) => {
+        const ids = res.data as string[];
+        setWishlist(new Set(ids));
+      })
+      .catch(() => {});
+  }, []);
+
   function toggleWishlist(id: string) {
     setWishlist((prev) => {
       const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
+      const adding = !prev.has(id);
+      if (adding) next.add(id);
+      else next.delete(id);
+      // Sync to DB (fire-and-forget)
+      if (isFirebaseConfigured) {
+        if (adding) api.wishlist.add(id).catch(() => {});
+        else api.wishlist.remove(id).catch(() => {});
+      }
+      // Also keep localStorage as fallback
       try {
         localStorage.setItem('tara_wishlist', JSON.stringify([...next]));
       } catch {}
@@ -408,8 +429,10 @@ export function PropertyListings({
                             src={p.coverImageUrl}
                             alt={p.name}
                             fill
-                            className="object-cover"
+                            className="object-cover transition-opacity duration-300"
                             sizes="(max-width:640px) 100vw, 50vw"
+                            placeholder="blur"
+                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjMiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjMiIGZpbGw9IiNmNGY0ZjUiLz48L3N2Zz4="
                           />
                         ) : (
                           <div className="flex h-full items-center justify-center">

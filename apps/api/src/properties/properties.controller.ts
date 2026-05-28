@@ -17,6 +17,7 @@ import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { CreatePropertySchema, UpdatePropertySchema } from '@tara/schemas';
 import { UploadsService } from '../uploads/uploads.service.js';
+import { EmailService } from '../email/email.service.js';
 import { z } from 'zod';
 
 const UploadUrlSchema = z.object({
@@ -29,6 +30,7 @@ export class PropertiesController {
   constructor(
     private readonly svc: PropertiesService,
     private readonly uploads: UploadsService,
+    private readonly email: EmailService,
   ) {}
 
   /** Public — active properties for the guest listing page. Supports date, amenity, and price filters. */
@@ -71,6 +73,19 @@ export class PropertiesController {
   @Roles('owner', 'admin')
   async getRevenue(@CurrentUser() user: AuthedUser) {
     const data = await this.svc.getRevenueSummary(user);
+    return { data };
+  }
+
+  /** Owner — occupancy report for a specific property (last N months). */
+  @Get(':id/occupancy')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async getOccupancy(
+    @Param('id') id: string,
+    @Query('months') months: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    const data = await this.svc.getOccupancyReport(id, user, months ? parseInt(months, 10) : 6);
     return { data };
   }
 
@@ -203,6 +218,42 @@ export class PropertiesController {
     @CurrentUser() user: AuthedUser,
   ) {
     await this.svc.deletePropertyImage(id, imageId, user);
+  }
+
+  /** Public — send a pre-booking enquiry to the property owner. Rate-limited. */
+  @Post('slug/:slug/enquiry')
+  @HttpCode(200)
+  async sendEnquiry(@Param('slug') slug: string, @Body() body: unknown) {
+    const { guestName, guestEmail, message } = z
+      .object({
+        guestName: z.string().min(2).max(120),
+        guestEmail: z.string().email(),
+        message: z.string().min(10).max(1000),
+      })
+      .parse(body);
+
+    const prop = await this.svc.getBySlug(slug);
+    const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';
+    const propertyUrl = `${webUrl}/en/properties/${slug}`;
+
+    const { getFirebaseAdmin } = await import('../auth/firebase-admin.js');
+    const ownerEmail = await getFirebaseAdmin()
+      .auth()
+      .getUser(prop.ownerId)
+      .then((u) => u.email ?? null)
+      .catch(() => null);
+
+    if (ownerEmail) {
+      void this.email.sendPropertyEnquiry(ownerEmail, {
+        guestName,
+        guestEmail,
+        propertyName: prop.name,
+        message,
+        propertyUrl,
+      });
+    }
+
+    return { ok: true };
   }
 
   /** Admin — list all properties across all tenants. */

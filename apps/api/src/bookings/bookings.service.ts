@@ -182,6 +182,7 @@ export class BookingsService {
         slug: properties.slug,
         name: properties.name,
         ownerId: properties.ownerId,
+        contactPhone: properties.contactPhone,
         stripeConnectAccountId: properties.stripeConnectAccountId,
         stripeConnectEnabled: properties.stripeConnectEnabled,
       })
@@ -204,7 +205,11 @@ export class BookingsService {
 
     // Verify room belongs to property.
     const [room] = await db
-      .select({ id: rooms.id, baseNightlyRateMinor: rooms.baseNightlyRateMinor })
+      .select({
+        id: rooms.id,
+        baseNightlyRateMinor: rooms.baseNightlyRateMinor,
+        minNights: rooms.minNights,
+      })
       .from(rooms)
       .where(
         and(
@@ -217,6 +222,14 @@ export class BookingsService {
       .limit(1);
 
     if (!room) throw new NotFoundException('Room not found');
+
+    // Enforce room-level minimum stay
+    const roomMinNights = room.minNights ?? 1;
+    if (nights.length < roomMinNights) {
+      throw new BadRequestException(
+        `This room requires a minimum stay of ${roomMinNights} night${roomMinNights !== 1 ? 's' : ''}.`,
+      );
+    }
 
     // Find a free unit for all requested nights.
     const [freeUnit] = await db
@@ -392,6 +405,7 @@ export class BookingsService {
         };
 
         const guestPhone = (result as { guestPhone?: string | null }).guestPhone ?? '';
+        const ownerPhone = property.contactPhone ?? '';
         await Promise.all([
           this.emailService.sendBookingReceived(ctx),
           guestPhone
@@ -405,6 +419,12 @@ export class BookingsService {
                   u.email ? this.emailService.sendOwnerNewBooking(u.email, ctx) : Promise.resolve(),
                 )
                 .catch(() => undefined)
+            : Promise.resolve(),
+          ownerPhone
+            ? this.whatsapp.sendOwnerNewBooking(ownerPhone, {
+                ...ctx,
+                guestPhone: guestPhone || ownerPhone,
+              })
             : Promise.resolve(),
         ]);
 
@@ -428,6 +448,9 @@ export class BookingsService {
         propertyCity: properties.city,
         propertyRegion: properties.region,
         manualPaymentMethods: properties.manualPaymentMethods,
+        propertyContactPhone: properties.contactPhone,
+        freeCancelDays: properties.freeCancelDays,
+        partialRefundPercent: properties.partialRefundPercent,
         roomName: rooms.name,
         roomType: rooms.roomType,
       })
@@ -654,15 +677,37 @@ export class BookingsService {
       throw new BadRequestException(`Cannot cancel a booking with status "${booking.status}"`);
     }
 
+    // Determine refund eligibility based on property cancellation policy
+    const [prop] = await db
+      .select({
+        freeCancelDays: properties.freeCancelDays,
+        partialRefundPercent: properties.partialRefundPercent,
+      })
+      .from(properties)
+      .where(eq(properties.id, booking.propertyId))
+      .limit(1);
+
+    const daysUntilCheckIn = Math.ceil(
+      (new Date(booking.checkIn).getTime() - Date.now()) / (1000 * 60 * 60 * 24),
+    );
+    const freeDays = prop?.freeCancelDays ?? 3;
+    const refundPct = prop?.partialRefundPercent ?? 50;
+    const refundPercent = freeDays > 0 && daysUntilCheckIn >= freeDays ? 100 : refundPct;
+
     const [updated] = await db
       .update(bookings)
       .set({ status: 'cancelled', updatedAt: new Date() })
       .where(eq(bookings.id, id))
       .returning();
 
-    this.logger.log({ event: 'booking.cancelled_by_guest', bookingId: id });
+    this.logger.log({
+      event: 'booking.cancelled_by_guest',
+      bookingId: id,
+      daysUntilCheckIn,
+      refundPercent,
+    });
     await this.sendStatusEmail(updated!, 'cancelled');
-    return updated!;
+    return { ...updated!, refundPercent };
   }
 
   private async sendStatusEmail(

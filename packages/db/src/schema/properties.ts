@@ -3,6 +3,7 @@ import {
   boolean,
   doublePrecision,
   index,
+  integer,
   jsonb,
   pgEnum,
   pgTable,
@@ -101,6 +102,11 @@ export const properties = pgTable(
     checkInTime: text('check_in_time'), // e.g. "14:00"
     checkOutTime: text('check_out_time'), // e.g. "12:00"
     houseRules: text('house_rules'),
+    contactPhone: text('contact_phone'), // owner WhatsApp / Viber number shown to confirmed guests
+
+    // Cancellation policy
+    freeCancelDays: integer('free_cancel_days').notNull().default(3),
+    partialRefundPercent: integer('partial_refund_percent').notNull().default(50),
 
     // Stripe Connect — owner's connected account for direct payouts
     stripeConnectAccountId: text('stripe_connect_account_id'),

@@ -57,11 +57,24 @@ function fmt(iso: string) {
   });
 }
 
+type TabKey = 'upcoming' | 'past' | 'cancelled';
+
+const UPCOMING = [
+  'stripe_pending',
+  'manual_pending',
+  'awaiting_verification',
+  'confirmed',
+  'checked_in',
+];
+const PAST = ['checked_out'];
+const CANCELLED = ['cancelled', 'refunded', 'disputed'];
+
 export default function MyBookingsPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>('upcoming');
 
   useEffect(() => {
     api.bookings
@@ -70,6 +83,12 @@ export default function MyBookingsPage(): React.ReactElement {
       .catch((e: Error) => setError(e.message))
       .finally(() => setLoading(false));
   }, []);
+
+  const filtered = rows.filter(({ booking }) => {
+    if (tab === 'upcoming') return UPCOMING.includes(booking.status);
+    if (tab === 'past') return PAST.includes(booking.status);
+    return CANCELLED.includes(booking.status);
+  });
 
   return (
     <div className="mx-auto max-w-2xl space-y-6 px-4 py-8">
@@ -89,6 +108,30 @@ export default function MyBookingsPage(): React.ReactElement {
             Browse →
           </Link>
         </div>
+      </div>
+
+      <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+        {(['upcoming', 'past', 'cancelled'] as const).map((t) => {
+          const count = rows.filter(({ booking }) => {
+            if (t === 'upcoming') return UPCOMING.includes(booking.status);
+            if (t === 'past') return PAST.includes(booking.status);
+            return CANCELLED.includes(booking.status);
+          }).length;
+          return (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`flex-1 rounded-lg py-2 text-sm font-medium transition-colors ${tab === t ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50' : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'}`}
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+              {count > 0 && (
+                <span className="ml-1.5 rounded-full bg-zinc-200 px-1.5 py-0.5 text-[10px] font-semibold dark:bg-zinc-700">
+                  {count}
+                </span>
+              )}
+            </button>
+          );
+        })}
       </div>
 
       {loading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}
@@ -111,9 +154,13 @@ export default function MyBookingsPage(): React.ReactElement {
         </div>
       )}
 
-      {rows.length > 0 && (
+      {!loading && rows.length > 0 && filtered.length === 0 && (
+        <p className="py-8 text-center text-sm text-zinc-400">No {tab} bookings.</p>
+      )}
+
+      {filtered.length > 0 && (
         <ul className="space-y-3">
-          {rows.map(({ booking, propertyName, propertyCity, roomName }) => (
+          {filtered.map(({ booking, propertyName, propertyCity, roomName }) => (
             <li key={booking.id}>
               <Link
                 href={`/${locale}/bookings/${booking.id}`}

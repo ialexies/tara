@@ -55,6 +55,36 @@ Owners see a **"Submit for review"** button; admin approves in `/admin`. Email i
 - Table: `messages(id, booking_id, sender_uid, sender_name, body, is_read, created_at)`
 - Endpoints: `GET /bookings/:id/messages`, `POST /bookings/:id/messages`
 - UI: message thread on guest booking page + owner booking card. Polls every 15 s.
+- `@SkipThrottle()` on `MessagesController` — auth-gated, IP throttle adds nothing here.
+
+### Booking rules
+
+- **Minimum stay**: `rooms.min_nights` (default 1). Enforced at booking creation. Separate from price-rule `minNights`.
+- **Cancellation policy**: `properties.free_cancel_days` (default 3) + `properties.partial_refund_percent` (default 50). Guest cancel page shows refund eligibility. API returns `refundPercent` on cancel.
+- **Auto-expiry**: `manual_pending` bookings older than 24h are auto-cancelled by hourly cron. Guest receives cancellation email + WhatsApp.
+
+### Notifications
+
+| Event                           | Email         | WhatsApp                                   |
+| ------------------------------- | ------------- | ------------------------------------------ |
+| Booking created                 | Guest + owner | Guest (if phone) + owner (if contactPhone) |
+| Booking confirmed               | Guest         | Guest                                      |
+| Booking cancelled               | Guest         | Guest                                      |
+| 24h check-in reminder           | Guest         | Guest                                      |
+| 24h post-checkout review prompt | Guest         | Guest                                      |
+
+WhatsApp uses Twilio — set `TWILIO_ACCOUNT_SID`, `TWILIO_AUTH_TOKEN`, `TWILIO_WHATSAPP_FROM` in env to activate. Safe no-op when not set.
+Owner's WhatsApp number is `properties.contact_phone` — set in Dashboard → Edit property.
+
+### Analytics & monitoring
+
+- **Plausible**: set `NEXT_PUBLIC_PLAUSIBLE_DOMAIN=tara-stays.com` (web build arg + runtime) to activate the `<Script>` tag.
+- **Service worker**: `public/sw.js` registered via layout. Shows `public/offline.html` when navigation fails offline.
+- **Audit log**: all money mutations and auth events go to `audit_log` table. Viewable in Admin → Audit tab.
+
+### Rate limiting
+
+`UserThrottlerGuard` (replaces `ThrottlerGuard`) keys by Firebase UID for authenticated requests, IP for unauthenticated. Prevents noisy clients on shared WiFi from throttling other users on the same IP.
 
 ## Code style
 

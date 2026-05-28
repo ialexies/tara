@@ -31,6 +31,9 @@ type BookingDetail = {
   roomName: string;
   roomType: string;
   manualPaymentMethods: { gcash?: string; maya?: string; bank?: string } | null;
+  propertyContactPhone?: string | null;
+  freeCancelDays?: number;
+  partialRefundPercent?: number;
 };
 
 async function fetchBooking(id: string): Promise<BookingDetail | null> {
@@ -75,6 +78,9 @@ export default async function BookingConfirmationPage({
     propertyRegion,
     roomName,
     manualPaymentMethods,
+    propertyContactPhone,
+    freeCancelDays,
+    partialRefundPercent,
   } = data;
   const isPending = booking.status === 'manual_pending';
   const isConfirmed = booking.status === 'confirmed';
@@ -107,16 +113,28 @@ export default async function BookingConfirmationPage({
         {(() => {
           if (isConfirmed) {
             return (
-              <div className="mb-6 flex items-center gap-3 rounded-xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950">
-                <span className="text-2xl">✅</span>
-                <div>
-                  <p className="font-semibold text-emerald-800 dark:text-emerald-200">
-                    Booking confirmed!
-                  </p>
-                  <p className="text-sm text-emerald-700 dark:text-emerald-300">
-                    Ref: <strong>{booking.referenceCode}</strong>
-                  </p>
+              <div className="mb-6 rounded-xl bg-emerald-50 px-4 py-4 dark:bg-emerald-950">
+                <div className="flex items-center gap-3">
+                  <span className="text-2xl">✅</span>
+                  <div>
+                    <p className="font-semibold text-emerald-800 dark:text-emerald-200">
+                      Booking confirmed!
+                    </p>
+                    <p className="text-sm text-emerald-700 dark:text-emerald-300">
+                      Ref: <strong>{booking.referenceCode}</strong>
+                    </p>
+                  </div>
                 </div>
+                {propertyContactPhone && (
+                  <a
+                    href={`https://wa.me/${propertyContactPhone.replace(/\D/g, '')}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="mt-3 flex items-center gap-2 text-sm font-medium text-emerald-700 underline underline-offset-2 dark:text-emerald-300"
+                  >
+                    <span>💬</span> WhatsApp the property: {propertyContactPhone}
+                  </a>
+                )}
               </div>
             );
           }
@@ -276,7 +294,13 @@ export default async function BookingConfirmationPage({
 
         {canGuestCancel && (
           <div className="mt-4">
-            <CancelBookingButton bookingId={booking.id} guestEmail={booking.guestEmail} />
+            <CancelBookingButton
+              bookingId={booking.id}
+              guestEmail={booking.guestEmail}
+              checkIn={booking.checkIn}
+              freeCancelDays={freeCancelDays}
+              partialRefundPercent={partialRefundPercent}
+            />
           </div>
         )}
 

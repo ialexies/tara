@@ -18,6 +18,8 @@ export const reviews = pgTable(
     rating: integer('rating').notNull(),
     body: text('body'),
     status: text('status').notNull().default('pending'),
+    ownerReply: text('owner_reply'),
+    ownerRepliedAt: timestamp('owner_replied_at', { withTimezone: true }),
     createdAt: timestamp('created_at', { withTimezone: true }).notNull().defaultNow(),
   },
   (t) => [

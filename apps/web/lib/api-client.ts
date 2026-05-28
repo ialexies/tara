@@ -65,6 +65,10 @@ export const api = {
     publish: (id: string) => apiFetch<unknown>(`/properties/${id}/publish`, { method: 'POST' }),
     unpublish: (id: string) => apiFetch<unknown>(`/properties/${id}/unpublish`, { method: 'POST' }),
     revenue: () => apiFetch<{ data: unknown[] }>('/properties/revenue'),
+    occupancy: (id: string, months?: number) =>
+      apiFetch<{ data: unknown[] }>(
+        `/properties/${id}/occupancy${months ? `?months=${months}` : ''}`,
+      ),
     adminListAll: () => apiFetch<{ data: unknown[] }>('/properties/admin/all'),
     adminSetStatus: (id: string, status: string) =>
       apiFetch<unknown>(`/properties/admin/${id}/status`, {
@@ -200,7 +204,29 @@ export const api = {
         body: JSON.stringify({ role }),
       }),
     listReviews: () => apiFetch<{ data: unknown[] }>('/admin/reviews'),
+    listAuditLog: (limit?: number) =>
+      apiFetch<{ data: unknown[] }>(`/auth/admin/audit${limit ? `?limit=${limit}` : ''}`),
     deleteReview: (id: string) => apiFetch<unknown>(`/admin/reviews/${id}`, { method: 'DELETE' }),
+  },
+  reviews: {
+    replyToReview: (reviewId: string, reply: string) =>
+      apiFetch<unknown>(`/reviews/${reviewId}/reply`, {
+        method: 'POST',
+        body: JSON.stringify({ reply }),
+      }),
+  },
+  enquiry: {
+    send: (slug: string, body: { guestName: string; guestEmail: string; message: string }) =>
+      apiFetch<{ ok: boolean }>(`/properties/slug/${slug}/enquiry`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+  },
+  wishlist: {
+    list: () => apiFetch<{ data: string[] }>('/wishlist'),
+    add: (propertyId: string) =>
+      apiFetch<{ ok: boolean }>(`/wishlist/${propertyId}`, { method: 'POST' }),
+    remove: (propertyId: string) => apiFetch<void>(`/wishlist/${propertyId}`, { method: 'DELETE' }),
   },
   stripeConnect: {
     status: (propertyId: string) =>

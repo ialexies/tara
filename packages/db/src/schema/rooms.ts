@@ -51,6 +51,7 @@ export const rooms = pgTable(
 
     // Nightly rate in PHP centavos (minor units). ₱600 = 60000.
     baseNightlyRateMinor: integer('base_nightly_rate_minor').notNull().default(0),
+    minNights: integer('min_nights').notNull().default(1),
 
     hasAircon: boolean('has_aircon').notNull().default(false),
     hasWindow: boolean('has_window').notNull().default(false),

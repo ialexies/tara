@@ -58,6 +58,13 @@ export class WhatsAppService {
     }
   }
 
+  async sendOwnerNewBooking(ownerPhone: string, ctx: BookingCtx): Promise<void> {
+    await this.send(
+      ownerPhone,
+      `📣 *New booking at ${ctx.propertyName}!*\n\nGuest: *${ctx.guestName}*\n📅 ${formatDate(ctx.checkIn)} → ${formatDate(ctx.checkOut)} (${ctx.nights} night${ctx.nights !== 1 ? 's' : ''})\n🛏 ${ctx.roomName}\n💰 ${pesos(ctx.totalMinor, ctx.currency)}\n📋 Ref: ${ctx.referenceCode}\n\nReview booking: ${ctx.bookingUrl}`,
+    );
+  }
+
   async sendBookingReceived(ctx: BookingCtx): Promise<void> {
     await this.send(
       ctx.guestPhone,
@@ -76,6 +83,18 @@ export class WhatsAppService {
     await this.send(
       ctx.guestPhone,
       `❌ *Booking cancelled*\n\nYour booking at *${ctx.propertyName}* (Ref: ${ctx.referenceCode}) has been cancelled.\n\nIf you have questions, please contact the property directly.`,
+    );
+  }
+
+  async sendReviewPrompt(ctx: {
+    guestPhone: string;
+    guestName: string;
+    propertyName: string;
+    reviewUrl: string;
+  }): Promise<void> {
+    await this.send(
+      ctx.guestPhone,
+      `🌺 *How was your stay at ${ctx.propertyName}?*\n\nHi ${ctx.guestName.split(' ')[0]}! We hope you had a great time. Your review helps other travellers find amazing places.\n\n👉 Leave a review (takes 30 seconds):\n${ctx.reviewUrl}`,
     );
   }
 

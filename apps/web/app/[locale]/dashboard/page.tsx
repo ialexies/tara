@@ -39,6 +39,9 @@ type Property = {
   checkInTime?: string | null;
   checkOutTime?: string | null;
   houseRules?: string | null;
+  contactPhone?: string | null;
+  freeCancelDays?: number | null;
+  partialRefundPercent?: number | null;
   createdAt: string;
 };
 
@@ -218,6 +221,11 @@ function EditPropertyForm({
   const [checkInTime, setCheckInTime] = useState(property.checkInTime ?? '');
   const [checkOutTime, setCheckOutTime] = useState(property.checkOutTime ?? '');
   const [houseRules, setHouseRules] = useState(property.houseRules ?? '');
+  const [contactPhone, setContactPhone] = useState(property.contactPhone ?? '');
+  const [freeCancelDays, setFreeCancelDays] = useState(property.freeCancelDays ?? 3);
+  const [partialRefundPercent, setPartialRefundPercent] = useState(
+    property.partialRefundPercent ?? 50,
+  );
   const [propImgs, setPropImgs] = useState<{ id: string; url: string }[]>([]);
   const [imgUploading, setImgUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -260,6 +268,9 @@ function EditPropertyForm({
         checkInTime: checkInTime || undefined,
         checkOutTime: checkOutTime || undefined,
         houseRules: houseRules || undefined,
+        contactPhone: contactPhone || undefined,
+        freeCancelDays,
+        partialRefundPercent,
       });
       onSuccess();
     } catch (e: unknown) {
@@ -598,6 +609,42 @@ function EditPropertyForm({
             maxLength={3000}
             placeholder="No smoking indoors · Quiet hours after 10pm · No outside guests"
             className={`${inputClass} resize-none`}
+          />
+        </Field>
+
+        <div className="grid grid-cols-2 gap-4">
+          <Field label="Free cancel (days before)" hint="0 = no free cancellation">
+            <input
+              type="number"
+              min={0}
+              max={60}
+              value={freeCancelDays}
+              onChange={(e) => setFreeCancelDays(Number(e.target.value))}
+              className={inputClass}
+            />
+          </Field>
+          <Field label="Partial refund %" hint="0 = non-refundable after free period">
+            <input
+              type="number"
+              min={0}
+              max={100}
+              value={partialRefundPercent}
+              onChange={(e) => setPartialRefundPercent(Number(e.target.value))}
+              className={inputClass}
+            />
+          </Field>
+        </div>
+
+        <Field
+          label="Contact phone (WhatsApp / Viber)"
+          hint="Shown to confirmed guests and used for booking notifications"
+        >
+          <input
+            type="tel"
+            value={contactPhone}
+            onChange={(e) => setContactPhone(e.target.value)}
+            placeholder="+63 912 345 6789"
+            className={inputClass}
           />
         </Field>
 

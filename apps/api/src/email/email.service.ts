@@ -90,6 +90,36 @@ export class EmailService {
     });
   }
 
+  async sendPropertyEnquiry(
+    ownerEmail: string,
+    ctx: {
+      guestName: string;
+      guestEmail: string;
+      propertyName: string;
+      message: string;
+      propertyUrl: string;
+    },
+  ): Promise<void> {
+    await this.send({
+      to: ownerEmail,
+      subject: `New enquiry about ${ctx.propertyName} from ${ctx.guestName}`,
+      html: enquiryHtml(ctx),
+    });
+  }
+
+  async sendReviewPrompt(ctx: {
+    guestEmail: string;
+    guestName: string;
+    propertyName: string;
+    reviewUrl: string;
+  }): Promise<void> {
+    await this.send({
+      to: ctx.guestEmail,
+      subject: `How was your stay at ${ctx.propertyName}? Leave a review`,
+      html: reviewPromptHtml(ctx),
+    });
+  }
+
   async sendPropertyApproved(
     ownerEmail: string,
     propertyName: string,
@@ -110,10 +140,24 @@ export class EmailService {
     });
   }
 
+  private buildUnsubscribeUrl(email: string): string {
+    const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';
+    const token = Buffer.from(JSON.stringify({ email, ts: Date.now() })).toString('base64url');
+    return `${webUrl}/en/unsubscribe?token=${token}`;
+  }
+
   private async send(params: { to: string; subject: string; html: string }): Promise<void> {
     if (!this.resend) return;
+    const unsubUrl = this.buildUnsubscribeUrl(params.to);
     try {
-      await this.resend.emails.send({ from: this.from, ...params });
+      await this.resend.emails.send({
+        from: this.from,
+        ...params,
+        headers: {
+          'List-Unsubscribe': `<${unsubUrl}>`,
+          'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
+        },
+      });
       this.logger.log({ event: 'email.sent', to: params.to, subject: params.subject });
     } catch (err) {
       this.logger.error({ event: 'email.send_failed', to: params.to, error: String(err) });
@@ -123,7 +167,7 @@ export class EmailService {
 
 // ─── Templates ────────────────────────────────────────────────────────────────
 
-function shell(title: string, body: string) {
+function shell(title: string, body: string, unsubscribeUrl?: string) {
   return `<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title>
 <style>
   body{margin:0;padding:0;background:#f4f4f5;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:#18181b}
@@ -145,7 +189,7 @@ function shell(title: string, body: string) {
 </style></head><body><div class="wrap">
 <div class="header"><h1>🌺 Tara</h1></div>
 <div class="body">${body}</div>
-<div class="footer">Tara — Philippines Hostel Booking · You received this because you made or manage a booking.</div>
+<div class="footer">Tara — Philippines Hostel Booking · You received this because you made or manage a booking.${unsubscribeUrl ? ` · <a href="${unsubscribeUrl}" style="color:#a1a1aa">Unsubscribe</a>` : ''}</div>
 </div></body></html>`;
 }
 
@@ -262,6 +306,37 @@ function propertyRejectedHtml(propertyName: string) {
       Thank you for listing <strong>${propertyName}</strong> on Tara. Our team has reviewed your listing and it needs a few updates before it can go live.
     </p>
     <p style="font-size:14px;color:#71717a;margin-top:16px">Please log in to your dashboard to make the necessary changes, then resubmit for review.</p>
+  `,
+  );
+}
+
+function enquiryHtml(ctx: {
+  guestName: string;
+  guestEmail: string;
+  propertyName: string;
+  message: string;
+  propertyUrl: string;
+}) {
+  return shell(
+    'Property enquiry',
+    `
+    <h2 style="margin:0 0 8px">New enquiry about ${ctx.propertyName}</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 16px">From: <strong>${ctx.guestName}</strong> &lt;${ctx.guestEmail}&gt;</p>
+    <div style="background:#f4f4f5;border-radius:8px;padding:16px;font-size:14px;line-height:1.6;color:#18181b;margin-bottom:20px">${ctx.message.replace(/\n/g, '<br>')}</div>
+    <a href="mailto:${ctx.guestEmail}" class="btn">Reply to guest</a>
+    <p style="font-size:12px;color:#a1a1aa;margin-top:16px">You can also view your listing: <a href="${ctx.propertyUrl}">${ctx.propertyUrl}</a></p>
+  `,
+  );
+}
+
+function reviewPromptHtml(ctx: { guestName: string; propertyName: string; reviewUrl: string }) {
+  return shell(
+    'Leave a review',
+    `
+    <h2 style="margin:0 0 8px">How was your stay at ${ctx.propertyName}?</h2>
+    <p style="color:#71717a;font-size:14px;margin:0 0 20px">Hi ${ctx.guestName.split(' ')[0]}, we hope you had a wonderful stay! Your review helps other travellers find great places to stay.</p>
+    <a href="${ctx.reviewUrl}" class="btn">Leave a review</a>
+    <p style="font-size:12px;color:#a1a1aa;margin-top:20px">It only takes 30 seconds. Thank you! 🌺</p>
   `,
   );
 }

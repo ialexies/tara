@@ -53,6 +53,16 @@ export class ReviewsController {
     return this.svc.create(input, guestUid);
   }
 
+  /** Owner — reply to a guest review on their property. */
+  @Post('reviews/:id/reply')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async reply(@Param('id') id: string, @Body() body: unknown, @CurrentUser() user: AuthedUser) {
+    const { reply } = z.object({ reply: z.string().min(1).max(1000) }).parse(body);
+    return this.svc.replyToReview(id, reply, user);
+  }
+
   /** Admin — list all reviews. */
   @Get('admin/reviews')
   @UseGuards(FirebaseGuard, RolesGuard)

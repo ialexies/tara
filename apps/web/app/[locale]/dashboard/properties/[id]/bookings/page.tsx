@@ -63,7 +63,7 @@ function formatDate(d: string) {
 export default function BookingsInboxPage(): React.ReactElement {
   const { locale, id: propertyId } = useParams<{ locale: string; id: string }>();
 
-  const [tab, setTab] = useState<'list' | 'calendar'>('list');
+  const [tab, setTab] = useState<'list' | 'calendar' | 'occupancy'>('list');
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -201,7 +201,7 @@ export default function BookingsInboxPage(): React.ReactElement {
             ↓ CSV
           </button>
           <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-            {(['list', 'calendar'] as const).map((t) => (
+            {(['list', 'calendar', 'occupancy'] as const).map((t) => (
               <button
                 key={t}
                 onClick={() => setTab(t)}
@@ -291,6 +291,9 @@ export default function BookingsInboxPage(): React.ReactElement {
       {tab === 'calendar' && !loading && (
         <BookingCalendar rows={rows} month={calMonth} onMonthChange={setCalMonth} />
       )}
+
+      {/* Occupancy view */}
+      {tab === 'occupancy' && <OccupancyReport propertyId={propertyId} />}
     </div>
   );
 }
@@ -617,6 +620,53 @@ function BookingCard({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+function OccupancyReport({ propertyId }: { propertyId: string }): React.ReactElement {
+  const [data, setData] = useState<
+    { month: string; soldNights: number; totalNights: number; occupancyPct: number }[]
+  >([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    api.properties
+      .occupancy(propertyId, 6)
+      .then((res) => setData(res.data as typeof data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
+  }, [propertyId]);
+
+  if (loading) return <div className="py-12 text-center text-sm text-zinc-400">Loading…</div>;
+  if (data.length === 0)
+    return <div className="py-12 text-center text-sm text-zinc-400">No occupancy data yet.</div>;
+
+  const maxPct = Math.max(...data.map((d) => d.occupancyPct), 1);
+
+  return (
+    <div className="space-y-4">
+      <p className="text-sm text-zinc-500">
+        Occupancy rate over the last 6 months (confirmed bookings only).
+      </p>
+      <div className="space-y-3">
+        {data.map((d) => (
+          <div key={d.month} className="space-y-1">
+            <div className="flex items-center justify-between text-sm">
+              <span className="font-medium text-zinc-700 dark:text-zinc-300">{d.month}</span>
+              <span className="text-zinc-500">
+                {d.occupancyPct}% · {d.soldNights}/{d.totalNights} nights
+              </span>
+            </div>
+            <div className="h-4 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+              <div
+                className="h-full rounded-full bg-emerald-500 transition-all"
+                style={{ width: `${(d.occupancyPct / maxPct) * 100}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

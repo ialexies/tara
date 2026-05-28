@@ -88,6 +88,27 @@ export class ReviewsService {
     if (!deleted) throw new NotFoundException('Review not found');
   }
 
+  async replyToReview(id: string, reply: string, user: AuthedUser) {
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
+    if (!review) throw new NotFoundException('Review not found');
+
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(eq(properties.id, review.propertyId))
+      .limit(1);
+    if (!prop || prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your property');
+
+    const [updated] = await db
+      .update(reviews)
+      .set({ ownerReply: reply, ownerRepliedAt: new Date() })
+      .where(eq(reviews.id, id))
+      .returning();
+
+    this.logger.log({ event: 'review.reply_added', reviewId: id, propertyId: review.propertyId });
+    return updated!;
+  }
+
   async approve(id: string, user: AuthedUser) {
     const [review] = await db.select().from(reviews).where(eq(reviews.id, id)).limit(1);
     if (!review) throw new NotFoundException('Review not found');

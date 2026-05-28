@@ -1,7 +1,8 @@
-import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
 import { AuthService } from './auth.service.js';
+import { AuditService } from '../audit/audit.service.js';
 import { FirebaseGuard, type AuthedUser } from './firebase.guard.js';
 import { RolesGuard } from './roles.guard.js';
 import { CurrentUser } from './current-user.decorator.js';
@@ -16,7 +17,10 @@ const SyncSchema = z.object({
 @Throttle({ auth: {} })
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly auditSvc: AuditService,
+  ) {}
 
   /**
    * Exchange a Firebase ID token for a long-lived session cookie value.
@@ -78,5 +82,13 @@ export class AuthController {
     const { role } = z.object({ role: z.enum(['guest', 'owner', 'admin']) }).parse(body);
     const updated = await this.auth.setUserRole(id, role);
     return { id: updated.id, email: updated.email, role: updated.role };
+  }
+
+  @Get('admin/audit')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  async adminAuditLog(@CurrentUser() user: AuthedUser, @Query('limit') limit?: string) {
+    if (user.role !== 'admin') throw new Error('Forbidden');
+    const data = await this.auditSvc.listRecent(limit ? parseInt(limit, 10) : 100);
+    return { data };
   }
 }

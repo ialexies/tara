@@ -1,6 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { db } from '@tara/db';
 import { auditLog } from '@tara/db/schema';
+import { desc } from 'drizzle-orm';
 
 export type AuditEvent =
   // Auth
@@ -42,6 +43,10 @@ export type AuditContext = {
 @Injectable()
 export class AuditService {
   private readonly logger = new Logger(AuditService.name);
+
+  async listRecent(limit = 100) {
+    return db.select().from(auditLog).orderBy(desc(auditLog.createdAt)).limit(limit);
+  }
 
   async log(event: AuditEvent, ctx: AuditContext = {}): Promise<void> {
     try {

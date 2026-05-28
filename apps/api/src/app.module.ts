@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { UserThrottlerGuard } from './common/user-throttler.guard.js';
 import { LoggerModule } from 'nestjs-pino';
 import { HealthModule } from './health/health.module.js';
 import { PropertiesModule } from './properties/properties.module.js';
@@ -17,6 +18,7 @@ import { ReviewsModule } from './reviews/reviews.module.js';
 import { PriceRulesModule } from './price-rules/price-rules.module.js';
 import { MessagesModule } from './messages/messages.module.js';
 import { WhatsAppModule } from './whatsapp/whatsapp.module.js';
+import { WishlistModule } from './wishlist/wishlist.module.js';
 import { SchedulerModule } from './scheduler/scheduler.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 
@@ -40,13 +42,14 @@ import { ScheduleModule } from '@nestjs/schedule';
     PriceRulesModule,
     MessagesModule,
     WhatsAppModule,
+    WishlistModule,
     ScheduleModule.forRoot(),
     SchedulerModule,
     AuthModule,
   ],
   providers: [
     { provide: APP_FILTER, useClass: ZodExceptionFilter },
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
   ],
 })
 export class AppModule {}

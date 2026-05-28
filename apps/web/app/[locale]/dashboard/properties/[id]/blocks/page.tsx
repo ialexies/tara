@@ -41,6 +41,9 @@ export default function BlockedDatesPage(): React.ReactElement {
   const [rangeFrom, setRangeFrom] = useState('');
   const [rangeTo, setRangeTo] = useState('');
   const [ranging, setRanging] = useState(false);
+  const [recurringDow, setRecurringDow] = useState<number[]>([]); // 0=Sun … 6=Sat
+  const [recurringMonths, setRecurringMonths] = useState(3);
+  const [recurring, setRecurring] = useState(false);
 
   const from = isoDate(monthStart);
   const to = isoDate(new Date(monthStart.getFullYear(), monthStart.getMonth() + 1, 0));
@@ -106,6 +109,69 @@ export default function BlockedDatesPage(): React.ReactElement {
           <p className="mt-1 text-sm text-zinc-500">
             Tap a date or block a range. Blocked dates won't accept new bookings.
           </p>
+        </div>
+      </div>
+
+      {/* Recurring block */}
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="mb-3 text-xs font-medium text-zinc-500">Block recurring days of the week</p>
+        <div className="flex flex-wrap gap-2">
+          {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map((label, dow) => (
+            <button
+              key={dow}
+              onClick={() =>
+                setRecurringDow((prev) =>
+                  prev.includes(dow) ? prev.filter((d) => d !== dow) : [...prev, dow],
+                )
+              }
+              className={`h-9 rounded-full px-3 text-sm font-medium transition-colors ${
+                recurringDow.includes(dow)
+                  ? 'bg-red-500 text-white'
+                  : 'border border-zinc-200 bg-zinc-50 text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
+              }`}
+            >
+              {label}
+            </button>
+          ))}
+          <select
+            value={recurringMonths}
+            onChange={(e) => setRecurringMonths(Number(e.target.value))}
+            className="h-9 rounded-full border border-zinc-200 bg-zinc-50 px-3 text-sm text-zinc-700 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-300"
+          >
+            {[1, 2, 3, 6].map((m) => (
+              <option key={m} value={m}>
+                {m} month{m > 1 ? 's' : ''}
+              </option>
+            ))}
+          </select>
+          <button
+            disabled={recurringDow.length === 0 || recurring}
+            onClick={async () => {
+              setRecurring(true);
+              try {
+                const dates: string[] = [];
+                const cursor = new Date();
+                cursor.setDate(cursor.getDate() + 1);
+                const end = new Date();
+                end.setMonth(end.getMonth() + recurringMonths);
+                while (cursor <= end) {
+                  if (recurringDow.includes(cursor.getDay())) {
+                    dates.push(isoDate(cursor));
+                  }
+                  cursor.setDate(cursor.getDate() + 1);
+                }
+                await Promise.all(dates.map((d) => api.bookings.setOwnerBlock(propertyId, d)));
+                setBlocked((prev) => new Set([...prev, ...dates]));
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : 'Failed');
+              } finally {
+                setRecurring(false);
+              }
+            }}
+            className="flex h-9 items-center rounded-full bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+          >
+            {recurring ? '…' : 'Block recurring'}
+          </button>
         </div>
       </div>
 

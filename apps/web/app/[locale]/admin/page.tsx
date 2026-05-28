@@ -44,7 +44,7 @@ const ROLE_COLOURS: Record<string, string> = {
 
 export default function AdminPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
-  const [tab, setTab] = useState<'properties' | 'users' | 'reviews'>('properties');
+  const [tab, setTab] = useState<'properties' | 'users' | 'reviews' | 'audit'>('properties');
 
   const [properties, setProperties] = useState<PropertyRow[]>([]);
   const [propsLoading, setPropsLoading] = useState(true);
@@ -62,12 +62,24 @@ export default function AdminPage(): React.ReactElement {
     guestName: string;
     rating: number;
     body: string | null;
+    ownerReply: string | null;
     status: string;
     createdAt: string;
   };
   const [reviewList, setReviewList] = useState<ReviewRow[]>([]);
   const [reviewsLoading, setReviewsLoading] = useState(false);
   const [reviewsError, setReviewsError] = useState<string | null>(null);
+
+  type AuditRow = {
+    id: string;
+    event: string;
+    actorEmail: string | null;
+    entityType: string | null;
+    entityId: string | null;
+    createdAt: string;
+  };
+  const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
+  const [auditLoading, setAuditLoading] = useState(false);
 
   function loadProperties() {
     setPropsLoading(true);
@@ -103,6 +115,14 @@ export default function AdminPage(): React.ReactElement {
   useEffect(() => {
     if (tab === 'users' && users.length === 0) loadUsers();
     if (tab === 'reviews' && reviewList.length === 0) loadReviews();
+    if (tab === 'audit' && auditRows.length === 0) {
+      setAuditLoading(true);
+      api.admin
+        .listAuditLog(200)
+        .then((res) => setAuditRows(res.data as AuditRow[]))
+        .catch(() => {})
+        .finally(() => setAuditLoading(false));
+    }
   }, [tab]);
 
   async function handleSetStatus(id: string, status: string) {
@@ -154,7 +174,7 @@ export default function AdminPage(): React.ReactElement {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-        {(['properties', 'users', 'reviews'] as const).map((t) => (
+        {(['properties', 'users', 'reviews', 'audit'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -302,29 +322,94 @@ export default function AdminPage(): React.ReactElement {
                         </span>
                       </div>
                       {r.body && <p className="mt-0.5 truncate text-xs text-zinc-500">{r.body}</p>}
+                      {r.ownerReply && (
+                        <p className="mt-0.5 truncate text-xs text-blue-500">↳ {r.ownerReply}</p>
+                      )}
                       <p className="mt-0.5 text-[10px] text-zinc-400">
                         {r.propertyId.slice(0, 8)}… ·{' '}
                         {new Date(r.createdAt).toLocaleDateString('en-PH')}
                       </p>
                     </div>
-                    <button
-                      onClick={async () => {
-                        if (!confirm('Delete this review?')) return;
-                        try {
-                          await api.admin.deleteReview(r.id);
-                          setReviewList((prev) => prev.filter((x) => x.id !== r.id));
-                        } catch {
-                          alert('Failed to delete');
-                        }
-                      }}
-                      className="shrink-0 rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
-                    >
-                      Delete
-                    </button>
+                    <div className="flex shrink-0 flex-col gap-1">
+                      <button
+                        onClick={async () => {
+                          const reply = prompt('Reply to this review:');
+                          if (!reply) return;
+                          try {
+                            await api.reviews.replyToReview(r.id, reply);
+                            setReviewList((prev) =>
+                              prev.map((x) => (x.id === r.id ? { ...x, ownerReply: reply } : x)),
+                            );
+                          } catch {
+                            alert('Failed to reply');
+                          }
+                        }}
+                        className="rounded-lg border border-blue-200 px-2.5 py-1 text-xs font-medium text-blue-600 hover:bg-blue-50 dark:border-blue-800 dark:text-blue-400"
+                      >
+                        Reply
+                      </button>
+                      <button
+                        onClick={async () => {
+                          if (!confirm('Delete this review?')) return;
+                          try {
+                            await api.admin.deleteReview(r.id);
+                            setReviewList((prev) => prev.filter((x) => x.id !== r.id));
+                          } catch {
+                            alert('Failed to delete');
+                          }
+                        }}
+                        className="rounded-lg border border-red-200 px-2.5 py-1 text-xs font-medium text-red-600 hover:bg-red-50 dark:border-red-800 dark:text-red-400"
+                      >
+                        Delete
+                      </button>
+                    </div>
                   </li>
                 ))}
               </ul>
             </>
+          )}
+        </>
+      )}
+      {/* Audit tab */}
+      {tab === 'audit' && (
+        <>
+          {auditLoading && <div className="py-12 text-center text-sm text-zinc-400">Loading…</div>}
+          {!auditLoading && (
+            <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-900">
+                  <tr>
+                    <th className="px-3 py-2">Event</th>
+                    <th className="px-3 py-2">Actor</th>
+                    <th className="px-3 py-2">Entity</th>
+                    <th className="px-3 py-2">Time</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+                  {auditRows.map((r) => (
+                    <tr key={r.id} className="bg-white dark:bg-zinc-900">
+                      <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300">
+                        {r.event}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-500">{r.actorEmail ?? '—'}</td>
+                      <td className="px-3 py-2 text-zinc-400">
+                        {r.entityType && r.entityId
+                          ? `${r.entityType}:${r.entityId.slice(0, 8)}`
+                          : '—'}
+                      </td>
+                      <td className="px-3 py-2 text-zinc-400">
+                        {new Date(r.createdAt).toLocaleString('en-PH', {
+                          month: 'short',
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        })}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </>
       )}

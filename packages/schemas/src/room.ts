@@ -48,6 +48,7 @@ export const UpdateRoomSchema = z.object({
   hasOutletPerBed: z.boolean().optional(),
   position: z.number().int().min(0).optional(),
   isActive: z.boolean().optional(),
+  minNights: z.number().int().min(1).max(30).optional(),
 });
 
 export type UpdateRoom = z.infer<typeof UpdateRoomSchema>;
