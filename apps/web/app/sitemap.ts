@@ -18,16 +18,10 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const staticPages: MetadataRoute.Sitemap = [
-    {
-      url: `${WEB_URL}/en`,
-      changeFrequency: 'daily',
-      priority: 1,
-    },
-    {
-      url: `${WEB_URL}/tl`,
-      changeFrequency: 'daily',
-      priority: 0.9,
-    },
+    { url: `${WEB_URL}/en`, changeFrequency: 'daily', priority: 1 },
+    { url: `${WEB_URL}/tl`, changeFrequency: 'daily', priority: 0.9 },
+    { url: `${WEB_URL}/en/terms`, changeFrequency: 'monthly', priority: 0.3 },
+    { url: `${WEB_URL}/en/privacy`, changeFrequency: 'monthly', priority: 0.3 },
   ];
 
   const propertyPages: MetadataRoute.Sitemap = properties.flatMap((p) => [

@@ -4,7 +4,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIdToken } from 'firebase/auth';
 import Image from 'next/image';
-import { firebaseAuth } from '@/lib/firebase-client';
+import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 
 type Room = {
@@ -103,6 +103,12 @@ export function BookingPanel({
   const [specialRequests, setSpecialRequests] = useState('');
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+
+  // Show email-unverified warning for logged-in users
+  const emailUnverified =
+    isFirebaseConfigured &&
+    firebaseAuth.currentUser != null &&
+    !firebaseAuth.currentUser.emailVerified;
 
   const nights = nightCount(checkIn, checkOut);
 
@@ -211,6 +217,13 @@ export function BookingPanel({
         </form>
       </div>
 
+      {/* Email verification warning */}
+      {emailUnverified && (
+        <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800 dark:border-amber-800 dark:bg-amber-950 dark:text-amber-300">
+          ⚠️ Please verify your email before booking. Check your inbox for a verification link.
+        </div>
+      )}
+
       {/* Availability results */}
       {availability !== null && (
         <div className="space-y-3">
@@ -282,9 +295,16 @@ export function BookingPanel({
                       ₱{(room.baseNightlyRateMinor / 100).toLocaleString('en-PH')}
                       <span className="text-xs font-normal text-zinc-500">/night</span>
                     </p>
-                    <p className="text-xs text-zinc-500">
-                      ₱{(total / 100).toLocaleString('en-PH')} total
-                    </p>
+                    {nights > 0 && (
+                      <p className="text-xs text-zinc-500">
+                        × {nights} night{nights !== 1 ? 's' : ''}
+                      </p>
+                    )}
+                    {nights > 0 && (
+                      <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                        ₱{(total / 100).toLocaleString('en-PH')}
+                      </p>
+                    )}
                   </div>
                 </div>
 
@@ -309,6 +329,20 @@ export function BookingPanel({
                     onSubmit={handleBook}
                     className="mx-4 mb-4 mt-0 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800"
                   >
+                    {/* Price summary */}
+                    <div className="rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-800">
+                      <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400">
+                        <span>
+                          ₱{(room.baseNightlyRateMinor / 100).toLocaleString('en-PH')} × {nights}{' '}
+                          night{nights !== 1 ? 's' : ''}
+                        </span>
+                        <span>₱{(total / 100).toLocaleString('en-PH')}</span>
+                      </div>
+                      <div className="mt-2 flex justify-between border-t border-zinc-200 pt-2 text-sm font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-50">
+                        <span>Total</span>
+                        <span>₱{(total / 100).toLocaleString('en-PH')}</span>
+                      </div>
+                    </div>
                     <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
                       Your details
                     </p>
@@ -349,12 +383,14 @@ export function BookingPanel({
                       maxLength={500}
                       className={`${inputClass} resize-none`}
                     />
-                    <div className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                      Total: <strong>₱{(total / 100).toLocaleString('en-PH')}</strong> for {nights}{' '}
-                      night{nights !== 1 ? 's' : ''}
-                      {property.paymentMode === 'stripe'
-                        ? " · You'll be redirected to complete card payment."
-                        : ' · Payment instructions sent after booking.'}
+                    {/* Cancellation policy */}
+                    <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
+                      <p className="font-semibold">Cancellation policy</p>
+                      <p className="mt-0.5">
+                        Cancel free up to 48 hours before check-in for a full refund. Cancellations
+                        within 48 hours are non-refundable. Contact the property for special
+                        circumstances.
+                      </p>
                     </div>
                     <button
                       type="submit"

@@ -6,6 +6,7 @@ import {
   Param,
   Patch,
   Post,
+  Query,
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
@@ -30,10 +31,13 @@ export class PropertiesController {
     private readonly uploads: UploadsService,
   ) {}
 
-  /** Public — active properties for the guest listing page. */
+  /** Public — active properties for the guest listing page. Optionally filter by date availability. */
   @Get()
-  async list() {
-    const items = await this.svc.listActive();
+  async list(@Query('checkIn') checkIn?: string, @Query('checkOut') checkOut?: string) {
+    const items =
+      checkIn && checkOut
+        ? await this.svc.listActiveWithAvailability(checkIn, checkOut)
+        : await this.svc.listActive();
     return { data: items, meta: { count: items.length } };
   }
 

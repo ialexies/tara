@@ -85,7 +85,14 @@ export default async function HomePage({
       </main>
 
       <footer className="pb-safe border-t border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400 dark:border-zinc-800">
-        © {new Date().getFullYear()} Tara · Philippines
+        © {new Date().getFullYear()} Tara · Philippines ·{' '}
+        <Link href={`/${locale}/terms`} className="hover:underline">
+          Terms
+        </Link>
+        {' · '}
+        <Link href={`/${locale}/privacy`} className="hover:underline">
+          Privacy
+        </Link>
       </footer>
     </div>
   );

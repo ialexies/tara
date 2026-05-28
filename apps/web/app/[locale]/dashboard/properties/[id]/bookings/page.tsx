@@ -62,10 +62,15 @@ function formatDate(d: string) {
 export default function BookingsInboxPage(): React.ReactElement {
   const { locale, id: propertyId } = useParams<{ locale: string; id: string }>();
 
+  const [tab, setTab] = useState<'list' | 'calendar'>('list');
   const [rows, setRows] = useState<BookingRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [acting, setActing] = useState<string | null>(null);
+  const [calMonth, setCalMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   useEffect(() => {
     load();
@@ -149,7 +154,24 @@ export default function BookingsInboxPage(): React.ReactElement {
         </Link>
       </div>
 
-      <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bookings</h1>
+      <div className="flex items-center justify-between gap-4">
+        <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">Bookings</h1>
+        <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
+          {(['list', 'calendar'] as const).map((t) => (
+            <button
+              key={t}
+              onClick={() => setTab(t)}
+              className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                tab === t
+                  ? 'bg-white text-zinc-900 shadow-sm dark:bg-zinc-800 dark:text-zinc-50'
+                  : 'text-zinc-500 hover:text-zinc-700 dark:text-zinc-400'
+              }`}
+            >
+              {t.charAt(0).toUpperCase() + t.slice(1)}
+            </button>
+          ))}
+        </div>
+      </div>
 
       {error && (
         <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
@@ -159,53 +181,184 @@ export default function BookingsInboxPage(): React.ReactElement {
 
       {loading && <div className="py-12 text-center text-sm text-zinc-400">Loading…</div>}
 
-      {!loading && rows.length === 0 && (
-        <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700">
-          <p className="text-sm text-zinc-500">No bookings yet.</p>
-        </div>
+      {/* List view */}
+      {tab === 'list' && (
+        <>
+          {!loading && rows.length === 0 && (
+            <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700">
+              <p className="text-sm text-zinc-500">No bookings yet.</p>
+            </div>
+          )}
+
+          {!loading && pending.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                Needs attention ({pending.length})
+              </h2>
+              {pending.map(({ booking, roomName }) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  roomName={roomName}
+                  acting={acting}
+                  onConfirm={handleConfirm}
+                  onCancel={handleCancel}
+                  onCheckIn={handleCheckIn}
+                  onCheckOut={handleCheckOut}
+                  onRefresh={load}
+                />
+              ))}
+            </section>
+          )}
+
+          {!loading && others.length > 0 && (
+            <section className="space-y-3">
+              <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
+                All bookings
+              </h2>
+              {others.map(({ booking, roomName }) => (
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  roomName={roomName}
+                  acting={acting}
+                  onConfirm={handleConfirm}
+                  onCancel={handleCancel}
+                  onCheckIn={handleCheckIn}
+                  onCheckOut={handleCheckOut}
+                  onRefresh={load}
+                />
+              ))}
+            </section>
+          )}
+        </>
       )}
 
-      {!loading && pending.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            Needs attention ({pending.length})
-          </h2>
-          {pending.map(({ booking, roomName }) => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              roomName={roomName}
-              acting={acting}
-              onConfirm={handleConfirm}
-              onCancel={handleCancel}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              onRefresh={load}
-            />
-          ))}
-        </section>
+      {/* Calendar view */}
+      {tab === 'calendar' && !loading && (
+        <BookingCalendar rows={rows} month={calMonth} onMonthChange={setCalMonth} />
       )}
+    </div>
+  );
+}
 
-      {!loading && others.length > 0 && (
-        <section className="space-y-3">
-          <h2 className="text-sm font-semibold uppercase tracking-wide text-zinc-500">
-            All bookings
-          </h2>
-          {others.map(({ booking, roomName }) => (
-            <BookingCard
-              key={booking.id}
-              booking={booking}
-              roomName={roomName}
-              acting={acting}
-              onConfirm={handleConfirm}
-              onCancel={handleCancel}
-              onCheckIn={handleCheckIn}
-              onCheckOut={handleCheckOut}
-              onRefresh={load}
-            />
-          ))}
-        </section>
-      )}
+function BookingCalendar({
+  rows,
+  month,
+  onMonthChange,
+}: {
+  rows: BookingRow[];
+  month: string;
+  onMonthChange: (m: string) => void;
+}): React.ReactElement {
+  const [year, mon] = month.split('-').map(Number);
+  const firstDay = new Date(year, mon - 1, 1);
+  const daysInMonth = new Date(year, mon, 0).getDate();
+  const startDow = firstDay.getDay(); // 0=Sun
+
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  const STATUS_DOT: Record<string, string> = {
+    confirmed: 'bg-emerald-500',
+    checked_in: 'bg-green-600',
+    stripe_pending: 'bg-blue-400',
+    manual_pending: 'bg-amber-400',
+    cancelled: 'bg-red-400',
+  };
+
+  // Map each date in this month to bookings that overlap it
+  const dateMap = new Map<string, BookingRow[]>();
+  for (let d = 1; d <= daysInMonth; d++) {
+    const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+    const hits = rows.filter((r) => {
+      return r.booking.checkIn <= dateStr && r.booking.checkOut > dateStr;
+    });
+    if (hits.length) dateMap.set(dateStr, hits);
+  }
+
+  function prevMonth() {
+    const d = new Date(year, mon - 2, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+  function nextMonth() {
+    const d = new Date(year, mon, 1);
+    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+  }
+
+  const today = new Date().toISOString().slice(0, 10);
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center justify-between gap-3">
+        <button
+          onClick={prevMonth}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
+        >
+          ‹
+        </button>
+        <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+          {firstDay.toLocaleDateString('en-PH', { month: 'long', year: 'numeric' })}
+        </p>
+        <button
+          onClick={nextMonth}
+          className="flex h-9 w-9 items-center justify-center rounded-xl border border-zinc-200 text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-400"
+        >
+          ›
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 text-center">
+        {DAYS.map((d) => (
+          <div key={d} className="py-1.5 text-xs font-medium text-zinc-400">
+            {d}
+          </div>
+        ))}
+        {/* Empty cells before first day */}
+        {Array.from({ length: startDow }).map((_, i) => (
+          <div key={`e${i}`} />
+        ))}
+        {Array.from({ length: daysInMonth }, (_, i) => {
+          const d = i + 1;
+          const dateStr = `${year}-${String(mon).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+          const hits = dateMap.get(dateStr) ?? [];
+          const isToday = dateStr === today;
+          return (
+            <div
+              key={d}
+              className={`flex min-h-[52px] flex-col items-center gap-1 rounded-lg p-1 ${
+                isToday ? 'bg-zinc-100 dark:bg-zinc-800' : ''
+              }`}
+            >
+              <span
+                className={`text-xs font-medium ${
+                  isToday ? 'text-zinc-900 dark:text-zinc-50' : 'text-zinc-500 dark:text-zinc-400'
+                }`}
+              >
+                {d}
+              </span>
+              {hits.slice(0, 3).map((r) => (
+                <span
+                  key={r.booking.id}
+                  title={`${r.booking.guestName} · ${r.roomName}`}
+                  className={`h-1.5 w-full max-w-[28px] rounded-full ${STATUS_DOT[r.booking.status] ?? 'bg-zinc-300'}`}
+                />
+              ))}
+              {hits.length > 3 && (
+                <span className="text-[10px] text-zinc-400">+{hits.length - 3}</span>
+              )}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Legend */}
+      <div className="flex flex-wrap gap-3 text-xs text-zinc-500">
+        {Object.entries(STATUS_DOT).map(([status, colour]) => (
+          <span key={status} className="flex items-center gap-1.5">
+            <span className={`h-2 w-2 rounded-full ${colour}`} />
+            {status.replace('_', ' ')}
+          </span>
+        ))}
+      </div>
     </div>
   );
 }

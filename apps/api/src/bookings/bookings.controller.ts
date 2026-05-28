@@ -78,8 +78,17 @@ export class BookingsController {
     if (!auth || !auth.startsWith('Bearer ')) return undefined;
     try {
       const decoded = await getFirebaseAdmin().auth().verifyIdToken(auth.slice(7));
+      // Enforce email verification for logged-in users
+      if (!decoded.email_verified) {
+        throw new Error('email_not_verified');
+      }
       return decoded.uid;
-    } catch {
+    } catch (err: unknown) {
+      if (err instanceof Error && err.message === 'email_not_verified') {
+        throw new (await import('@nestjs/common').then((m) => m.ForbiddenException))(
+          'Please verify your email address before booking.',
+        );
+      }
       return undefined;
     }
   }

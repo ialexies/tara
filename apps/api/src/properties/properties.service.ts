@@ -5,8 +5,17 @@ import {
   UnprocessableEntityException,
   ConflictException,
 } from '@nestjs/common';
-import { db, properties, rooms, propertyImages } from '@tara/db';
-import { eq, and, isNull, count, min, getTableColumns, asc } from 'drizzle-orm';
+import {
+  db,
+  properties,
+  rooms,
+  units,
+  bookingItems,
+  bookings,
+  propertyImages,
+  ownerBlocks,
+} from '@tara/db';
+import { eq, and, isNull, count, min, getTableColumns, asc, inArray, notExists } from 'drizzle-orm';
 import type { CreateProperty, UpdateProperty } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
@@ -39,6 +48,77 @@ export class PropertiesService {
       .where(and(eq(properties.status, 'active'), isNull(properties.deletedAt)))
       .orderBy(properties.publishedAt)
       .limit(100);
+  }
+
+  async listActiveWithAvailability(checkIn: string, checkOut: string) {
+    if (checkOut <= checkIn) return [];
+
+    // Build the list of nights between checkIn and checkOut
+    const nights: string[] = [];
+    const cursor = new Date(checkIn);
+    const end = new Date(checkOut);
+    while (cursor < end) {
+      nights.push(cursor.toISOString().slice(0, 10));
+      cursor.setDate(cursor.getDate() + 1);
+    }
+    if (nights.length === 0) return [];
+
+    // Get all active properties first
+    const allActive = await this.listActive();
+    if (allActive.length === 0) return [];
+
+    // For each property check if any unit is fully free for all nights
+    const available: typeof allActive = [];
+    await Promise.all(
+      allActive.map(async (prop) => {
+        // Any unit in this property that has no booking for any of the nights
+        const [freeUnit] = await db
+          .select({ id: units.id })
+          .from(units)
+          .innerJoin(rooms, eq(units.roomId, rooms.id))
+          .where(
+            and(
+              eq(rooms.propertyId, prop.id),
+              eq(rooms.isActive, true),
+              isNull(rooms.deletedAt),
+              eq(units.isActive, true),
+              isNull(units.deletedAt),
+              notExists(
+                db
+                  .select({ id: bookingItems.id })
+                  .from(bookingItems)
+                  .innerJoin(bookings, eq(bookingItems.bookingId, bookings.id))
+                  .where(
+                    and(
+                      eq(bookingItems.unitId, units.id),
+                      inArray(bookingItems.night, nights),
+                      inArray(bookings.status, [
+                        'stripe_pending',
+                        'manual_pending',
+                        'awaiting_verification',
+                        'confirmed',
+                        'checked_in',
+                      ]),
+                    ),
+                  ),
+              ),
+              notExists(
+                db
+                  .select({ date: ownerBlocks.date })
+                  .from(ownerBlocks)
+                  .where(
+                    and(eq(ownerBlocks.propertyId, prop.id), inArray(ownerBlocks.date, nights)),
+                  ),
+              ),
+            ),
+          )
+          .limit(1);
+
+        if (freeUnit) available.push(prop);
+      }),
+    );
+
+    return available;
   }
 
   async getBySlug(slug: string) {
