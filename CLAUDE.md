@@ -26,19 +26,25 @@ The majority of Tara's users are on mobile. Every UI decision must start from mo
 
 ### Key API modules
 
-| Module        | Responsibility                                                |
-| ------------- | ------------------------------------------------------------- |
-| `auth`        | Firebase token verification, user sync, custom claims         |
-| `properties`  | Listings, approval flow, revenue summary, server-side filters |
-| `rooms`       | Room + unit management                                        |
-| `bookings`    | Booking lifecycle, payments, check-in/out                     |
-| `messages`    | Guest↔owner thread per booking (`messages` table)             |
-| `reviews`     | Post-checkout guest reviews                                   |
-| `price-rules` | Seasonal / date-range pricing overrides                       |
-| `stripe`      | Checkout sessions, webhook, refunds                           |
-| `scheduler`   | Daily cron jobs (booking reminders via `@nestjs/schedule`)    |
-| `email`       | Transactional emails via Resend                               |
-| `uploads`     | R2 presigned upload URLs                                      |
+| Module            | Responsibility                                                        |
+| ----------------- | --------------------------------------------------------------------- |
+| `auth`            | Firebase token verification, user sync, custom claims, referral codes |
+| `properties`      | Listings, approval flow, revenue summary, server-side filters         |
+| `rooms`           | Room + unit management                                                |
+| `bookings`        | Booking lifecycle, payments, check-in/out, ID verification            |
+| `messages`        | Guest↔owner thread per booking (`messages` table)                     |
+| `reviews`         | Post-checkout guest reviews                                           |
+| `price-rules`     | Seasonal / date-range pricing overrides                               |
+| `promo-codes`     | Owner creates discount codes; guests validate + apply at checkout     |
+| `guest-blacklist` | Owner blocks guest emails from booking a property                     |
+| `waitlist`        | Guests join queue; notified by email on cancellation                  |
+| `search-alerts`   | Saved search filters; daily cron emails matching new properties       |
+| `webhooks`        | Owner-registered HTTPS endpoints with HMAC signing                    |
+| `property-staff`  | Co-host / manager roles per property                                  |
+| `stripe`          | Checkout sessions, webhook, refunds                                   |
+| `scheduler`       | Daily cron jobs — booking reminders + search alerts                   |
+| `email`           | Transactional emails via Resend                                       |
+| `uploads`         | R2 presigned upload URLs                                              |
 
 ### Property status flow
 
@@ -179,4 +185,131 @@ curl -si https://api-staging.tara-stays.com/properties/<id>/upload-url \
 
 `SchedulerService` runs a daily cron at **08:00 PHT** (midnight UTC) via `@nestjs/schedule`. It queries bookings with `checkIn = tomorrow` and sends reminder emails to guests. No env var needed — fires automatically when the API starts.
 
+`SearchAlertsService` also runs a daily cron at 08:00 PHT — it checks for properties created in the last 25 hours and emails matching saved-search subscribers.
+
 To verify the scheduler is registered: check API startup logs for `SchedulerService` initialization. To test a reminder manually in dev, call `schedulerService.sendBookingReminders()` directly (not exposed as an HTTP endpoint by design).
+
+## Promo codes
+
+Owner-created discount codes. Two types: `percent` (1–100%) and `flat` (PHP amount in minor units).
+
+- **Dashboard**: `/dashboard/promo-codes` — create, list, deactivate
+- **Booking panel**: guest enters code; validated live via `GET /promo-codes/validate?code=&propertyId=&amount=`
+- **Apply at checkout**: `POST /bookings` accepts `promoCode` field; validation happens server-side
+- **Schema**: `promo_codes` table — `discount_type`, `discount_value`, `max_uses`, `uses_count`, `valid_from`, `valid_to`, `is_active`
+- Promo code usage auto-increments on booking creation
+
+## Guest blacklist
+
+Owner can block a guest email from booking any of their properties.
+
+- **Dashboard**: `/dashboard/properties/[id]/blacklist` — add/remove blocked emails
+- **Enforcement**: checked at `POST /bookings` creation — returns 403 for blocked emails
+- **Schema**: `guest_blacklist(property_id, owner_uid, guest_email, reason)`
+- Reason is private to the owner; never shown to guests
+
+## Waitlist
+
+Guests join a queue for a full room + date range. Auto-notified when a booking is cancelled.
+
+- **Join**: `POST /waitlist` (public, no auth required)
+- **Notification**: on booking cancellation, `WaitlistService.notifyOnCancellation()` fires and emails matching waitlist entries
+- **Owner view**: `GET /waitlist/property/:propertyId` (owner-auth required)
+- **Schema**: `waitlist(room_id, property_id, guest_email, guest_name, check_in, check_out, notified_at)`
+- Unique constraint: one entry per `(room_id, guest_email, check_in)`
+
+## Webhooks
+
+Owner-registered HTTPS endpoints. Events dispatched fire-and-forget with HMAC-SHA256 signature.
+
+- **Dashboard**: `/dashboard/webhooks` — register URL, select events, reveal signing secret
+- **Events**: `booking.created`, `booking.confirmed`, `booking.cancelled`, `booking.checked_in`, `booking.checked_out`
+- **Signature header**: `X-Tara-Signature: <sha256_hex>`; verify with `HMAC-SHA256(secret, body)`
+- **Schema**: `webhooks(owner_uid, url, secret, events[], is_active)`
+- Dispatch is async (fire-and-forget); webhook failures are logged but not retried
+- Dispatch currently wired to `booking.created` only; extend `WebhooksService.dispatch()` + call sites for other events
+
+## Staff / co-hosts
+
+Owner invites staff with per-property roles.
+
+- **Roles**: `cohost` (view bookings), `manager` (full access — same as owner for now)
+- **Dashboard**: `/dashboard/properties/[id]/staff`
+- **Schema**: `property_staff(property_id, owner_uid, staff_email, staff_uid, role)`
+- `staffUid` is populated when the invited user logs in (future: link via Firebase lookup on sign-in)
+
+## Referral program
+
+Every authenticated user can get a unique 8-char referral code.
+
+- **Endpoint**: `GET /auth/me/referral` — returns or creates the code
+- **Dashboard**: `/dashboard/refer` — shows code + shareable link
+- **Schema**: `users.referral_code` (nullable text, unique)
+- Code is auto-generated on first request; never changes
+- Redemption tracking (crediting the referrer) is not yet implemented — the code is for future promo integration
+
+## Search alerts
+
+Guests save their current search filters; emailed daily when matching new properties go live.
+
+- **Create**: `POST /search-alerts` (public, no auth)
+- **Delete**: `DELETE /search-alerts/:id?email=`
+- **Cron**: runs daily at 08:00 PHT, checks properties created in the last 25 hours
+- **Schema**: `search_alerts(guest_email, city, property_type, max_price_minor, amenities[], last_notified_at)`
+- UI: "Save alert" button appears in the listing filter bar when any filter is active
+
+## Bulk pricing
+
+Owner can set the same nightly rate across multiple rooms at once.
+
+- **UI**: "Bulk price" button appears in the Rooms page when a property has ≥2 rooms
+- Implemented as a modal overlay; calls `PATCH /properties/:id/rooms/:roomId` for each selected room in parallel
+- No new API endpoint — reuses existing room update
+
+## Pricing calendar view
+
+Visual month grid on the Pricing rules page showing which days have active rules.
+
+- **Toggle**: List / Calendar view switcher in the Pricing page header
+- Green cells = rate override active; amber = min-nights constraint; grey = no rule
+- Hover tooltip shows rule names
+
+## Performance comparison
+
+Two-panel side-by-side view comparing any two property/month combinations.
+
+- **Dashboard**: `/dashboard/compare`
+- Uses existing `GET /properties/:id/occupancy?months=` endpoint
+- Shows: occupancy %, booked days, revenue
+
+## Multi-property calendar
+
+Unified occupancy view across all owner properties.
+
+- **Dashboard**: `/dashboard/calendar`
+- Property toggle chips to show/hide individual properties
+- Colour coding: red = full, amber = partial, grey = open
+
+## Invoice / receipt
+
+Printable receipt for confirmed and checked-out bookings.
+
+- **UI**: "Download receipt" button on the guest booking detail page
+- Opens a print dialog via `window.print()` — no server-side PDF generation
+- Shown only for `confirmed` and `checked_out` status bookings
+
+## Dark mode toggle
+
+Explicit user preference stored in `localStorage`.
+
+- **UI**: Light / System / Dark selector on the Profile page
+- Applies immediately by toggling the `dark` class on `<html>`
+- Persists across sessions via `localStorage.getItem('tara_theme')`
+
+## ID verification
+
+Owner can mark a booking's ID as verified.
+
+- **Endpoint**: `POST /bookings/:id/verify-id` (owner-auth)
+- **Schema**: `bookings.id_verified` (boolean), `bookings.id_verified_at` (timestamp)
+- High-value booking prompts are shown based on `totalMinor > 500000` (₱5,000) — UI flag only, no automated block
