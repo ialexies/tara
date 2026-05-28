@@ -293,7 +293,9 @@ export function BookingPanel({
                     <div className="rounded-lg bg-zinc-50 px-3 py-2 text-sm text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
                       Total: <strong>₱{(total / 100).toLocaleString('en-PH')}</strong> for {nights}{' '}
                       night{nights !== 1 ? 's' : ''}
-                      {' · '}Payment instructions sent after booking.
+                      {property.paymentMode === 'stripe'
+                        ? " · You'll be redirected to complete card payment."
+                        : ' · Payment instructions sent after booking.'}
                     </div>
                     <button
                       type="submit"
@@ -301,8 +303,12 @@ export function BookingPanel({
                       className="flex h-11 w-full items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
                     >
                       {submitting
-                        ? 'Confirming…'
-                        : `Confirm booking · ₱${(total / 100).toLocaleString('en-PH')}`}
+                        ? property.paymentMode === 'stripe'
+                          ? 'Redirecting…'
+                          : 'Confirming…'
+                        : property.paymentMode === 'stripe'
+                          ? `Pay with card · ₱${(total / 100).toLocaleString('en-PH')}`
+                          : `Confirm booking · ₱${(total / 100).toLocaleString('en-PH')}`}
                     </button>
                   </form>
                 )}
