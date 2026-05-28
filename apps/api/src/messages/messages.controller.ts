@@ -1,4 +1,5 @@
 import { Body, Controller, Get, Param, Post, UseGuards, HttpCode } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { MessagesService } from './messages.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -10,6 +11,7 @@ const SendMessageSchema = z.object({
   senderName: z.string().max(120).optional(),
 });
 
+@SkipThrottle()
 @Controller('bookings/:bookingId/messages')
 @UseGuards(FirebaseGuard)
 export class MessagesController {
