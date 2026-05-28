@@ -90,37 +90,13 @@ jobs:
 
       - name: Redeploy staging stack
         run: |
-          PORTAINER_URL="https://192.168.0.253:9443"
-          PORTAINER_TOKEN="ptr_ejo0JsEI7qy5b90GsEpDrPPUX9Wu6kwWXRYiDWc8ndA="
-
-          # Fetch env vars Portainer manages so they survive the recreate
-          STACK_JSON=$(curl -sk --max-time 15 -H "X-API-Key: $PORTAINER_TOKEN" "$PORTAINER_URL/api/stacks")
-          STACK_ID=$(echo "$STACK_JSON" | python3 -c "
-          import json,sys
-          s = next(s for s in json.load(sys.stdin) if s['Name']=='tara-staging')
-          print(s['Id'])
-          ")
-          ENV_JSON=$(curl -sk --max-time 15 -H "X-API-Key: $PORTAINER_TOKEN" \
-            "$PORTAINER_URL/api/stacks/$STACK_ID" | \
-            python3 -c "import json,sys; print(json.dumps(json.load(sys.stdin).get('Env', [])))")
-
-          # Write a temp env file from Portainer-managed vars
-          echo "$ENV_JSON" | python3 -c "
-          import json, sys
-          for e in json.load(sys.stdin):
-              v = e['value'].replace('\\\\n', '\n')
-              print(f'{e[\"name\"]}={v}')
-          " > /tmp/staging-portainer.env
-
-          # Restart api + web directly — runner runs on the same host as the containers,
-          # so docker compose can use the freshly built images without a registry push.
+          # Runner is the home server — images are already built locally.
+          # Env vars are read from the server's .env file (source of truth for all secrets).
           docker compose \
-            --env-file /tmp/staging-portainer.env \
+            --env-file /home/ialexies/stacks/tara-staging/.env \
             -f infra/portainer/stacks/tara-staging.yml \
             -p tara-staging \
             up -d --no-deps --force-recreate api web
-
-          rm -f /tmp/staging-portainer.env
 
       - name: Smoke test
         run: |
