@@ -28,7 +28,7 @@ const securityHeaders = [
     // Migrate to nonce-based CSP when moving to production.
     value: [
       "default-src 'self'",
-      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com",
+      "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://apis.google.com https://www.gstatic.com https://static.cloudflareinsights.com",
       "style-src 'self' 'unsafe-inline'",
       "img-src 'self' data: blob: https:",
       `connect-src 'self' ${apiPublicUrl} ${process.env.NODE_ENV === 'development' ? 'ws://localhost:3000 ws://localhost:4000' : ''} https://staging.tara-stays.com https://tara-stays.com https://*.googleapis.com https://*.firebaseapp.com https://accounts.google.com https://securetoken.googleapis.com https://*.r2.cloudflarestorage.com https://*.r2.dev`,
