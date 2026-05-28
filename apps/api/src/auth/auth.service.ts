@@ -73,6 +73,9 @@ export class AuthService {
           email,
           emailVerifiedAt: email_verified ? new Date() : byUid.emailVerifiedAt,
           fullName: input.fullName ?? byUid.fullName,
+          // Only update role when the caller explicitly provides one (e.g. during registration).
+          // Normal logins pass no role and should not silently downgrade an owner to guest.
+          ...(input.role ? { role: input.role } : {}),
           updatedAt: new Date(),
         })
         .where(eq(users.id, byUid.id))
@@ -89,6 +92,7 @@ export class AuthService {
             firebaseUid: uid,
             emailVerifiedAt: email_verified ? new Date() : byEmail.emailVerifiedAt,
             fullName: input.fullName ?? byEmail.fullName,
+            ...(input.role ? { role: input.role } : {}),
             updatedAt: new Date(),
           })
           .where(eq(users.id, byEmail.id))

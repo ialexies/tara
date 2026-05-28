@@ -2,7 +2,7 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState, type FormEvent } from 'react';
+import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useParams, useRouter } from 'next/navigation';
 import {
@@ -22,6 +22,11 @@ export default function RegisterPage(): React.ReactElement {
   const [pending, setPending] = useState(false);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => setHydrated(true), []);
+  // Prevents the onAuthStateChanged listener from racing with an in-flight signup.
+  // createUserWithEmailAndPassword / signInWithPopup both trigger auth state changes,
+  // which would call finishSignIn with role:'guest' before the explicit call with the
+  // user-selected role — creating the DB row as guest before we can set it to owner.
+  const signingIn = useRef(false);
 
   async function finishSignIn(
     user: import('firebase/auth').User,
@@ -46,6 +51,7 @@ export default function RegisterPage(): React.ReactElement {
     e.preventDefault();
     setError(null);
     setPending(true);
+    signingIn.current = true;
     const data = new FormData(e.currentTarget);
     const email = String(data.get('email') ?? '');
     const password = String(data.get('password') ?? '');
@@ -63,6 +69,7 @@ export default function RegisterPage(): React.ReactElement {
       const code = (err as { code?: string }).code;
       setError(friendlyError(code) ?? 'Could not create account');
     } finally {
+      signingIn.current = false;
       setPending(false);
     }
   }
@@ -70,6 +77,7 @@ export default function RegisterPage(): React.ReactElement {
   async function handleGoogle(): Promise<void> {
     setError(null);
     setPending(true);
+    signingIn.current = true;
     try {
       // Popup avoids the third-party-storage isolation problem on localhost.
       const cred = await signInWithPopup(firebaseAuth, googleProvider);
@@ -82,15 +90,19 @@ export default function RegisterPage(): React.ReactElement {
       const code = (err as { code?: string }).code;
       setError(friendlyError(code) ?? 'Google sign-in failed');
       setPending(false);
+    } finally {
+      signingIn.current = false;
     }
   }
 
   // If user is already authenticated in Firebase (page refresh), finish sign-in.
+  // Skip if an explicit signup is in flight — that flow calls finishSignIn with the
+  // correct role itself, and we must not race it with a hardcoded 'guest' role here.
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     let handled = false;
     const unsubscribe = onAuthStateChanged(firebaseAuth, (user) => {
-      if (handled || !user) return;
+      if (handled || !user || signingIn.current) return;
       handled = true;
       setPending(true);
       void finishSignIn(user, {
