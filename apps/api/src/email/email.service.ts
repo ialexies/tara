@@ -146,6 +146,7 @@ export class EmailService {
       to: guestEmail,
       subject: `New properties matching your search on Tara`,
       html: shell(
+        'New properties matching your search',
         `<p>New properties matching your saved search are now available:</p>
          <ul style="margin:8px 0;padding-left:20px">${list}</ul>
          <p><a href="https://tara-stays.com" style="background:#18181b;color:#fff;padding:12px 24px;border-radius:8px;text-decoration:none;font-weight:600;">Browse properties →</a></p>`,
@@ -164,6 +165,7 @@ export class EmailService {
       to: guestEmail,
       subject: `Good news! ${roomName} is now available`,
       html: shell(
+        `${roomName} is now available`,
         `<p>Hi ${guestName},</p>
          <p>Great news — <strong>${roomName}</strong> you were waiting for just opened up for <strong>${checkIn}</strong> to <strong>${checkOut}</strong>.</p>
          <p>Book now before it fills up again!</p>

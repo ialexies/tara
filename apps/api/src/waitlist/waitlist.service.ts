@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { db } from '@tara/db/client';
-import { waitlist, bookings, rooms } from '@tara/db';
+import { waitlist, rooms } from '@tara/db';
 import { and, eq, isNull, lte, gte } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
 

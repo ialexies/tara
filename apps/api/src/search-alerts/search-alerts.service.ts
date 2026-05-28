@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { db } from '@tara/db/client';
 import { searchAlerts, properties } from '@tara/db';
-import { and, eq, isNull, lte, or, sql } from 'drizzle-orm';
+import { and, eq, isNull, sql } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
 
 @Injectable()
