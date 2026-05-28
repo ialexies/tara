@@ -110,6 +110,7 @@ export function PropertyListings({
               onClick={() => {
                 setSearch('');
                 setTypeFilter('');
+                setCityFilter('');
                 setMaxPrice('');
               }}
               className="h-11 rounded-xl border border-zinc-200 px-3 text-sm text-zinc-500 hover:text-zinc-700 dark:border-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
@@ -132,6 +133,7 @@ export function PropertyListings({
               onClick={() => {
                 setSearch('');
                 setTypeFilter('');
+                setCityFilter('');
                 setMaxPrice('');
               }}
               className="text-sm text-zinc-700 underline dark:text-zinc-300"
