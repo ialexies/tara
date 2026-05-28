@@ -42,7 +42,13 @@ const securityHeaders = [
 ];
 
 const r2PublicHostname = process.env.R2_PUBLIC_URL
-  ? new URL(process.env.R2_PUBLIC_URL).hostname
+  ? (() => {
+      try {
+        return new URL(process.env.R2_PUBLIC_URL!).hostname;
+      } catch {
+        return null;
+      }
+    })()
   : null;
 
 const nextConfig: NextConfig = {
@@ -51,8 +57,12 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   images: {
     remotePatterns: [
-      // R2 public bucket URL — populated once R2 credentials are set
-      ...(r2PublicHostname ? [{ protocol: 'https' as const, hostname: r2PublicHostname }] : []),
+      // Cloudflare R2 public development URLs — covers all *.r2.dev buckets
+      { protocol: 'https' as const, hostname: '*.r2.dev' },
+      // R2 custom domain (when R2_PUBLIC_URL is set to a non-r2.dev hostname)
+      ...(r2PublicHostname && !r2PublicHostname.endsWith('.r2.dev')
+        ? [{ protocol: 'https' as const, hostname: r2PublicHostname }]
+        : []),
       // Allow any https image in development for convenience
       ...(process.env.NODE_ENV === 'development'
         ? [{ protocol: 'https' as const, hostname: '**' }]
