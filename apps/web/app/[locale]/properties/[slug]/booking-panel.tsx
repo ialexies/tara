@@ -61,6 +61,8 @@ type AvailabilityResult = {
   baseNightlyRateMinor: number;
   availableUnits: number;
   totalUnits: number;
+  minNights: number | null;
+  meetsMinNights: boolean;
 };
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -216,7 +218,7 @@ export function BookingPanel({
           )}
           {availability.map((room) => {
             const isSelected = bookingRoom?.roomId === room.roomId;
-            const unavailable = room.availableUnits === 0;
+            const unavailable = room.availableUnits === 0 || !room.meetsMinNights;
             const total = room.baseNightlyRateMinor * nights;
 
             return (
@@ -235,16 +237,29 @@ export function BookingPanel({
                       {room.roomType === 'dorm' ? `${room.capacity}-bed dorm` : 'Private room'}
                       {room.gender ? ` · ${room.gender}-only` : ''}
                     </p>
-                    {unavailable ? (
+                    {room.availableUnits === 0 ? (
                       <p className="mt-1 text-xs font-medium text-red-500">Sold out</p>
+                    ) : !room.meetsMinNights ? (
+                      <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
+                        Min. {room.minNights} nights required for these dates
+                      </p>
                     ) : (
                       <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
                         {room.availableUnits} of {room.totalUnits} available
+                        {room.minNights ? ` · Min. ${room.minNights} nights` : ''}
                       </p>
                     )}
                     <AmenityBadges
                       room={property.rooms.find((r) => r.id === room.roomId) ?? null}
                     />
+                    {(() => {
+                      const desc = property.rooms.find((r) => r.id === room.roomId)?.description;
+                      return desc ? (
+                        <p className="mt-2 text-xs leading-relaxed text-zinc-500 dark:text-zinc-400">
+                          {desc}
+                        </p>
+                      ) : null;
+                    })()}
                   </div>
                   <div className="shrink-0 text-right">
                     <p className="font-bold text-zinc-900 dark:text-zinc-50">

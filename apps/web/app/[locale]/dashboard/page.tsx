@@ -2,15 +2,28 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { ImageUploader } from '@/components/image-uploader';
 
+type Amenities = {
+  wifi?: boolean;
+  parking?: boolean;
+  pool?: boolean;
+  aircon?: boolean;
+  restaurant?: boolean;
+  bar?: boolean;
+  laundry?: boolean;
+  gym?: boolean;
+};
+
 type Property = {
   id: string;
   name: string;
+  slug: string;
   city: string;
   region: string;
   status: string;
@@ -20,6 +33,7 @@ type Property = {
   coverImageUrl?: string | null;
   paymentMode: string;
   manualPaymentMethods?: { gcash?: string; maya?: string; bank?: string } | null;
+  amenities?: Amenities | null;
   createdAt: string;
 };
 
@@ -134,6 +148,7 @@ function EditPropertyForm({
   onCancel: () => void;
 }): React.ReactElement {
   const [name, setName] = useState(property.name);
+  const [slug, setSlug] = useState(property.slug);
   const [propertyType, setPropertyType] = useState(property.propertyType);
   const [city, setCity] = useState(property.city);
   const [region, setRegion] = useState(property.region);
@@ -144,8 +159,24 @@ function EditPropertyForm({
   const [gcash, setGcash] = useState(property.manualPaymentMethods?.gcash ?? '');
   const [maya, setMaya] = useState(property.manualPaymentMethods?.maya ?? '');
   const [bank, setBank] = useState(property.manualPaymentMethods?.bank ?? '');
+  const [amenities, setAmenities] = useState<Amenities>(property.amenities ?? {});
+  const [propImgs, setPropImgs] = useState<{ id: string; url: string }[]>([]);
+  const [imgUploading, setImgUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadImages = useCallback(async () => {
+    try {
+      const res = await api.properties.listImages(property.id);
+      setPropImgs(res.data as { id: string; url: string }[]);
+    } catch {
+      // non-fatal
+    }
+  }, [property.id]);
+
+  useEffect(() => {
+    void loadImages();
+  }, [loadImages]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -154,6 +185,7 @@ function EditPropertyForm({
     try {
       await api.properties.update(property.id, {
         name,
+        slug: slug || undefined,
         propertyType,
         city,
         region,
@@ -164,6 +196,7 @@ function EditPropertyForm({
           paymentMode === 'manual'
             ? { gcash: gcash || undefined, maya: maya || undefined, bank: bank || undefined }
             : undefined,
+        amenities,
       });
       onSuccess();
     } catch (e: unknown) {
@@ -202,6 +235,69 @@ function EditPropertyForm({
             return publicUrl;
           }}
         />
+        <div>
+          <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Additional photos
+          </p>
+          {propImgs.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {propImgs.map((img) => (
+                <div
+                  key={img.id}
+                  className="group relative h-20 w-28 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
+                >
+                  <Image src={img.url} alt="" fill className="object-cover" sizes="112px" />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await api.properties.deleteImage(property.id, img.id);
+                      await loadImages();
+                    }}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs text-white opacity-0 group-hover:opacity-100"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <label
+            className={`flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 text-sm text-zinc-500 dark:border-zinc-600 ${imgUploading ? 'opacity-50' : 'hover:border-zinc-400'}`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={imgUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImgUploading(true);
+                try {
+                  const { uploadUrl, publicUrl } = await api.properties.getImageUploadUrl(
+                    property.id,
+                    file.type,
+                    file.size,
+                  );
+                  await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': file.type },
+                  });
+                  await api.properties.addImage(property.id, publicUrl);
+                  await loadImages();
+                } catch {
+                  // user can retry
+                } finally {
+                  setImgUploading(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+            {imgUploading ? 'Uploading…' : '+ Add photo'}
+          </label>
+        </div>
+
         <Field label="Property name" required>
           <input
             type="text"
@@ -211,6 +307,24 @@ function EditPropertyForm({
             minLength={2}
             className={inputClass}
           />
+        </Field>
+
+        <Field label="URL slug">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-zinc-400">tara-stays.com/en/properties/</span>
+            <input
+              type="text"
+              value={slug}
+              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+              minLength={2}
+              maxLength={120}
+              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+              className={`${inputClass} flex-1`}
+            />
+          </div>
+          <p className="mt-1 text-xs text-zinc-400">
+            Lowercase letters, numbers, and hyphens only. Changing this breaks existing links.
+          </p>
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
@@ -282,6 +396,39 @@ function EditPropertyForm({
             className={`${inputClass} resize-none`}
           />
         </Field>
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Property amenities
+          </p>
+          <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {(
+              [
+                ['wifi', 'WiFi'],
+                ['parking', 'Parking'],
+                ['pool', 'Pool'],
+                ['aircon', 'Air-con'],
+                ['restaurant', 'Restaurant'],
+                ['bar', 'Bar'],
+                ['laundry', 'Laundry'],
+                ['gym', 'Gym'],
+              ] as [keyof Amenities, string][]
+            ).map(([key, label]) => (
+              <label
+                key={key}
+                className="flex cursor-pointer items-center gap-2 rounded-lg border border-zinc-200 px-3 py-2 text-sm dark:border-zinc-700"
+              >
+                <input
+                  type="checkbox"
+                  checked={amenities[key] ?? false}
+                  onChange={(e) => setAmenities((a) => ({ ...a, [key]: e.target.checked }))}
+                  className="h-4 w-4 rounded"
+                />
+                {label}
+              </label>
+            ))}
+          </div>
+        </div>
 
         {paymentMode === 'manual' && (
           <div className="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">

@@ -23,6 +23,17 @@ type Room = {
   baseNightlyRateMinor: number;
 };
 
+type Amenities = {
+  wifi?: boolean;
+  parking?: boolean;
+  pool?: boolean;
+  aircon?: boolean;
+  restaurant?: boolean;
+  bar?: boolean;
+  laundry?: boolean;
+  gym?: boolean;
+};
+
 type Property = {
   id: string;
   slug: string;
@@ -37,6 +48,7 @@ type Property = {
   latitude: number | null;
   longitude: number | null;
   manualPaymentMethods: { gcash?: string; maya?: string; bank?: string } | null;
+  amenities: Amenities | null;
   rooms: Room[];
 };
 
@@ -97,6 +109,36 @@ async function fetchProperty(slug: string): Promise<Property | null> {
   }
 }
 
+type Review = {
+  id: string;
+  guestName: string;
+  rating: number;
+  body: string | null;
+  createdAt: string;
+};
+
+async function fetchPropertyImages(propertyId: string): Promise<{ id: string; url: string }[]> {
+  try {
+    const res = await fetch(`${API_URL}/properties/${propertyId}/images`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: { id: string; url: string }[] };
+    return json.data;
+  } catch {
+    return [];
+  }
+}
+
+async function fetchReviews(propertyId: string): Promise<Review[]> {
+  try {
+    const res = await fetch(`${API_URL}/properties/${propertyId}/reviews`, { cache: 'no-store' });
+    if (!res.ok) return [];
+    const json = (await res.json()) as { data: Review[] };
+    return json.data;
+  } catch {
+    return [];
+  }
+}
+
 export default async function PropertyPage({
   params,
 }: {
@@ -107,6 +149,11 @@ export default async function PropertyPage({
 
   const property = await fetchProperty(slug);
   if (!property) notFound();
+
+  const [propertyReviews, galleryImages] = await Promise.all([
+    fetchReviews(property.id),
+    fetchPropertyImages(property.id),
+  ]);
 
   const cheapestRoom = property.rooms.reduce<Room | null>(
     (min, r) => (!min || r.baseNightlyRateMinor < min.baseNightlyRateMinor ? r : min),
@@ -134,19 +181,34 @@ export default async function PropertyPage({
           ← All properties
         </Link>
 
-        <div className="relative mb-6 h-48 overflow-hidden rounded-2xl bg-zinc-100 sm:h-64 dark:bg-zinc-800">
-          {property.coverImageUrl ? (
-            <Image
-              src={property.coverImageUrl}
-              alt={property.name}
-              fill
-              className="object-cover"
-              sizes="(max-width:768px) 100vw, 768px"
-              priority
-            />
-          ) : (
-            <div className="flex h-full items-center justify-center">
-              <span className="text-5xl">🏨</span>
+        {/* Hero + gallery */}
+        <div className="mb-6 space-y-2">
+          <div className="relative h-48 overflow-hidden rounded-2xl bg-zinc-100 sm:h-64 dark:bg-zinc-800">
+            {property.coverImageUrl ? (
+              <Image
+                src={property.coverImageUrl}
+                alt={property.name}
+                fill
+                className="object-cover"
+                sizes="(max-width:768px) 100vw, 768px"
+                priority
+              />
+            ) : (
+              <div className="flex h-full items-center justify-center">
+                <span className="text-5xl">🏨</span>
+              </div>
+            )}
+          </div>
+          {galleryImages.length > 0 && (
+            <div className="flex gap-2 overflow-x-auto pb-1">
+              {galleryImages.map((img) => (
+                <div
+                  key={img.id}
+                  className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
+                >
+                  <Image src={img.url} alt="" fill className="object-cover" sizes="112px" />
+                </div>
+              ))}
             </div>
           )}
         </div>
@@ -181,6 +243,26 @@ export default async function PropertyPage({
               {property.description}
             </p>
           )}
+          {property.amenities && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {(
+                [
+                  ['wifi', 'WiFi'],
+                  ['parking', 'Parking'],
+                  ['pool', 'Pool'],
+                  ['aircon', 'Air-con'],
+                  ['restaurant', 'Restaurant'],
+                  ['bar', 'Bar'],
+                  ['laundry', 'Laundry'],
+                  ['gym', 'Gym'],
+                ] as [keyof Amenities, string][]
+              )
+                .filter(([key]) => property.amenities?.[key])
+                .map(([key, label]) => (
+                  <Chip key={key}>{label}</Chip>
+                ))}
+            </div>
+          )}
         </div>
 
         {property.latitude && property.longitude && (
@@ -188,6 +270,41 @@ export default async function PropertyPage({
         )}
 
         <BookingPanel property={property} locale={locale} />
+
+        {propertyReviews.length > 0 && (
+          <section className="mt-8">
+            <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
+              Reviews ({propertyReviews.length})
+            </h2>
+            <ul className="space-y-4">
+              {propertyReviews.map((r) => (
+                <li
+                  key={r.id}
+                  className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                  <div className="flex items-center justify-between gap-2">
+                    <p className="font-medium text-zinc-900 dark:text-zinc-50">{r.guestName}</p>
+                    <span className="text-amber-500">
+                      {'★'.repeat(r.rating)}
+                      {'☆'.repeat(5 - r.rating)}
+                    </span>
+                  </div>
+                  {r.body && (
+                    <p className="mt-2 text-sm leading-relaxed text-zinc-600 dark:text-zinc-400">
+                      {r.body}
+                    </p>
+                  )}
+                  <p className="mt-2 text-xs text-zinc-400">
+                    {new Date(r.createdAt).toLocaleDateString('en-PH', {
+                      year: 'numeric',
+                      month: 'short',
+                    })}
+                  </p>
+                </li>
+              ))}
+            </ul>
+          </section>
+        )}
       </main>
 
       <footer className="pb-safe border-t border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400 dark:border-zinc-800">

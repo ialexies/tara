@@ -105,6 +105,32 @@ export default function BookingsInboxPage(): React.ReactElement {
     }
   }
 
+  async function handleCheckIn(id: string) {
+    if (!confirm('Mark this guest as checked in?')) return;
+    setActing(id);
+    try {
+      await api.bookings.checkIn(id);
+      load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setActing(null);
+    }
+  }
+
+  async function handleCheckOut(id: string) {
+    if (!confirm('Mark this guest as checked out?')) return;
+    setActing(id);
+    try {
+      await api.bookings.checkOut(id);
+      load();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed');
+    } finally {
+      setActing(null);
+    }
+  }
+
   const pending = rows.filter((r) =>
     ['stripe_pending', 'manual_pending', 'awaiting_verification'].includes(r.booking.status),
   );
@@ -152,6 +178,9 @@ export default function BookingsInboxPage(): React.ReactElement {
               acting={acting}
               onConfirm={handleConfirm}
               onCancel={handleCancel}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onRefresh={load}
             />
           ))}
         </section>
@@ -170,10 +199,89 @@ export default function BookingsInboxPage(): React.ReactElement {
               acting={acting}
               onConfirm={handleConfirm}
               onCancel={handleCancel}
+              onCheckIn={handleCheckIn}
+              onCheckOut={handleCheckOut}
+              onRefresh={load}
             />
           ))}
         </section>
       )}
+    </div>
+  );
+}
+
+type ModificationRequest = {
+  id: string;
+  requestedCheckIn: string;
+  requestedCheckOut: string;
+  status: string;
+  guestMessage: string | null;
+};
+
+function ModificationRequests({
+  bookingId,
+  onResolved,
+}: {
+  bookingId: string;
+  onResolved: () => void;
+}): React.ReactElement {
+  const [requests, setRequests] = useState<ModificationRequest[]>([]);
+  const [resolving, setResolving] = useState<string | null>(null);
+
+  useEffect(() => {
+    api.bookings
+      .listModificationRequests(bookingId)
+      .then((res) => setRequests(res.data as ModificationRequest[]))
+      .catch(() => undefined);
+  }, [bookingId]);
+
+  const pending = requests.filter((r) => r.status === 'pending');
+  if (pending.length === 0) return <></>;
+
+  async function resolve(requestId: string, action: 'approved' | 'rejected') {
+    setResolving(requestId);
+    try {
+      await api.bookings.resolveModificationRequest(bookingId, requestId, action);
+      onResolved();
+    } catch (e: unknown) {
+      alert(e instanceof Error ? e.message : 'Failed');
+      setResolving(null);
+    }
+  }
+
+  return (
+    <div className="mt-3 space-y-2 border-t border-amber-100 pt-3 dark:border-amber-900">
+      {pending.map((req) => (
+        <div key={req.id} className="rounded-lg bg-amber-50 px-3 py-2.5 dark:bg-amber-950">
+          <p className="text-xs font-semibold text-amber-800 dark:text-amber-200">
+            Date change request
+          </p>
+          <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-300">
+            {formatDate(req.requestedCheckIn)} → {formatDate(req.requestedCheckOut)}
+          </p>
+          {req.guestMessage && (
+            <p className="mt-0.5 text-xs italic text-amber-600 dark:text-amber-400">
+              "{req.guestMessage}"
+            </p>
+          )}
+          <div className="mt-2 flex gap-2">
+            <button
+              onClick={() => resolve(req.id, 'approved')}
+              disabled={resolving === req.id}
+              className="flex h-8 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-xs font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {resolving === req.id ? '…' : 'Approve'}
+            </button>
+            <button
+              onClick={() => resolve(req.id, 'rejected')}
+              disabled={resolving === req.id}
+              className="flex h-8 flex-1 items-center justify-center rounded-lg border border-red-200 text-xs font-medium text-red-600 hover:bg-red-50 disabled:opacity-50 dark:border-red-800 dark:text-red-400"
+            >
+              Reject
+            </button>
+          </div>
+        </div>
+      ))}
     </div>
   );
 }
@@ -184,17 +292,25 @@ function BookingCard({
   acting,
   onConfirm,
   onCancel,
+  onCheckIn,
+  onCheckOut,
+  onRefresh,
 }: {
   booking: Booking;
   roomName: string;
   acting: string | null;
   onConfirm: (id: string) => void;
   onCancel: (id: string) => void;
+  onCheckIn: (id: string) => void;
+  onCheckOut: (id: string) => void;
+  onRefresh: () => void;
 }): React.ReactElement {
   const canConfirm = ['manual_pending', 'awaiting_verification'].includes(booking.status);
   const canCancel = ['manual_pending', 'awaiting_verification', 'confirmed'].includes(
     booking.status,
   );
+  const canCheckIn = booking.status === 'confirmed';
+  const canCheckOut = booking.status === 'checked_in';
   const isActing = acting === booking.id;
 
   return (
@@ -231,7 +347,11 @@ function BookingCard({
         <p className="mt-2 text-xs italic text-zinc-500">"{booking.specialRequests}"</p>
       )}
 
-      {(canConfirm || canCancel) && (
+      {booking.status === 'confirmed' && (
+        <ModificationRequests bookingId={booking.id} onResolved={onRefresh} />
+      )}
+
+      {(canConfirm || canCancel || canCheckIn || canCheckOut) && (
         <div className="mt-3 flex gap-2 border-t border-zinc-100 pt-3 dark:border-zinc-800">
           {canConfirm && (
             <button
@@ -240,6 +360,24 @@ function BookingCard({
               className="flex h-9 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
             >
               {isActing ? '…' : 'Confirm payment'}
+            </button>
+          )}
+          {canCheckIn && (
+            <button
+              onClick={() => onCheckIn(booking.id)}
+              disabled={isActing}
+              className="flex h-9 flex-1 items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
+            >
+              {isActing ? '…' : 'Check in'}
+            </button>
+          )}
+          {canCheckOut && (
+            <button
+              onClick={() => onCheckOut(booking.id)}
+              disabled={isActing}
+              className="flex h-9 flex-1 items-center justify-center rounded-lg bg-zinc-700 text-sm font-semibold text-white hover:bg-zinc-800 disabled:opacity-50 dark:bg-zinc-600"
+            >
+              {isActing ? '…' : 'Check out'}
             </button>
           )}
           {canCancel && (

@@ -6,13 +6,23 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { db, properties, rooms, units, bookings, bookingItems, ownerBlocks } from '@tara/db';
+import {
+  db,
+  properties,
+  rooms,
+  units,
+  bookings,
+  bookingItems,
+  ownerBlocks,
+  bookingDateChanges,
+} from '@tara/db';
 import { eq, and, isNull, inArray, notExists, gte, lte } from 'drizzle-orm';
 import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
 import { StripeService } from '../stripe/stripe.service.js';
 import { AuditService } from '../audit/audit.service.js';
+import { PriceRulesService } from '../price-rules/price-rules.service.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -41,6 +51,7 @@ export class BookingsService {
     private readonly emailService: EmailService,
     private readonly stripeService: StripeService,
     private readonly auditService: AuditService,
+    private readonly priceRulesService: PriceRulesService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -48,20 +59,27 @@ export class BookingsService {
     if (checkOut <= checkIn) throw new BadRequestException('Check-out must be after check-in');
 
     const nights = nightsBetween(checkIn, checkOut);
+    const nightCount = nights.length;
 
-    const propertyRooms = await db
-      .select({
-        roomId: rooms.id,
-        roomName: rooms.name,
-        roomType: rooms.roomType,
-        capacity: rooms.capacity,
-        gender: rooms.gender,
-        baseNightlyRateMinor: rooms.baseNightlyRateMinor,
-      })
-      .from(rooms)
-      .where(
-        and(eq(rooms.propertyId, propertyId), eq(rooms.isActive, true), isNull(rooms.deletedAt)),
-      );
+    const [propertyRooms, applicableRules] = await Promise.all([
+      db
+        .select({
+          roomId: rooms.id,
+          roomName: rooms.name,
+          roomType: rooms.roomType,
+          capacity: rooms.capacity,
+          gender: rooms.gender,
+          baseNightlyRateMinor: rooms.baseNightlyRateMinor,
+        })
+        .from(rooms)
+        .where(
+          and(eq(rooms.propertyId, propertyId), eq(rooms.isActive, true), isNull(rooms.deletedAt)),
+        ),
+      this.priceRulesService.getApplicableRules(propertyId, checkIn, checkOut),
+    ]);
+
+    // Property-level rules (no roomId) apply to all rooms.
+    const propertyRules = applicableRules.filter((r) => !r.roomId);
 
     const result = await Promise.all(
       propertyRooms.map(async (room) => {
@@ -72,7 +90,6 @@ export class BookingsService {
             and(eq(units.roomId, room.roomId), eq(units.isActive, true), isNull(units.deletedAt)),
           );
 
-        // A unit is available only if it has NO booking_item for any of the requested nights.
         const availableUnits = await db
           .select({ id: units.id })
           .from(units)
@@ -103,15 +120,28 @@ export class BookingsService {
             ),
           );
 
+        // Apply price rules: room-specific rules take precedence over property-level ones.
+        const roomRules = applicableRules.filter((r) => r.roomId === room.roomId);
+        const allApplicable = [...propertyRules, ...roomRules];
+        const rateOverride = [...allApplicable]
+          .reverse()
+          .find((r) => r.rateOverrideMinor != null)?.rateOverrideMinor;
+        const minNights = allApplicable.reduce<number | null>(
+          (max, r) => (r.minNights != null ? Math.max(max ?? 0, r.minNights) : max),
+          null,
+        );
+
         return {
           roomId: room.roomId,
           roomName: room.roomName,
           roomType: room.roomType,
           capacity: room.capacity,
           gender: room.gender,
-          baseNightlyRateMinor: room.baseNightlyRateMinor,
+          baseNightlyRateMinor: rateOverride ?? room.baseNightlyRateMinor,
           totalUnits: allUnits.length,
           availableUnits: availableUnits.length,
+          minNights,
+          meetsMinNights: minNights == null || nightCount >= minNights,
         };
       }),
     );
@@ -122,6 +152,23 @@ export class BookingsService {
   async create(input: CreateBooking, guestUid?: string) {
     const nights = nightsBetween(input.checkIn, input.checkOut);
     if (nights.length === 0) throw new BadRequestException('Check-out must be after check-in');
+
+    // Check applicable price rules for min-nights constraint.
+    const rules = await this.priceRulesService.getApplicableRules(
+      input.propertyId,
+      input.checkIn,
+      input.checkOut,
+    );
+    const roomRules = rules.filter((r) => !r.roomId || r.roomId === input.roomId);
+    const minNights = roomRules.reduce<number | null>(
+      (max, r) => (r.minNights != null ? Math.max(max ?? 0, r.minNights) : max),
+      null,
+    );
+    if (minNights != null && nights.length < minNights) {
+      throw new BadRequestException(
+        `A minimum stay of ${minNights} nights is required for these dates`,
+      );
+    }
 
     // Verify property exists and is active.
     const [property] = await db
@@ -547,14 +594,58 @@ export class BookingsService {
   }
 
   async cancel(id: string, user: AuthedUser) {
+    // Fetch the full booking before transitioning so we have stripe/payment fields.
+    const [pre] = await db
+      .select({ stripeSessionId: bookings.stripeSessionId, paymentMode: properties.paymentMode })
+      .from(bookings)
+      .innerJoin(properties, eq(properties.id, bookings.propertyId))
+      .where(eq(bookings.id, id))
+      .limit(1);
+
     const booking = await this.transitionStatus(
       id,
       user,
       ['manual_pending', 'awaiting_verification', 'confirmed'],
       'cancelled',
     );
+
+    // Issue Stripe refund if the booking was paid by card.
+    if (pre?.paymentMode === 'stripe' && pre?.stripeSessionId) {
+      void this.stripeService.refundBySessionId(pre.stripeSessionId);
+    }
+
     await this.sendStatusEmail(booking, 'cancelled');
     return booking;
+  }
+
+  async checkIn(id: string, user: AuthedUser) {
+    return this.transitionStatus(id, user, ['confirmed'], 'checked_in');
+  }
+
+  async checkOut(id: string, user: AuthedUser) {
+    return this.transitionStatus(id, user, ['checked_in'], 'checked_out');
+  }
+
+  async cancelByGuest(id: string, guestEmail: string) {
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
+
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase()) {
+      throw new ForbiddenException('Email does not match');
+    }
+    if (!['manual_pending', 'confirmed'].includes(booking.status)) {
+      throw new BadRequestException(`Cannot cancel a booking with status "${booking.status}"`);
+    }
+
+    const [updated] = await db
+      .update(bookings)
+      .set({ status: 'cancelled', updatedAt: new Date() })
+      .where(eq(bookings.id, id))
+      .returning();
+
+    this.logger.log({ event: 'booking.cancelled_by_guest', bookingId: id });
+    await this.sendStatusEmail(updated!, 'cancelled');
+    return updated!;
   }
 
   private async sendStatusEmail(
@@ -611,11 +702,172 @@ export class BookingsService {
     }
   }
 
+  async requestDateChange(
+    bookingId: string,
+    requestedCheckIn: string,
+    requestedCheckOut: string,
+    guestEmail: string,
+    guestMessage?: string,
+  ) {
+    if (requestedCheckOut <= requestedCheckIn)
+      throw new BadRequestException('Check-out must be after check-in');
+
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, bookingId)).limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase())
+      throw new ForbiddenException('Email does not match');
+    if (booking.status !== 'confirmed')
+      throw new BadRequestException('Can only request changes on confirmed bookings');
+
+    const existing = await db
+      .select({ id: bookingDateChanges.id })
+      .from(bookingDateChanges)
+      .where(
+        and(eq(bookingDateChanges.bookingId, bookingId), eq(bookingDateChanges.status, 'pending')),
+      )
+      .limit(1);
+    if (existing.length > 0)
+      throw new ConflictException('A modification request is already pending');
+
+    const [created] = await db
+      .insert(bookingDateChanges)
+      .values({
+        bookingId,
+        requestedCheckIn,
+        requestedCheckOut,
+        guestMessage: guestMessage ?? null,
+      })
+      .returning();
+
+    this.logger.log({
+      event: 'booking.modification_requested',
+      bookingId,
+      requestedCheckIn,
+      requestedCheckOut,
+    });
+    return created!;
+  }
+
+  async listModificationRequests(bookingId: string, user: AuthedUser) {
+    const [booking] = await db
+      .select({ propertyId: bookings.propertyId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(eq(properties.id, booking.propertyId))
+      .limit(1);
+    if (!prop || prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your booking');
+
+    return db
+      .select()
+      .from(bookingDateChanges)
+      .where(eq(bookingDateChanges.bookingId, bookingId))
+      .orderBy(bookingDateChanges.createdAt);
+  }
+
+  async resolveModificationRequest(
+    bookingId: string,
+    requestId: string,
+    action: 'approved' | 'rejected',
+    user: AuthedUser,
+  ) {
+    const [booking] = await db
+      .select({ propertyId: bookings.propertyId, roomId: bookings.roomId })
+      .from(bookings)
+      .where(eq(bookings.id, bookingId))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(eq(properties.id, booking.propertyId))
+      .limit(1);
+    if (!prop || prop.tenantId !== user.tenantId) throw new ForbiddenException('Not your booking');
+
+    const [request] = await db
+      .select()
+      .from(bookingDateChanges)
+      .where(and(eq(bookingDateChanges.id, requestId), eq(bookingDateChanges.bookingId, bookingId)))
+      .limit(1);
+    if (!request) throw new NotFoundException('Modification request not found');
+    if (request.status !== 'pending') throw new BadRequestException('Request already resolved');
+
+    if (action === 'rejected') {
+      await db
+        .update(bookingDateChanges)
+        .set({ status: 'rejected', resolvedAt: new Date() })
+        .where(eq(bookingDateChanges.id, requestId));
+      this.logger.log({ event: 'booking.modification_rejected', bookingId, requestId });
+      return { ok: true };
+    }
+
+    // Approval: rebook same unit onto new nights inside a transaction.
+    const newNights = nightsBetween(request.requestedCheckIn, request.requestedCheckOut);
+
+    const [currentItem] = await db
+      .select({
+        unitId: bookingItems.unitId,
+        rateMinor: bookingItems.rateMinor,
+        tenantId: bookingItems.tenantId,
+      })
+      .from(bookingItems)
+      .where(eq(bookingItems.bookingId, bookingId))
+      .limit(1);
+    if (!currentItem) throw new BadRequestException('No booking items found');
+
+    await db
+      .transaction(async (tx) => {
+        await tx.delete(bookingItems).where(eq(bookingItems.bookingId, bookingId));
+
+        await tx.insert(bookingItems).values(
+          newNights.map((night) => ({
+            bookingId,
+            unitId: currentItem.unitId,
+            tenantId: currentItem.tenantId,
+            night,
+            rateMinor: currentItem.rateMinor,
+            currency: 'PHP',
+          })),
+        );
+
+        await tx
+          .update(bookings)
+          .set({
+            checkIn: request.requestedCheckIn,
+            checkOut: request.requestedCheckOut,
+            nights: newNights.length,
+            totalMinor: currentItem.rateMinor * newNights.length,
+            updatedAt: new Date(),
+          })
+          .where(eq(bookings.id, bookingId));
+
+        await tx
+          .update(bookingDateChanges)
+          .set({ status: 'approved', resolvedAt: new Date() })
+          .where(eq(bookingDateChanges.id, requestId));
+      })
+      .catch((err: unknown) => {
+        if (err instanceof Error && 'code' in err && (err as { code: string }).code === '23505') {
+          throw new ConflictException('The requested dates are no longer available');
+        }
+        throw err;
+      });
+
+    this.logger.log({ event: 'booking.modification_approved', bookingId, requestId });
+    return { ok: true };
+  }
+
   private async transitionStatus(
     id: string,
     user: AuthedUser,
     allowedFrom: string[],
-    to: 'confirmed' | 'cancelled',
+    to: 'confirmed' | 'cancelled' | 'checked_in' | 'checked_out',
   ) {
     const [booking] = await db
       .select({ id: bookings.id, status: bookings.status, propertyId: bookings.propertyId })
@@ -644,7 +896,16 @@ export class BookingsService {
 
     this.logger.log({ event: `booking.${to}`, bookingId: id, tenantId: user.tenantId });
 
-    void this.auditService.log(to === 'confirmed' ? 'booking.confirmed' : 'booking.cancelled', {
+    const auditEvent =
+      to === 'confirmed'
+        ? 'booking.confirmed'
+        : to === 'cancelled'
+          ? 'booking.cancelled'
+          : to === 'checked_in'
+            ? 'booking.checked_in'
+            : 'booking.checked_out';
+
+    void this.auditService.log(auditEvent, {
       actorUid: user.uid,
       entityType: 'booking',
       entityId: id,

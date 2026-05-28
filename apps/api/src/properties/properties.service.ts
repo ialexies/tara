@@ -3,9 +3,10 @@ import {
   Logger,
   NotFoundException,
   UnprocessableEntityException,
+  ConflictException,
 } from '@nestjs/common';
-import { db, properties, rooms } from '@tara/db';
-import { eq, and, isNull, count, min, getTableColumns } from 'drizzle-orm';
+import { db, properties, rooms, propertyImages } from '@tara/db';
+import { eq, and, isNull, count, min, getTableColumns, asc } from 'drizzle-orm';
 import type { CreateProperty, UpdateProperty } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
@@ -136,10 +137,22 @@ export class PropertiesService {
   async update(id: string, input: UpdateProperty, user: AuthedUser) {
     await this.getOwnedById(id, user);
 
+    if (input.slug !== undefined) {
+      const [existing] = await db
+        .select({ id: properties.id })
+        .from(properties)
+        .where(eq(properties.slug, input.slug))
+        .limit(1);
+      if (existing && existing.id !== id) {
+        throw new ConflictException('That slug is already in use');
+      }
+    }
+
     const [updated] = await db
       .update(properties)
       .set({
         ...(input.name !== undefined && { name: input.name }),
+        ...(input.slug !== undefined && { slug: input.slug }),
         ...(input.propertyType !== undefined && { propertyType: input.propertyType }),
         ...(input.region !== undefined && { region: input.region }),
         ...(input.city !== undefined && { city: input.city }),
@@ -152,6 +165,7 @@ export class PropertiesService {
         }),
         ...(input.description !== undefined && { description: input.description }),
         ...(input.coverImageUrl !== undefined && { coverImageUrl: input.coverImageUrl }),
+        ...(input.amenities !== undefined && { amenities: input.amenities }),
         updatedAt: new Date(),
       })
       .where(eq(properties.id, id))
@@ -215,5 +229,74 @@ export class PropertiesService {
   async count(): Promise<number> {
     const rows = await db.select().from(properties);
     return rows.length;
+  }
+
+  async listPropertyImages(propertyId: string) {
+    return db
+      .select()
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, propertyId))
+      .orderBy(asc(propertyImages.position), asc(propertyImages.createdAt));
+  }
+
+  async addPropertyImage(propertyId: string, url: string, user: AuthedUser) {
+    await this.getOwnedById(propertyId, user);
+    const existing = await db
+      .select({ position: propertyImages.position })
+      .from(propertyImages)
+      .where(eq(propertyImages.propertyId, propertyId))
+      .orderBy(asc(propertyImages.position));
+    const nextPosition = existing.length > 0 ? existing[existing.length - 1]!.position + 1 : 0;
+    const [image] = await db
+      .insert(propertyImages)
+      .values({ propertyId, tenantId: user.tenantId, url, position: nextPosition })
+      .returning();
+    return image!;
+  }
+
+  async deletePropertyImage(propertyId: string, imageId: string, user: AuthedUser) {
+    await this.getOwnedById(propertyId, user);
+    const [img] = await db
+      .select({ id: propertyImages.id, propertyId: propertyImages.propertyId })
+      .from(propertyImages)
+      .where(eq(propertyImages.id, imageId))
+      .limit(1);
+    if (!img || img.propertyId !== propertyId) throw new NotFoundException('Image not found');
+    await db.delete(propertyImages).where(eq(propertyImages.id, imageId));
+  }
+
+  async adminListAll() {
+    return db
+      .select({
+        id: properties.id,
+        name: properties.name,
+        slug: properties.slug,
+        city: properties.city,
+        region: properties.region,
+        propertyType: properties.propertyType,
+        status: properties.status,
+        tenantId: properties.tenantId,
+        createdAt: properties.createdAt,
+      })
+      .from(properties)
+      .orderBy(properties.createdAt);
+  }
+
+  async adminSetStatus(id: string, status: 'active' | 'suspended' | 'paused' | 'pending') {
+    const [prop] = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(eq(properties.id, id))
+      .limit(1);
+    if (!prop) throw new NotFoundException('Property not found');
+
+    const [updated] = await db
+      .update(properties)
+      .set({ status, updatedAt: new Date() })
+      .where(eq(properties.id, id))
+      .returning();
+
+    this.logger.log({ event: 'admin.property.status_changed', propertyId: id, status });
+    return updated!;
   }
 }

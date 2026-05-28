@@ -94,4 +94,52 @@ export class RoomsController {
   ) {
     await this.svc.remove(propertyId, roomId, user);
   }
+
+  @Get(':roomId/images')
+  async listImages(
+    @Param('propertyId') propertyId: string,
+    @Param('roomId') roomId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    const data = await this.svc.listRoomImages(propertyId, roomId, user);
+    return { data };
+  }
+
+  @Post(':roomId/images/upload-url')
+  @HttpCode(200)
+  async getRoomImageUploadUrl(
+    @Param('propertyId') propertyId: string,
+    @Param('roomId') roomId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    await this.svc.assertOwned(propertyId, roomId, user);
+    const { contentType } = UploadUrlSchema.parse(body);
+    const ext = contentType.split('/')[1] ?? 'jpg';
+    const key = `rooms/${roomId}/images/${Date.now()}.${ext}`;
+    return this.uploads.presignUpload({ key, contentType });
+  }
+
+  @Post(':roomId/images')
+  @HttpCode(201)
+  async addRoomImage(
+    @Param('propertyId') propertyId: string,
+    @Param('roomId') roomId: string,
+    @Body() body: unknown,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    const { url } = z.object({ url: z.string().url() }).parse(body);
+    return this.svc.addRoomImage(propertyId, roomId, url, user);
+  }
+
+  @Delete(':roomId/images/:imageId')
+  @HttpCode(204)
+  async deleteRoomImage(
+    @Param('propertyId') propertyId: string,
+    @Param('roomId') roomId: string,
+    @Param('imageId') imageId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    await this.svc.deleteRoomImage(propertyId, roomId, imageId, user);
+  }
 }

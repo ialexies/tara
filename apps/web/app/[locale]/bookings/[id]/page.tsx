@@ -2,6 +2,9 @@ export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
 import { setRequestLocale } from 'next-intl/server';
 import Link from 'next/link';
+import { CancelBookingButton } from './cancel-button';
+import { ReviewForm } from './review-form';
+import { DateChangeForm } from './date-change-form';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -75,6 +78,10 @@ export default async function BookingConfirmationPage({
   const isPending = booking.status === 'manual_pending';
   const isConfirmed = booking.status === 'confirmed';
   const isStripePending = booking.status === 'stripe_pending';
+  const isCheckedOut = booking.status === 'checked_out';
+  const canGuestCancel = isPending || isConfirmed;
+  const canDateChange = isConfirmed;
+  const canReview = isConfirmed || isCheckedOut;
   const stripeJustPaid = stripeParam === 'success';
   const totalPesos = booking.totalMinor / 100;
 
@@ -228,6 +235,29 @@ export default async function BookingConfirmationPage({
         >
           Browse more properties
         </Link>
+
+        {canDateChange && (
+          <div className="mt-4">
+            <DateChangeForm
+              bookingId={booking.id}
+              guestEmail={booking.guestEmail}
+              currentCheckIn={booking.checkIn}
+              currentCheckOut={booking.checkOut}
+            />
+          </div>
+        )}
+
+        {canGuestCancel && (
+          <div className="mt-4">
+            <CancelBookingButton bookingId={booking.id} guestEmail={booking.guestEmail} />
+          </div>
+        )}
+
+        {canReview && (
+          <div className="mt-4">
+            <ReviewForm bookingId={booking.id} />
+          </div>
+        )}
       </main>
     </div>
   );

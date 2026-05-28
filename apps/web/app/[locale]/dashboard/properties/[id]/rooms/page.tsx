@@ -2,8 +2,9 @@
 
 export const dynamic = 'force-dynamic';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { ImageUploader } from '@/components/image-uploader';
@@ -98,6 +99,12 @@ export default function RoomsPage(): React.ReactElement {
             className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
           >
             Blocked dates
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/pricing`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Pricing
           </Link>
           <Link
             href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
@@ -302,8 +309,23 @@ function EditRoomForm({
   const [description, setDescription] = useState(room.description ?? '');
   const [isActive, setIsActive] = useState(room.isActive);
   const [coverImageUrl, setCoverImageUrl] = useState<string | null>(room.coverImageUrl ?? null);
+  const [roomImgs, setRoomImgs] = useState<{ id: string; url: string }[]>([]);
+  const [imgUploading, setImgUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const loadImages = useCallback(async () => {
+    try {
+      const res = await api.rooms.listImages(propertyId, room.id);
+      setRoomImgs(res.data as { id: string; url: string }[]);
+    } catch {
+      // non-fatal
+    }
+  }, [propertyId, room.id]);
+
+  useEffect(() => {
+    void loadImages();
+  }, [loadImages]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -346,7 +368,7 @@ function EditRoomForm({
       <form onSubmit={handleSubmit} className="space-y-4">
         <ImageUploader
           currentUrl={coverImageUrl}
-          label="Room photo"
+          label="Cover photo"
           onUpload={async (file) => {
             const { uploadUrl, publicUrl } = await api.rooms.getUploadUrl(
               propertyId,
@@ -364,6 +386,71 @@ function EditRoomForm({
             return publicUrl;
           }}
         />
+
+        <div>
+          <p className="mb-2 text-sm font-medium text-zinc-700 dark:text-zinc-300">
+            Additional photos
+          </p>
+          {roomImgs.length > 0 && (
+            <div className="mb-2 flex flex-wrap gap-2">
+              {roomImgs.map((img) => (
+                <div
+                  key={img.id}
+                  className="group relative h-20 w-28 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
+                >
+                  <Image src={img.url} alt="" fill className="object-cover" sizes="112px" />
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await api.rooms.deleteImage(propertyId, room.id, img.id);
+                      await loadImages();
+                    }}
+                    className="absolute right-1 top-1 flex h-6 w-6 items-center justify-center rounded-full bg-black/60 text-xs text-white opacity-0 group-hover:opacity-100"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+          <label
+            className={`flex h-10 cursor-pointer items-center gap-2 rounded-lg border border-dashed border-zinc-300 px-3 text-sm text-zinc-500 dark:border-zinc-600 ${imgUploading ? 'opacity-50' : 'hover:border-zinc-400'}`}
+          >
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={imgUploading}
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                setImgUploading(true);
+                try {
+                  const { uploadUrl, publicUrl } = await api.rooms.getImageUploadUrl(
+                    propertyId,
+                    room.id,
+                    file.type,
+                    file.size,
+                  );
+                  await fetch(uploadUrl, {
+                    method: 'PUT',
+                    body: file,
+                    headers: { 'Content-Type': file.type },
+                  });
+                  await api.rooms.addImage(propertyId, room.id, publicUrl);
+                  await loadImages();
+                } catch {
+                  // show nothing; user can retry
+                } finally {
+                  setImgUploading(false);
+                  e.target.value = '';
+                }
+              }}
+            />
+            {imgUploading ? 'Uploading…' : '+ Add photo'}
+          </label>
+        </div>
+
         <Field label="Room name" required>
           <input
             type="text"

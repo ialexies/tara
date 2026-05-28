@@ -1,3 +1,4 @@
+import './instrument.js';
 import 'reflect-metadata';
 import crypto from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
@@ -5,7 +6,9 @@ import { FastifyAdapter, type NestFastifyApplication } from '@nestjs/platform-fa
 import type { FastifyInstance } from 'fastify';
 import helmet from '@fastify/helmet';
 import { Logger } from 'nestjs-pino';
+import { HttpAdapterHost } from '@nestjs/core';
 import { AppModule } from './app.module.js';
+import { SentryFilter } from './common/sentry.filter.js';
 
 const PORT = Number(process.env.API_PORT ?? 4000);
 const HOST = process.env.API_HOST ?? '0.0.0.0';
@@ -24,6 +27,8 @@ async function bootstrap(): Promise<void> {
     { bufferLogs: true },
   );
   app.useLogger(app.get(Logger));
+  const { httpAdapter } = app.get(HttpAdapterHost);
+  app.useGlobalFilters(new SentryFilter(httpAdapter));
 
   // Capture raw body for Stripe webhook signature verification.
   const fastify = app.getHttpAdapter().getInstance() as unknown as FastifyInstance;

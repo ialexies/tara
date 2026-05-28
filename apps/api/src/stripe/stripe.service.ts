@@ -130,6 +130,25 @@ export class StripeService implements OnModuleInit {
     });
   }
 
+  async refundBySessionId(sessionId: string): Promise<void> {
+    if (!this.client) return;
+    try {
+      const session = await this.client.checkout.sessions.retrieve(sessionId);
+      const paymentIntent =
+        typeof session.payment_intent === 'string'
+          ? session.payment_intent
+          : session.payment_intent?.id;
+      if (!paymentIntent) {
+        this.logger.warn({ event: 'stripe.refund.no_payment_intent', sessionId });
+        return;
+      }
+      await this.client.refunds.create({ payment_intent: paymentIntent });
+      this.logger.log({ event: 'stripe.refund.created', sessionId, paymentIntent });
+    } catch (err) {
+      this.logger.error({ event: 'stripe.refund.failed', sessionId, error: String(err) });
+    }
+  }
+
   private async onSessionExpired(session: Stripe.Checkout.Session) {
     const bookingId = session.metadata?.bookingId;
     if (!bookingId) return;

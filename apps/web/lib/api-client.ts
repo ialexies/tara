@@ -59,6 +59,25 @@ export const api = {
       }),
     publish: (id: string) => apiFetch<unknown>(`/properties/${id}/publish`, { method: 'POST' }),
     unpublish: (id: string) => apiFetch<unknown>(`/properties/${id}/unpublish`, { method: 'POST' }),
+    adminListAll: () => apiFetch<{ data: unknown[] }>('/properties/admin/all'),
+    adminSetStatus: (id: string, status: string) =>
+      apiFetch<unknown>(`/properties/admin/${id}/status`, {
+        method: 'POST',
+        body: JSON.stringify({ status }),
+      }),
+    listImages: (id: string) => apiFetch<{ data: unknown[] }>(`/properties/${id}/images`),
+    getImageUploadUrl: (id: string, contentType: string, contentLength: number) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(`/properties/${id}/images/upload-url`, {
+        method: 'POST',
+        body: JSON.stringify({ contentType, contentLength }),
+      }),
+    addImage: (id: string, url: string) =>
+      apiFetch<unknown>(`/properties/${id}/images`, {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
+    deleteImage: (id: string, imageId: string) =>
+      apiFetch<unknown>(`/properties/${id}/images/${imageId}`, { method: 'DELETE' }),
   },
   rooms: {
     list: (propertyId: string) => apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/rooms`),
@@ -89,6 +108,27 @@ export const api = {
         method: 'PATCH',
         body: JSON.stringify({ url }),
       }),
+    listImages: (propertyId: string, roomId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/rooms/${roomId}/images`),
+    getImageUploadUrl: (
+      propertyId: string,
+      roomId: string,
+      contentType: string,
+      contentLength: number,
+    ) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(
+        `/properties/${propertyId}/rooms/${roomId}/images/upload-url`,
+        { method: 'POST', body: JSON.stringify({ contentType, contentLength }) },
+      ),
+    addImage: (propertyId: string, roomId: string, url: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms/${roomId}/images`, {
+        method: 'POST',
+        body: JSON.stringify({ url }),
+      }),
+    deleteImage: (propertyId: string, roomId: string, imageId: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/rooms/${roomId}/images/${imageId}`, {
+        method: 'DELETE',
+      }),
   },
   bookings: {
     availability: (propertyId: string, checkIn: string, checkOut: string) =>
@@ -102,6 +142,33 @@ export const api = {
       apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/bookings`),
     confirm: (id: string) => apiFetch<unknown>(`/bookings/${id}/confirm`, { method: 'POST' }),
     cancel: (id: string) => apiFetch<unknown>(`/bookings/${id}/cancel`, { method: 'POST' }),
+    checkIn: (id: string) => apiFetch<unknown>(`/bookings/${id}/check-in`, { method: 'POST' }),
+    checkOut: (id: string) => apiFetch<unknown>(`/bookings/${id}/check-out`, { method: 'POST' }),
+    cancelByGuest: (id: string, guestEmail: string) =>
+      apiFetch<unknown>(`/bookings/${id}/cancel-guest`, {
+        method: 'POST',
+        body: JSON.stringify({ guestEmail }),
+      }),
+    requestDateChange: (
+      id: string,
+      body: {
+        requestedCheckIn: string;
+        requestedCheckOut: string;
+        guestEmail: string;
+        guestMessage?: string;
+      },
+    ) =>
+      apiFetch<unknown>(`/bookings/${id}/modification-requests`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    listModificationRequests: (id: string) =>
+      apiFetch<{ data: unknown[] }>(`/bookings/${id}/modification-requests`),
+    resolveModificationRequest: (id: string, requestId: string, action: 'approved' | 'rejected') =>
+      apiFetch<unknown>(`/bookings/${id}/modification-requests/${requestId}/resolve`, {
+        method: 'POST',
+        body: JSON.stringify({ action }),
+      }),
     ownerBlocks: (propertyId: string, from: string, to: string) =>
       apiFetch<{ data: string[] }>(`/properties/${propertyId}/owner-blocks?from=${from}&to=${to}`),
     setOwnerBlock: (propertyId: string, date: string) =>
@@ -111,5 +178,16 @@ export const api = {
       }),
     deleteOwnerBlock: (propertyId: string, date: string) =>
       apiFetch<unknown>(`/properties/${propertyId}/owner-blocks/${date}`, { method: 'DELETE' }),
+  },
+  priceRules: {
+    list: (propertyId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/price-rules`),
+    create: (propertyId: string, body: unknown) =>
+      apiFetch<unknown>(`/properties/${propertyId}/price-rules`, {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
+    remove: (propertyId: string, ruleId: string) =>
+      apiFetch<unknown>(`/properties/${propertyId}/price-rules/${ruleId}`, { method: 'DELETE' }),
   },
 };

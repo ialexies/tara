@@ -5,8 +5,8 @@ import {
   Logger,
   NotFoundException,
 } from '@nestjs/common';
-import { db, properties, rooms, units } from '@tara/db';
-import { eq, and, isNull } from 'drizzle-orm';
+import { db, properties, rooms, units, roomImages } from '@tara/db';
+import { eq, and, isNull, asc } from 'drizzle-orm';
 import type { CreateRoom, UpdateRoom } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
@@ -167,6 +167,41 @@ export class RoomsService {
       .where(and(eq(rooms.id, roomId), eq(rooms.propertyId, propertyId), isNull(rooms.deletedAt)))
       .limit(1);
     if (!room) throw new NotFoundException('Room not found');
+  }
+
+  async listRoomImages(propertyId: string, roomId: string, user: AuthedUser) {
+    await this.assertOwned(propertyId, roomId, user);
+    return db
+      .select()
+      .from(roomImages)
+      .where(eq(roomImages.roomId, roomId))
+      .orderBy(asc(roomImages.position), asc(roomImages.createdAt));
+  }
+
+  async addRoomImage(propertyId: string, roomId: string, url: string, user: AuthedUser) {
+    await this.assertOwned(propertyId, roomId, user);
+    const existing = await db
+      .select({ position: roomImages.position })
+      .from(roomImages)
+      .where(eq(roomImages.roomId, roomId))
+      .orderBy(asc(roomImages.position));
+    const nextPosition = existing.length > 0 ? existing[existing.length - 1]!.position + 1 : 0;
+    const [image] = await db
+      .insert(roomImages)
+      .values({ roomId, tenantId: user.tenantId, url, position: nextPosition })
+      .returning();
+    return image!;
+  }
+
+  async deleteRoomImage(propertyId: string, roomId: string, imageId: string, user: AuthedUser) {
+    await this.assertOwned(propertyId, roomId, user);
+    const [img] = await db
+      .select({ id: roomImages.id, roomId: roomImages.roomId })
+      .from(roomImages)
+      .where(eq(roomImages.id, imageId))
+      .limit(1);
+    if (!img || img.roomId !== roomId) throw new NotFoundException('Image not found');
+    await db.delete(roomImages).where(eq(roomImages.id, imageId));
   }
 
   private async assertPropertyOwned(propertyId: string, user: AuthedUser) {

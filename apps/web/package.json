@@ -13,6 +13,7 @@
     "clean": "rimraf .next .turbo node_modules"
   },
   "dependencies": {
+    "@sentry/nextjs": "^10.54.0",
     "@tara/auth": "workspace:^",
     "@tara/schemas": "workspace:*",
     "firebase": "^12.13.0",

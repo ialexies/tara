@@ -13,6 +13,8 @@ import { EmailModule } from './email/email.module.js';
 import { UploadsModule } from './uploads/uploads.module.js';
 import { StripeModule } from './stripe/stripe.module.js';
 import { AuditModule } from './audit/audit.module.js';
+import { ReviewsModule } from './reviews/reviews.module.js';
+import { PriceRulesModule } from './price-rules/price-rules.module.js';
 
 @Module({
   imports: [
@@ -20,6 +22,7 @@ import { AuditModule } from './audit/audit.module.js';
     ThrottlerModule.forRoot([
       { name: 'global', ttl: 60_000, limit: 120 }, // 120 req/min default
       { name: 'auth', ttl: 60_000, limit: 10 }, // 10 req/min on auth endpoints
+      { name: 'guest_action', ttl: 60_000, limit: 5 }, // 5 req/min for unauthenticated mutations
     ]),
     AuditModule,
     EmailModule,
@@ -29,6 +32,8 @@ import { AuditModule } from './audit/audit.module.js';
     PropertiesModule,
     RoomsModule,
     BookingsModule,
+    ReviewsModule,
+    PriceRulesModule,
     AuthModule,
   ],
   providers: [

@@ -26,6 +26,7 @@ export function PropertyListings({
 }) {
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [cityFilter, setCityFilter] = useState('');
   const [maxPrice, setMaxPrice] = useState('');
 
   const cities = useMemo(() => {
@@ -45,12 +46,13 @@ export function PropertyListings({
       )
         return false;
       if (typeFilter && p.propertyType !== typeFilter) return false;
+      if (cityFilter && p.city !== cityFilter) return false;
       if (max && p.priceFrom != null && p.priceFrom > max) return false;
       return true;
     });
   }, [properties, search, typeFilter, maxPrice]);
 
-  const hasFilters = search || typeFilter || maxPrice;
+  const hasFilters = search || typeFilter || cityFilter || maxPrice;
 
   return (
     <div className="space-y-5">
@@ -76,6 +78,20 @@ export function PropertyListings({
               </option>
             ))}
           </select>
+          {cities.length > 1 && (
+            <select
+              value={cityFilter}
+              onChange={(e) => setCityFilter(e.target.value)}
+              className="h-11 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <option value="">All cities</option>
+              {cities.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          )}
           <div className="relative">
             <span className="pointer-events-none absolute inset-y-0 left-3 flex items-center text-sm text-zinc-400">
               ₱

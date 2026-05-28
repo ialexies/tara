@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import createNextIntlPlugin from 'next-intl/plugin';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const withNextIntl = createNextIntlPlugin('./i18n/request.ts');
 
@@ -55,4 +56,12 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withNextIntl(nextConfig);
+export default withSentryConfig(withNextIntl(nextConfig), {
+  silent: !process.env.CI,
+  telemetry: false,
+  // Only upload source maps when SENTRY_AUTH_TOKEN is present (CI/CD only).
+  sourcemaps: {
+    disable: !process.env.SENTRY_AUTH_TOKEN,
+  },
+  autoInstrumentServerFunctions: true,
+});

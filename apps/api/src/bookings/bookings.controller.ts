@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
+import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { BookingsService } from './bookings.service.js';
 import { FirebaseGuard, type AuthedUser } from '../auth/firebase.guard.js';
@@ -64,6 +65,8 @@ export class BookingsController {
   /** Public — create a booking (guest may or may not be logged in). */
   @Post('bookings')
   @HttpCode(201)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
   async create(@Body() body: unknown, @Req() req: FastifyRequest) {
     const input = CreateBookingSchema.parse(body);
     const guestUid = await this.extractOptionalUid(req);
@@ -103,6 +106,80 @@ export class BookingsController {
   @Roles('owner', 'admin')
   async cancel(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
     return this.svc.cancel(id, user);
+  }
+
+  /** Owner — mark a booking as checked in. */
+  @Post('bookings/:id/check-in')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async checkIn(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
+    return this.svc.checkIn(id, user);
+  }
+
+  /** Owner — mark a booking as checked out. */
+  @Post('bookings/:id/check-out')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async checkOut(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
+    return this.svc.checkOut(id, user);
+  }
+
+  /** Guest — cancel their own booking (verified by email). */
+  @Post('bookings/:id/cancel-guest')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async cancelByGuest(@Param('id') id: string, @Body() body: { guestEmail: string }) {
+    return this.svc.cancelByGuest(id, body.guestEmail);
+  }
+
+  /** Guest — request a date change (verified by email). */
+  @Post('bookings/:id/modification-requests')
+  @HttpCode(201)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async requestDateChange(
+    @Param('id') id: string,
+    @Body()
+    body: {
+      requestedCheckIn: string;
+      requestedCheckOut: string;
+      guestEmail: string;
+      guestMessage?: string;
+    },
+  ) {
+    return this.svc.requestDateChange(
+      id,
+      body.requestedCheckIn,
+      body.requestedCheckOut,
+      body.guestEmail,
+      body.guestMessage,
+    );
+  }
+
+  /** Owner — list modification requests for a booking. */
+  @Get('bookings/:id/modification-requests')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async listModificationRequests(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
+    const data = await this.svc.listModificationRequests(id, user);
+    return { data };
+  }
+
+  /** Owner — approve or reject a modification request. */
+  @Post('bookings/:id/modification-requests/:requestId/resolve')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async resolveModificationRequest(
+    @Param('id') id: string,
+    @Param('requestId') requestId: string,
+    @Body() body: { action: 'approved' | 'rejected' },
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.svc.resolveModificationRequest(id, requestId, body.action, user);
   }
 
   /** Owner — list owner-blocked dates for a property. */

@@ -6,3 +6,8 @@ export * from './bookings.js';
 export * from './booking-items.js';
 export * from './audit-log.js';
 export * from './owner-blocks.js';
+export * from './room-images.js';
+export * from './reviews.js';
+export * from './property-images.js';
+export * from './price-rules.js';
+export * from './booking-date-changes.js';

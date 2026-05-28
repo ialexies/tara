@@ -20,9 +20,29 @@ export const CreatePropertySchema = z.object({
 
 export type CreateProperty = z.infer<typeof CreatePropertySchema>;
 
+const AmenitiesSchema = z
+  .object({
+    wifi: z.boolean().optional(),
+    parking: z.boolean().optional(),
+    pool: z.boolean().optional(),
+    aircon: z.boolean().optional(),
+    restaurant: z.boolean().optional(),
+    bar: z.boolean().optional(),
+    laundry: z.boolean().optional(),
+    gym: z.boolean().optional(),
+  })
+  .optional();
+
 export const UpdatePropertySchema = z.object({
   name: z.string().min(2).max(120).optional(),
+  slug: z
+    .string()
+    .min(2)
+    .max(120)
+    .regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/, 'Slug must be lowercase letters, numbers, and hyphens')
+    .optional(),
   description: z.string().max(2000).optional(),
+  amenities: AmenitiesSchema,
   coverImageUrl: z.string().url().nullable().optional(),
   propertyType: z.enum(['hostel', 'hotel', 'guesthouse', 'apartment', 'resort']).optional(),
   region: z.string().min(1).max(80).optional(),

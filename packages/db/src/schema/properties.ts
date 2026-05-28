@@ -94,6 +94,8 @@ export const properties = pgTable(
 
     description: text('description'),
     coverImageUrl: text('cover_image_url'),
+    amenities: jsonb('amenities'),
+    // ^ shape: { wifi?, parking?, pool?, aircon?, restaurant?, bar?, laundry?, gym? }
 
     // Mock data flag — see docs/business/mock-data.md
     isMock: boolean('is_mock').notNull().default(false),
