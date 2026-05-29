@@ -5,6 +5,7 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import { BookingPanel } from './booking-panel';
 import { EnquiryForm } from './enquiry-form';
+import { GalleryLightbox } from '@/components/gallery-lightbox';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 const WEB_URL = process.env.WEB_URL ?? 'http://localhost:3000';
@@ -206,43 +207,13 @@ export default async function PropertyPage({
           ← All properties
         </Link>
 
-        {/* Hero + gallery */}
-        <div className="mb-6 space-y-2">
-          <div className="relative h-48 overflow-hidden rounded-2xl bg-zinc-100 sm:h-64 dark:bg-zinc-800">
-            {property.coverImageUrl ? (
-              <Image
-                src={property.coverImageUrl}
-                alt={property.name}
-                fill
-                className="object-cover"
-                sizes="(max-width:768px) 100vw, 768px"
-                priority
-              />
-            ) : (
-              <div className="flex h-full items-center justify-center">
-                <span className="text-5xl">🏨</span>
-              </div>
-            )}
-          </div>
-          {galleryImages.length > 0 && (
-            <div className="flex gap-2 overflow-x-auto pb-1">
-              {galleryImages.map((img) => (
-                <div
-                  key={img.id}
-                  className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
-                >
-                  <Image
-                    src={img.url}
-                    alt=""
-                    fill
-                    className="object-cover"
-                    sizes="112px"
-                    loading="lazy"
-                  />
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Hero + gallery with lightbox */}
+        <div className="mb-6">
+          <GalleryLightbox
+            coverImageUrl={property.coverImageUrl}
+            coverAlt={property.name}
+            galleryImages={galleryImages}
+          />
         </div>
 
         <div className="mb-8">

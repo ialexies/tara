@@ -9,6 +9,26 @@ import { isFirebaseConfigured } from '@/lib/firebase-client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+const TYPE_STYLES: Record<string, string> = {
+  hostel: 'bg-emerald-600 text-white',
+  guesthouse: 'bg-sky-600 text-white',
+  hotel: 'bg-indigo-600 text-white',
+  resort: 'bg-amber-500 text-white',
+  apartment: 'bg-violet-600 text-white',
+  inn: 'bg-zinc-600 text-white',
+};
+
+function PropertyTypeBadge({ type }: { type: string }): React.ReactElement {
+  const style = TYPE_STYLES[type.toLowerCase()] ?? 'bg-zinc-600 text-white';
+  return (
+    <span
+      className={`absolute bottom-2 left-2 rounded-full px-2 py-0.5 text-[11px] font-semibold capitalize leading-tight ${style}`}
+    >
+      {type}
+    </span>
+  );
+}
+
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
 }
@@ -446,13 +466,13 @@ export function PropertyListings({
                             <span className="text-3xl">🏨</span>
                           </div>
                         )}
+                        <PropertyTypeBadge type={p.propertyType} />
                       </div>
                       <div className="flex flex-1 flex-col gap-1">
                         <p className="font-semibold text-zinc-900 dark:text-zinc-50">{p.name}</p>
                         <p className="text-sm text-zinc-500">
                           {p.city}, {p.region}
                         </p>
-                        <p className="text-xs capitalize text-zinc-400">{p.propertyType}</p>
                       </div>
                       <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
                         {p.priceFrom != null ? (
