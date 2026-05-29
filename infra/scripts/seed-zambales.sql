@@ -1,13 +1,13 @@
 -- ============================================================
 -- Zambales test properties seed
--- Owner: owner@test.tara-stays.com (93639fa3-6900-4760-bea5-ca173bc8191a)
+-- Owner: owner@test.tara-stays.com (4e737f48-27ca-4fef-adf0-b613b8af7ad0)
 -- Run: docker exec -i tara-postgres psql -U tara -d tara_dev < infra/scripts/seed-zambales.sql
 -- ============================================================
 
 -- Wipe existing mock properties owned by the test owner so this is idempotent
 DELETE FROM properties
 WHERE is_mock = true
-  AND owner_id = '93639fa3-6900-4760-bea5-ca173bc8191a';
+  AND owner_id = '4e737f48-27ca-4fef-adf0-b613b8af7ad0';
 
 -- ============================================================
 -- 1. Anawangin Cove Backpackers  (San Antonio, hostel) — 22 beds
@@ -26,7 +26,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'anawangin-backpackers', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'anawangin-backpackers', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Anawangin Cove Backpackers', 'anawangin-cove-backpackers', 'hostel',
     'Zambales', 'San Antonio', 'Pundaquit, San Antonio, Zambales',
     15.1794, 119.8657,
@@ -104,7 +104,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'liwliwa-surf-house', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'liwliwa-surf-house', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Liwliwa Surf House', 'liwliwa-surf-house', 'guesthouse',
     'Zambales', 'San Felipe', 'Liwliwa Beach, San Felipe, Zambales',
     15.0632, 119.9118,
@@ -191,7 +191,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'subic-dive-stay', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'subic-dive-stay', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Subic Bay Dive & Stay', 'subic-bay-dive-stay', 'hotel',
     'Zambales', 'Olongapo', 'Waterfront Road, Subic Bay Freeport Zone, Olongapo',
     14.8027, 120.2729,
@@ -278,7 +278,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'nagsasa-eco-camp', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'nagsasa-eco-camp', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Nagsasa Cove Eco Camp', 'nagsasa-cove-eco-camp', 'hostel',
     'Zambales', 'San Antonio', 'Nagsasa Cove, San Antonio, Zambales',
     15.1950, 119.8420,
@@ -352,7 +352,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'olongapo-city-hostel', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'olongapo-city-hostel', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Olongapo City Hostel', 'olongapo-city-hostel', 'hostel',
     'Zambales', 'Olongapo', '15 Gordon Ave, Olongapo City, Zambales',
     14.8289, 120.2827,
@@ -439,7 +439,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'pundaquit-beach-resort', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'pundaquit-beach-resort', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'Pundaquit Beach Resort', 'pundaquit-beach-resort', 'resort',
     'Zambales', 'San Antonio', 'Pundaquit, San Antonio, Zambales',
     15.1842, 119.8612,
@@ -527,7 +527,7 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'san-antonio-apartments', '93639fa3-6900-4760-bea5-ca173bc8191a',
+    'san-antonio-apartments', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
     'San Antonio Beach Apartments', 'san-antonio-beach-apartments', 'apartment',
     'Zambales', 'San Antonio', 'National Highway, San Antonio, Zambales',
     15.1680, 119.8820,
@@ -601,8 +601,8 @@ BEGIN
     amenities, check_in_time, check_out_time, house_rules,
     free_cancel_days, partial_refund_percent
   ) VALUES (
-    'zambales-backpacker-inn', '93639fa3-6900-4760-bea5-ca173bc8191a',
-    'Zambales Backpacker Inn', 'zambales-backpacker-inn', 'inn',
+    'zambales-backpacker-inn', '4e737f48-27ca-4fef-adf0-b613b8af7ad0',
+    'Zambales Backpacker Inn', 'zambales-backpacker-inn', 'hostel',
     'Zambales', 'San Felipe', 'San Felipe Proper, San Felipe, Zambales',
     15.0510, 119.8980,
     'PHP', 'manual', '{"gcash":"09241234567","maya":"09241234567"}',
@@ -675,6 +675,6 @@ LEFT JOIN rooms r ON r.property_id = p.id
 LEFT JOIN units u ON u.room_id = r.id
 LEFT JOIN property_images pi ON pi.property_id = p.id
 WHERE p.is_mock = true
-  AND p.owner_id = '93639fa3-6900-4760-bea5-ca173bc8191a'
+  AND p.owner_id = '4e737f48-27ca-4fef-adf0-b613b8af7ad0'
 GROUP BY p.id, p.name, p.city, p.property_type
 ORDER BY p.city, p.name;
