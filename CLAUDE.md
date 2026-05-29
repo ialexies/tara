@@ -238,7 +238,7 @@ To verify the scheduler is registered: check API startup logs for `SchedulerServ
 Owner-created discount codes. Two types: `percent` (1–100%) and `flat` (PHP amount in minor units).
 
 - **Dashboard**: `/dashboard/promo-codes` — create, list, deactivate
-- **Booking panel**: guest enters code; validated live via `GET /promo-codes/validate?code=&propertyId=&amount=`
+- **Book page** (`/properties/[slug]/book`): guest enters code; validated live via `GET /promo-codes/validate?code=&propertyId=&amount=`
 - **Apply at checkout**: `POST /bookings` accepts `promoCode` field; validation happens server-side
 - **Schema**: `promo_codes` table — `discount_type`, `discount_value`, `max_uses`, `uses_count`, `valid_from`, `valid_to`, `is_active`
 - Promo code usage auto-increments on booking creation
@@ -358,6 +358,124 @@ Owner can mark a booking's ID as verified.
 - **Schema**: `bookings.id_verified` (boolean), `bookings.id_verified_at` (timestamp)
 - High-value booking prompts are shown based on `totalMinor > 500000` (₱5,000) — UI flag only, no automated block
 
+## Booking flow (two-step)
+
+Booking is split across two pages:
+
+1. **Property page** (`/properties/[slug]`) — date picker + "Check availability" → room list with availability badges → **"Book this room →"** button per room
+2. **Book page** (`/properties/[slug]/book?roomId=&checkIn=&checkOut=&roomName=&rate=`) — full-screen confirm page with:
+   - Booking summary card (property, room, dates, price breakdown)
+   - Guest details form (pre-filled from saved profile)
+   - Promo code input
+   - Accurate cancellation policy from property data
+   - Sticky green confirm button (always visible at bottom on mobile)
+   - Inline email-verification banner for unverified users (send + confirm without leaving the page)
+
+The `rate` param is `baseNightlyRateMinor` passed via URL for instant price display before any API call.
+
+## User profile fields
+
+`users` table has extended profile fields (migration `0033_user_profile_fields.sql`):
+
+| Field           | Notes                                        |
+| --------------- | -------------------------------------------- |
+| `first_name`    | nullable text                                |
+| `last_name`     | nullable text                                |
+| `phone`         | nullable text (not in Firebase, stored here) |
+| `date_of_birth` | nullable date                                |
+| `nationality`   | nullable text                                |
+
+- **Self-service update**: `PATCH /auth/me` — auth-gated, partial update (only sent fields are changed)
+- **UI**: Profile page at `/bookings/profile` — "Personal information" card + "Account" card
+- **Booking pre-fill**: booking form fetches `GET /auth/me` on mount and pre-fills name (first + last joined), email, phone. Falls back to Firebase `displayName`/`phoneNumber` if profile not yet filled.
+
+## Property type badges (listing cards)
+
+Each listing card shows a colored pill overlaid bottom-left on the cover image:
+
+| Type       | Color    |
+| ---------- | -------- |
+| hostel     | emerald  |
+| guesthouse | sky blue |
+| hotel      | indigo   |
+| resort     | amber    |
+| apartment  | violet   |
+
+Color map lives in `PropertyTypeBadge` in [apps/web/app/[locale]/property-listings.tsx](apps/web/app/[locale]/property-listings.tsx).
+
+## Image lightbox (property gallery)
+
+`GalleryLightbox` component ([apps/web/components/gallery-lightbox.tsx](apps/web/components/gallery-lightbox.tsx)) replaces the static hero + thumbnail strip on property pages.
+
+- Tap cover or any thumbnail → full-screen black overlay with the image
+- Prev/next arrow buttons + keyboard (← → Escape) + touch swipe
+- Photo counter (e.g. "2 / 5")
+- "⊞ N photos" badge on the hero image
+- Body scroll locked while open
+
+## Interactive map (listings page)
+
+`PropertiesMap` component ([apps/web/components/properties-map.tsx](apps/web/components/properties-map.tsx)) — Leaflet.js map, `dynamic` imported with `ssr: false`.
+
+- Shows all properties as colored **price pill pins** matching their property type color
+- Auto-fits bounds to show all pins on load
+- Hover a listing card in grid view → that pin enlarges (1.25×) and its popup opens
+- Popup shows name, city, "From ₱X/night", and a "View property →" link
+- Leaflet CSS imported in `app/[locale]/layout.tsx`; marker images in `apps/web/public/leaflet/`
+- `hoveredId` state lives in `PropertyListings`; passed down to both the map and grid cards via `onMouseEnter`/`onMouseLeave`
+
+**CSP**: `frame-src` in `apps/web/middleware.ts` must include `https://www.openstreetmap.org` for the property-page single-property OSM iframe (used on property detail pages, not the listings map).
+
+## Admin endpoints — @Roles decorator required
+
+All `GET/POST /auth/admin/*` routes use `@Roles('admin')` + `@UseGuards(FirebaseGuard, RolesGuard)`. Do **not** use `throw new Error('Forbidden')` manually — it produces a 500 instead of 403 because NestJS doesn't recognize plain `Error` as an `HttpException`. Always use the `@Roles` decorator on the handler.
+
+## Booking email — paymentInstructions must be a string
+
+`EmailService.sendBookingReceived` calls `.replace(/\n/g, '<br>')` on `ctx.paymentInstructions`. Pass a pre-formatted string, not the raw `manualPaymentMethods` JSON object. The booking service formats it:
+
+```typescript
+Object.entries(manualPaymentMethods)
+  .filter(([, v]) => v)
+  .map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`)
+  .join('\n');
+```
+
+## Manual deploy to staging (CI runner down)
+
+When the GitHub Actions self-hosted runner is unavailable, deploy directly via SSH:
+
+```bash
+ssh ialexies@192.168.0.253 << 'ENDSSH'
+cd /home/ialexies/projects/tara
+git pull origin main -q
+read_env() { grep "^$1=" /home/ialexies/stacks/tara-staging/.env | cut -d= -f2-; }
+
+# Build API
+docker build -f apps/api/Dockerfile -t tara-api:staging .
+
+# Build web (NEXT_PUBLIC_* must be baked in at build time)
+docker build -f apps/web/Dockerfile \
+  --build-arg NEXT_PUBLIC_API_URL=https://api-staging.tara-stays.com \
+  --build-arg NEXT_PUBLIC_FIREBASE_API_KEY="$(read_env NEXT_PUBLIC_FIREBASE_API_KEY)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN="$(read_env NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_PROJECT_ID="$(read_env NEXT_PUBLIC_FIREBASE_PROJECT_ID)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET="$(read_env NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="$(read_env NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="$(read_env NEXT_PUBLIC_FIREBASE_APP_ID)" \
+  --build-arg R2_PUBLIC_URL="$(read_env R2_PUBLIC_URL)" \
+  -t tara-web:staging .
+
+# Restart
+cd /home/ialexies/stacks/tara-staging
+docker compose -p tara-staging --env-file .env up -d --no-deps api web
+ENDSSH
+```
+
+Web Firebase env vars live in `/home/ialexies/stacks/tara-staging/.env` on the home server. The web container also needs `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` at runtime for server actions (session cookie creation) — these are passed via the compose `--env-file`.
+
+**Split-brain warning**: if two Compose projects are both running (e.g. old `stacks-*` stack alongside `tara-staging-*`), both cloudflared connectors register to the same tunnel and Cloudflare splits traffic between them. `docker ps | grep cloudflared` — only `tara-staging-cloudflared-1` should be running.
+
 ## Local dev seed data
 
 Test properties for local development are in `infra/scripts/seed-zambales.sql`. Re-run anytime to reset mock data:
@@ -366,15 +484,17 @@ Test properties for local development are in `infra/scripts/seed-zambales.sql`. 
 docker exec -i tara-postgres psql -U tara -d tara_dev < infra/scripts/seed-zambales.sql
 ```
 
-The script deletes then re-inserts 6 properties owned by `owner@test.tara-stays.com`:
+The script deletes then re-inserts **8 properties** owned by `owner@test.tara-stays.com` (staging: `owner_id = 4e737f48-27ca-4fef-adf0-b613b8af7ad0`):
 
-| Property                   | City        | Type       | Rooms | From         |
-| -------------------------- | ----------- | ---------- | ----- | ------------ |
-| Anawangin Cove Backpackers | San Antonio | Hostel     | 2     | ₱450/night   |
-| Liwliwa Surf House         | San Felipe  | Guesthouse | 3     | ₱550/night   |
-| Subic Bay Dive & Stay      | Olongapo    | Hotel      | 3     | ₱750/night   |
-| Nagsasa Cove Eco Camp      | San Antonio | Hostel     | 2     | ₱400/night   |
-| Olongapo City Hostel       | Olongapo    | Hostel     | 3     | ₱650/night   |
-| Pundaquit Beach Resort     | San Antonio | Resort     | 3     | ₱2,200/night |
+| Property                     | City        | Type       | Units | From         |
+| ---------------------------- | ----------- | ---------- | ----- | ------------ |
+| Anawangin Cove Backpackers   | San Antonio | Hostel     | 20    | ₱450/night   |
+| Nagsasa Cove Eco Camp        | San Antonio | Hostel     | 22    | ₱400/night   |
+| Pundaquit Beach Resort       | San Antonio | Resort     | 23    | ₱2,200/night |
+| San Antonio Beach Apartments | San Antonio | Apartment  | 14    | ₱1,800/night |
+| Olongapo City Hostel         | Olongapo    | Hostel     | 24    | ₱550/night   |
+| Subic Bay Dive & Stay        | Olongapo    | Hotel      | 19    | ₱750/night   |
+| Liwliwa Surf House           | San Felipe  | Guesthouse | 21    | ₱550/night   |
+| Zambales Backpacker Inn      | San Felipe  | Hostel     | 20    | ₱350/night   |
 
-Each has cover + gallery images (Unsplash), amenities, GCash payment info, and units. All are `is_mock = true` so the script can safely delete and re-create them.
+All are `is_mock = true`. The delete step cascades through bookings → messages before removing properties. On staging, owner_id differs from local dev — the script uses a hardcoded UUID that must match `owner@test.tara-stays.com`'s actual `users.id` in the target DB.
