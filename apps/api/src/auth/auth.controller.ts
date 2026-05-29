@@ -1,4 +1,14 @@
-import { Body, Controller, Get, HttpCode, Param, Post, Query, UseGuards } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
 import { Throttle } from '@nestjs/throttler';
 import { z } from 'zod';
 import { AuthService } from './auth.service.js';
@@ -12,6 +22,17 @@ const SyncSchema = z.object({
   idToken: z.string().min(1),
   fullName: z.string().optional(),
   role: z.enum(['guest', 'owner']).optional(),
+});
+const UpdateProfileSchema = z.object({
+  firstName: z.string().max(100).optional(),
+  lastName: z.string().max(100).optional(),
+  fullName: z.string().max(200).optional(),
+  phone: z.string().max(30).optional(),
+  dateOfBirth: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+  nationality: z.string().max(100).optional(),
 });
 
 @Throttle({ auth: {} })
@@ -59,6 +80,24 @@ export class AuthController {
       email: user.email,
       role: user.role,
       profile,
+    };
+  }
+
+  @Patch('me')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard)
+  async updateMe(@CurrentUser() user: AuthedUser, @Body() body: unknown) {
+    const patch = UpdateProfileSchema.parse(body);
+    const updated = await this.auth.updateProfile(user.uid, patch);
+    return {
+      id: updated.id,
+      email: updated.email,
+      fullName: updated.fullName,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      phone: updated.phone,
+      dateOfBirth: updated.dateOfBirth,
+      nationality: updated.nationality,
     };
   }
 

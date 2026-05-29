@@ -287,6 +287,27 @@ export const api = {
         method: 'DELETE',
       }),
   },
+  profile: {
+    get: () =>
+      apiFetch<{
+        id: string;
+        email: string;
+        fullName: string | null;
+        firstName: string | null;
+        lastName: string | null;
+        phone: string | null;
+        dateOfBirth: string | null;
+        nationality: string | null;
+      }>('/auth/me'),
+    update: (patch: {
+      firstName?: string;
+      lastName?: string;
+      fullName?: string;
+      phone?: string;
+      dateOfBirth?: string;
+      nationality?: string;
+    }) => apiFetch<unknown>('/auth/me', { method: 'PATCH', body: JSON.stringify(patch) }),
+  },
   referral: {
     getMyCode: () => apiFetch<{ code: string }>('/auth/me/referral'),
   },

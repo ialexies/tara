@@ -1,5 +1,5 @@
 import { sql } from 'drizzle-orm';
-import { boolean, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
+import { boolean, date, pgEnum, pgTable, text, timestamp, uuid } from 'drizzle-orm/pg-core';
 import { citext } from './_types.js';
 
 export const userRoleEnum = pgEnum('user_role', ['guest', 'owner', 'admin', 'ops']);
@@ -20,6 +20,11 @@ export const users = pgTable('users', {
   emailVerifiedAt: timestamp('email_verified_at', { withTimezone: true }),
 
   fullName: text('full_name'),
+  firstName: text('first_name'),
+  lastName: text('last_name'),
+  phone: text('phone'),
+  dateOfBirth: date('date_of_birth'),
+  nationality: text('nationality'),
 
   createdAt: timestamp('created_at', { withTimezone: true })
     .notNull()

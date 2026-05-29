@@ -13,11 +13,35 @@ import {
   reauthenticateWithCredential,
 } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
+import { api } from '@/lib/api-client';
+
+const NATIONALITIES = [
+  'Filipino',
+  'American',
+  'Australian',
+  'British',
+  'Canadian',
+  'Chinese',
+  'French',
+  'German',
+  'Indonesian',
+  'Japanese',
+  'Korean',
+  'Malaysian',
+  'Singaporean',
+  'Spanish',
+  'Thai',
+  'Other',
+];
 
 export default function ProfilePage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
 
-  const [displayName, setDisplayName] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [dateOfBirth, setDateOfBirth] = useState('');
+  const [nationality, setNationality] = useState('');
   const [email, setEmail] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [currentPassword, setCurrentPassword] = useState('');
@@ -28,9 +52,29 @@ export default function ProfilePage(): React.ReactElement {
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     const user = firebaseAuth.currentUser;
-    if (!user) return;
-    setDisplayName(user.displayName ?? '');
-    setEmail(user.email ?? '');
+    if (user?.email) setEmail(user.email);
+
+    api.profile
+      .get()
+      .then((res) => {
+        const p = res as {
+          profile?: {
+            firstName?: string | null;
+            lastName?: string | null;
+            phone?: string | null;
+            dateOfBirth?: string | null;
+            nationality?: string | null;
+          };
+        };
+        const profile = p.profile;
+        if (!profile) return;
+        if (profile.firstName) setFirstName(profile.firstName);
+        if (profile.lastName) setLastName(profile.lastName);
+        if (profile.phone) setPhone(profile.phone);
+        if (profile.dateOfBirth) setDateOfBirth(profile.dateOfBirth);
+        if (profile.nationality) setNationality(profile.nationality);
+      })
+      .catch(() => {});
   }, []);
 
   async function handleSave(e: React.FormEvent) {
@@ -47,13 +91,13 @@ export default function ProfilePage(): React.ReactElement {
     }
 
     try {
-      // Re-authenticate if changing email or password
       if ((email !== user.email || newPassword) && currentPassword) {
         const cred = EmailAuthProvider.credential(user.email!, currentPassword);
         await reauthenticateWithCredential(user, cred);
       }
 
-      if (displayName !== user.displayName) {
+      const displayName = [firstName, lastName].filter(Boolean).join(' ');
+      if (displayName && displayName !== user.displayName) {
         await updateProfile(user, { displayName });
       }
       if (email !== user.email) {
@@ -64,6 +108,15 @@ export default function ProfilePage(): React.ReactElement {
         setNewPassword('');
         setCurrentPassword('');
       }
+
+      await api.profile.update({
+        firstName: firstName || undefined,
+        lastName: lastName || undefined,
+        fullName: displayName || undefined,
+        phone: phone || undefined,
+        dateOfBirth: dateOfBirth || undefined,
+        nationality: nationality || undefined,
+      });
 
       setSuccess('Profile updated');
     } catch (err: unknown) {
@@ -77,6 +130,10 @@ export default function ProfilePage(): React.ReactElement {
       setSaving(false);
     }
   }
+
+  const inputClass =
+    'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50';
+  const labelClass = 'text-sm font-medium text-zinc-700 dark:text-zinc-300';
 
   return (
     <div className="flex min-h-dvh flex-col bg-zinc-50 dark:bg-zinc-950">
@@ -104,7 +161,7 @@ export default function ProfilePage(): React.ReactElement {
           <DarkModeToggle />
         </div>
 
-        <form onSubmit={handleSave} className="space-y-4">
+        <form onSubmit={handleSave} className="space-y-5">
           {success && (
             <div className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900 dark:bg-emerald-950 dark:text-emerald-400">
               {success}
@@ -116,55 +173,117 @@ export default function ProfilePage(): React.ReactElement {
             </div>
           )}
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-              Display name
-            </label>
-            <input
-              type="text"
-              value={displayName}
-              onChange={(e) => setDisplayName(e.target.value)}
-              placeholder="Your name"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </div>
+          {/* Personal info */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+              Personal information
+            </p>
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className={labelClass}>First name</label>
+                  <input
+                    type="text"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="Juan"
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelClass}>Last name</label>
+                  <input
+                    type="text"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="dela Cruz"
+                    className={inputClass}
+                  />
+                </div>
+              </div>
 
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </div>
+              <div className="space-y-1.5">
+                <label className={labelClass}>Phone / WhatsApp</label>
+                <input
+                  type="tel"
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+63 912 345 6789"
+                  className={inputClass}
+                />
+              </div>
 
-          <div className="space-y-1.5 border-t border-zinc-200 pt-4 dark:border-zinc-800">
-            <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">Change password</p>
-            <input
-              type="password"
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="New password (leave blank to keep current)"
-              className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-            />
-          </div>
-
-          {(email !== (firebaseAuth?.currentUser?.email ?? '') || newPassword) && (
-            <div className="space-y-1.5">
-              <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                Current password <span className="text-red-500">*</span>
-              </label>
-              <input
-                type="password"
-                value={currentPassword}
-                onChange={(e) => setCurrentPassword(e.target.value)}
-                placeholder="Required to change email or password"
-                required
-                className="w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
-              />
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <label className={labelClass}>Date of birth</label>
+                  <input
+                    type="date"
+                    value={dateOfBirth}
+                    onChange={(e) => setDateOfBirth(e.target.value)}
+                    className={inputClass}
+                  />
+                </div>
+                <div className="space-y-1.5">
+                  <label className={labelClass}>Nationality</label>
+                  <select
+                    value={nationality}
+                    onChange={(e) => setNationality(e.target.value)}
+                    className={inputClass}
+                  >
+                    <option value="">Select…</option>
+                    {NATIONALITIES.map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
+
+          {/* Account */}
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="mb-4 text-sm font-semibold text-zinc-900 dark:text-zinc-50">Account</p>
+            <div className="space-y-3">
+              <div className="space-y-1.5">
+                <label className={labelClass}>Email</label>
+                <input
+                  type="email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className={inputClass}
+                />
+              </div>
+
+              <div className="space-y-1.5">
+                <label className={labelClass}>New password</label>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Leave blank to keep current"
+                  className={inputClass}
+                />
+              </div>
+
+              {(email !== (firebaseAuth?.currentUser?.email ?? '') || newPassword) && (
+                <div className="space-y-1.5">
+                  <label className={labelClass}>
+                    Current password <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    placeholder="Required to change email or password"
+                    required
+                    className={inputClass}
+                  />
+                </div>
+              )}
+            </div>
+          </div>
 
           <button
             type="submit"
@@ -204,14 +323,15 @@ function DarkModeToggle(): React.ReactElement {
         {(['system', 'light', 'dark'] as const).map((t) => (
           <button
             key={t}
+            type="button"
             onClick={() => apply(t)}
-            className={`flex h-9 flex-1 items-center justify-center rounded-lg border text-sm font-medium transition-colors ${
+            className={`flex-1 rounded-lg border px-3 py-2 text-xs font-medium capitalize transition-colors ${
               theme === t
                 ? 'border-zinc-900 bg-zinc-900 text-white dark:border-zinc-50 dark:bg-zinc-50 dark:text-zinc-900'
-                : 'border-zinc-200 text-zinc-500 dark:border-zinc-700'
+                : 'border-zinc-200 bg-white text-zinc-600 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400'
             }`}
           >
-            {t.charAt(0).toUpperCase() + t.slice(1)}
+            {t}
           </button>
         ))}
       </div>

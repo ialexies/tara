@@ -170,6 +170,35 @@ export class AuthService {
     return { code: updated!.referralCode! };
   }
 
+  async updateProfile(
+    uid: string,
+    patch: {
+      firstName?: string;
+      lastName?: string;
+      fullName?: string;
+      phone?: string;
+      dateOfBirth?: string;
+      nationality?: string;
+    },
+  ): Promise<User> {
+    const [updated] = await db
+      .update(users)
+      .set({
+        ...(patch.firstName !== undefined ? { firstName: patch.firstName || null } : {}),
+        ...(patch.lastName !== undefined ? { lastName: patch.lastName || null } : {}),
+        ...(patch.fullName !== undefined ? { fullName: patch.fullName || null } : {}),
+        ...(patch.phone !== undefined ? { phone: patch.phone || null } : {}),
+        ...(patch.dateOfBirth !== undefined ? { dateOfBirth: patch.dateOfBirth || null } : {}),
+        ...(patch.nationality !== undefined ? { nationality: patch.nationality || null } : {}),
+        updatedAt: new Date(),
+      })
+      .where(eq(users.firebaseUid, uid))
+      .returning();
+    if (!updated) throw new Error('User not found');
+    this.logger.log({ event: 'auth.profile.self_updated', firebaseUid: uid });
+    return updated;
+  }
+
   async listUsers(limit = 100, offset = 0): Promise<User[]> {
     return db.select().from(users).orderBy(users.createdAt).limit(limit).offset(offset);
   }
