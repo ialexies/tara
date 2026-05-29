@@ -10,7 +10,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { BookingsService } from './bookings.service.js';
 import { FirebaseGuard, type AuthedUser } from '../auth/firebase.guard.js';
@@ -25,6 +25,7 @@ export class BookingsController {
 
   /** Public — dates where all units are fully booked (for calendar display). */
   @Get('properties/:propertyId/blocked-dates')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async blockedDates(
     @Param('propertyId') propertyId: string,
     @Query('from') from: string,
@@ -36,6 +37,7 @@ export class BookingsController {
 
   /** Public — availability check for a property's rooms. */
   @Get('properties/:propertyId/availability')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async availability(
     @Param('propertyId') propertyId: string,
     @Query('checkIn') checkIn: string,
@@ -47,6 +49,7 @@ export class BookingsController {
 
   /** Owner — list all bookings for a property. */
   @Get('properties/:propertyId/bookings')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('owner', 'admin')
   async listByProperty(@Param('propertyId') propertyId: string, @CurrentUser() user: AuthedUser) {
@@ -56,6 +59,7 @@ export class BookingsController {
 
   /** Guest — list my own bookings (requires auth). */
   @Get('bookings/mine')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard)
   async listMine(@CurrentUser() user: AuthedUser) {
     const data = await this.svc.listByGuest(user.uid);

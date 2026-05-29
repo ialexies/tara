@@ -6,7 +6,7 @@ import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
-@SkipThrottle()
+@SkipThrottle({ global: true, auth: true, guest_action: true })
 @Controller('wishlist')
 @UseGuards(FirebaseGuard)
 export class WishlistController {

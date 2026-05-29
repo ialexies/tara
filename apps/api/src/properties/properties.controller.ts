@@ -62,6 +62,7 @@ export class PropertiesController {
 
   /** Owner — list properties I own. */
   @Get('mine')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('owner', 'admin')
   async listMine(@CurrentUser() user: AuthedUser) {
@@ -71,6 +72,7 @@ export class PropertiesController {
 
   /** Owner — revenue summary across all owned properties. */
   @Get('revenue')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('owner', 'admin')
   async getRevenue(@CurrentUser() user: AuthedUser) {
