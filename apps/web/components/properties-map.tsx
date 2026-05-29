@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef } from 'react';
-import type { Map, Marker } from 'leaflet';
+import type { Map as LeafletMap, Marker } from 'leaflet';
 
 type Property = {
   id: string;
@@ -77,8 +77,8 @@ export function PropertiesMap({
   locale: string;
   hoveredId: string | null;
 }) {
-  const mapRef = useRef<Map | null>(null);
-  const markersRef = useRef<Map<string, Marker>>(new globalThis.Map());
+  const mapRef = useRef<LeafletMap | null>(null);
+  const markersRef = useRef<globalThis.Map<string, Marker>>(new globalThis.Map());
   const containerRef = useRef<HTMLDivElement>(null);
   const mapped = properties.filter((p) => p.latitude && p.longitude);
 
