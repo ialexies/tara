@@ -14,6 +14,7 @@ import {
 } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import { api } from '@/lib/api-client';
+import { PhoneInput } from '@/components/phone-input';
 
 const NATIONALITIES = [
   'Filipino',
@@ -204,13 +205,7 @@ export default function ProfilePage(): React.ReactElement {
 
               <div className="space-y-1.5">
                 <label className={labelClass}>Phone / WhatsApp</label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+63 912 345 6789"
-                  className={inputClass}
-                />
+                <PhoneInput value={phone} onChange={setPhone} />
               </div>
 
               <div className="grid grid-cols-2 gap-3">

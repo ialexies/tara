@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getIdToken, sendEmailVerification } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import { api } from '@/lib/api-client';
+import { PhoneInput } from '@/components/phone-input';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -213,18 +214,6 @@ export function BookConfirmClient({
     }
   }
 
-  function formatPhone(raw: string): string {
-    const digits = raw.replace(/\D/g, '');
-    // Philippine mobile: 09XXXXXXXXX → +639XXXXXXXXX
-    if (digits.startsWith('09') && digits.length === 11) return `+63${digits.slice(1)}`;
-    // Already international format 639XXXXXXXXX
-    if (digits.startsWith('639') && digits.length === 12) return `+${digits}`;
-    // +63 already present
-    if (raw.startsWith('+63') && digits.length === 12) return `+${digits}`;
-    // Return as-is if we can't normalise
-    return raw.trim();
-  }
-
   const cancelPolicy =
     property.freeCancelDays > 0
       ? `Free cancellation up to ${property.freeCancelDays} day${property.freeCancelDays !== 1 ? 's' : ''} before check-in.${property.partialRefundPercent > 0 ? ` After that, ${property.partialRefundPercent}% refund.` : ' No refund after that.'}`
@@ -339,20 +328,10 @@ export function BookConfirmClient({
               required
               className={inputClass}
             />
-            <input
-              type="tel"
-              placeholder={
-                property.paymentMode === 'manual'
-                  ? 'Phone / WhatsApp * (e.g. 09171234567)'
-                  : 'Phone / WhatsApp (e.g. 09171234567)'
-              }
+            <PhoneInput
               value={guestPhone}
-              onChange={(e) => setGuestPhone(e.target.value)}
-              onBlur={(e) => {
-                if (e.target.value) setGuestPhone(formatPhone(e.target.value));
-              }}
+              onChange={setGuestPhone}
               required={property.paymentMode === 'manual'}
-              className={inputClass}
             />
             <textarea
               placeholder="Special requests (optional)"
