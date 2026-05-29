@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { getIdToken } from 'firebase/auth';
 import Image from 'next/image';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
+import { api } from '@/lib/api-client';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 
 type Room = {
@@ -112,13 +113,33 @@ export function BookingPanel({
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
 
-  // Pre-fill guest details from the logged-in Firebase user
+  // Pre-fill guest details from the saved profile (DB) then fall back to Firebase
   useEffect(() => {
     const user = isFirebaseConfigured ? firebaseAuth.currentUser : null;
     if (!user) return;
-    if (user.displayName) setGuestName(user.displayName);
     if (user.email) setGuestEmail(user.email);
-    if (user.phoneNumber) setGuestPhone(user.phoneNumber);
+
+    api.profile
+      .get()
+      .then((res) => {
+        const p = res as {
+          profile?: {
+            firstName?: string | null;
+            lastName?: string | null;
+            phone?: string | null;
+          };
+        };
+        const profile = p.profile;
+        const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
+        if (fullName) setGuestName(fullName);
+        else if (user.displayName) setGuestName(user.displayName);
+        if (profile?.phone) setGuestPhone(profile.phone);
+        else if (user.phoneNumber) setGuestPhone(user.phoneNumber);
+      })
+      .catch(() => {
+        if (user.displayName) setGuestName(user.displayName);
+        if (user.phoneNumber) setGuestPhone(user.phoneNumber);
+      });
   }, []);
 
   // Show email-unverified warning for logged-in users
