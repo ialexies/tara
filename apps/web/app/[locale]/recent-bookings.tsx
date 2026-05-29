@@ -5,12 +5,14 @@ import Link from 'next/link';
 import { api } from '@/lib/api-client';
 import { isFirebaseConfigured } from '@/lib/firebase-client';
 
-type Booking = {
-  id: string;
-  referenceCode: string;
-  checkIn: string;
-  checkOut: string;
-  status: string;
+type BookingRow = {
+  booking: {
+    id: string;
+    referenceCode: string;
+    checkIn: string;
+    checkOut: string;
+    status: string;
+  };
   propertyName: string;
   roomName: string;
 };
@@ -32,20 +34,19 @@ const STATUS_COLOR: Record<string, string> = {
 };
 
 export function RecentBookings({ locale }: { locale: string }): React.ReactElement | null {
-  const [bookings, setBookings] = useState<Booking[]>([]);
+  const [rows, setRows] = useState<BookingRow[]>([]);
 
   useEffect(() => {
     if (!isFirebaseConfigured) return;
     api.bookings
       .mine()
       .then((res) => {
-        const all = res.data as Booking[];
-        setBookings(all.slice(0, 3));
+        setRows((res.data as BookingRow[]).slice(0, 3));
       })
       .catch(() => {});
   }, []);
 
-  if (bookings.length === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <div className="mb-8">
@@ -59,25 +60,25 @@ export function RecentBookings({ locale }: { locale: string }): React.ReactEleme
         </Link>
       </div>
       <div className="grid gap-3 sm:grid-cols-3">
-        {bookings.map((b) => (
+        {rows.map(({ booking, propertyName, roomName }) => (
           <Link
-            key={b.id}
-            href={`/${locale}/bookings/${b.id}`}
+            key={booking.id}
+            href={`/${locale}/bookings/${booking.id}`}
             className="flex flex-col gap-1 rounded-xl border border-zinc-200 bg-white p-4 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-900"
           >
             <div className="flex items-center justify-between gap-2">
               <span className="truncate text-sm font-medium text-zinc-900 dark:text-zinc-50">
-                {b.propertyName}
+                {propertyName}
               </span>
               <span
-                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLOR[b.status] ?? 'bg-amber-100 text-amber-700'}`}
+                className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-semibold ${STATUS_COLOR[booking.status] ?? 'bg-amber-100 text-amber-700'}`}
               >
-                {STATUS_LABEL[b.status] ?? b.status}
+                {STATUS_LABEL[booking.status] ?? booking.status}
               </span>
             </div>
-            <p className="text-xs text-zinc-500">{b.roomName}</p>
+            <p className="text-xs text-zinc-500">{roomName}</p>
             <p className="text-xs text-zinc-400">
-              {b.checkIn} → {b.checkOut}
+              {booking.checkIn} → {booking.checkOut}
             </p>
           </Link>
         ))}
