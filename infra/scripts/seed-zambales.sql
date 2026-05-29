@@ -32,7 +32,7 @@ BEGIN
     15.1794, 119.8657,
     'PHP', 'manual', '{"gcash":"09171234567","maya":"09171234567"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1506929562872-bb421503ef21?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/654d6757-aea5-452d-bd0c-2a95a11911e0.jpg',
     'Wake up to the sound of waves at Anawangin Cove, one of Zambales'' most iconic destinations. Nestled between agoho pine trees and a white sand cove, our backpacker hostel is the perfect base camp for island-hopping, snorkeling, and trekking to nearby Capones Lighthouse. We run daily boat tours to Anawangin and Camara islands.',
     '{"wifi":false,"parking":true,"pool":false,"aircon":false,"restaurant":true,"gym":false}',
     '2:00 PM', '11:00 AM',
@@ -46,7 +46,7 @@ BEGIN
   VALUES (
     pid, 'anawangin-backpackers', 'Pine Grove Dorm (Mixed)', 'anawangin-pine-grove-dorm',
     'dorm', 'shared', 8, false, true, true, true, 45000, true,
-    'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f2d4084a-e78c-4e2c-81fb-1225e70f7595.jpg',
     '8-bed mixed dorm surrounded by agoho pine trees. Fall asleep to the sea breeze.', 1
   ) RETURNING id INTO r1;
 
@@ -56,7 +56,7 @@ BEGIN
   VALUES (
     pid, 'anawangin-backpackers', 'Cove View Private', 'anawangin-cove-view-private',
     'private', 'shared', 2, false, true, false, true, 120000, true,
-    'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a3a2dc8d-79f3-411d-8636-d3c49f0a76cf.jpg',
     'Private fan room with direct view of the cove. Perfect for couples.', 2
   ) RETURNING id INTO r2;
 
@@ -68,10 +68,10 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'anawangin-backpackers', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', 1),
-    (pid, 'anawangin-backpackers', 'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=800&q=80', 2),
-    (pid, 'anawangin-backpackers', 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80', 3),
-    (pid, 'anawangin-backpackers', 'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=800&q=80', 4);
+    (pid, 'anawangin-backpackers', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/cd3b9562-45f7-41a6-8bb6-be76ce2ae5d1.jpg', 1),
+    (pid, 'anawangin-backpackers', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a0f5a067-25e1-40c6-aa66-9468b657052a.jpg', 2),
+    (pid, 'anawangin-backpackers', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/07627cc2-6fbe-41d8-bf5b-2b2c8f51aee0.jpg', 3),
+    (pid, 'anawangin-backpackers', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f2d4084a-e78c-4e2c-81fb-1225e70f7595.jpg', 4);
 END $$;
 
 
@@ -97,7 +97,7 @@ BEGIN
     15.0632, 119.9118,
     'PHP', 'manual', '{"gcash":"09181234567"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/83d8671e-d606-4ba3-be9c-b631088fe25f.jpg',
     'Liwliwa is Zambales'' crown jewel for surfing, and our surf house sits just 30 meters from the break. We offer board rentals, surf lessons with certified instructors, and a laid-back vibe that keeps guests coming back season after season. The restaurant serves fresh catches from the local fishermen daily.',
     '{"wifi":true,"parking":true,"pool":false,"aircon":false,"restaurant":true,"gym":false}',
     '1:00 PM', '11:00 AM',
@@ -110,7 +110,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'liwliwa-surf-house', 'Surfer Dorm', 'liwliwa-surfer-dorm',
     'dorm', 'shared', 6, false, true, true, true, 55000, true,
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/83a02164-1201-451d-8b58-8b1bd733aa3c.jpg',
     '6-bed dorm for the surf crowd. Board storage right outside.', 1)
   RETURNING id INTO r1;
 
@@ -119,7 +119,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'liwliwa-surf-house', 'Beachfront Kubo', 'liwliwa-beachfront-kubo',
     'private', 'private', 2, false, true, false, true, 180000, true,
-    'https://images.unsplash.com/photo-1584132967334-10e028bd69f7?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/73158bc9-00bd-4314-adae-3f386473abce.jpg',
     'Nipa hut right on the sand. Sliding door opens to the beach.', 2)
   RETURNING id INTO r2;
 
@@ -128,7 +128,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'liwliwa-surf-house', 'Garden Twin', 'liwliwa-garden-twin',
     'private', 'shared', 2, false, true, false, false, 140000, true,
-    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/ba63a65c-6f19-4fdf-ad27-50013c4ac7c1.jpg',
     'Twin beds in a quiet garden-facing room. Great for friends.', 1)
   RETURNING id INTO r3;
 
@@ -143,9 +143,9 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'liwliwa-surf-house', 'https://images.unsplash.com/photo-1502680390469-be75c86b636f?w=800&q=80', 1),
-    (pid, 'liwliwa-surf-house', 'https://images.unsplash.com/photo-1455130624386-52f569c695e3?w=800&q=80', 2),
-    (pid, 'liwliwa-surf-house', 'https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?w=800&q=80', 3);
+    (pid, 'liwliwa-surf-house', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/83d8671e-d606-4ba3-be9c-b631088fe25f.jpg', 1),
+    (pid, 'liwliwa-surf-house', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/fc6861aa-2007-4556-aa72-2f248f1e9f00.jpg', 2),
+    (pid, 'liwliwa-surf-house', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/ecd23c02-b5e1-4b0e-9e3a-84e8b41799b3.jpg', 3);
 END $$;
 
 
@@ -171,7 +171,7 @@ BEGIN
     14.8027, 120.2729,
     'PHP', 'manual', '{"gcash":"09191234567","bank":"BDO 1234567890 Subic Dive Inc"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/57cfd4f8-f594-4d82-9965-93e84255f7be.jpg',
     'Subic Bay is famous for its WWII shipwreck dive sites and crystal-clear waters. Our dive center and guesthouse combination is perfect for PADI-certified divers and beginners alike. We run two dive trips daily to the USS New York wreck, El Capitan, and San Quentin reef. Gear rental and PADI Open Water courses available.',
     '{"wifi":true,"parking":true,"pool":true,"aircon":true,"restaurant":true,"gym":false}',
     '2:00 PM', '12:00 PM',
@@ -184,7 +184,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'subic-dive-stay', 'Diver Dorm', 'subic-diver-dorm',
     'dorm', 'shared', 4, true, true, true, true, 75000, true,
-    'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f2d4084a-e78c-4e2c-81fb-1225e70f7595.jpg',
     '4-bed A/C dorm with extra-large lockers for dive gear.', 1)
   RETURNING id INTO r1;
 
@@ -193,7 +193,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'subic-dive-stay', 'Bay View Double', 'subic-bay-view-double',
     'private', 'private', 2, true, true, false, true, 250000, true,
-    'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/922a399b-b515-441c-a8c8-c9129af12f28.jpg',
     'Double room with A/C and a view of Subic Bay. Includes daily breakfast.', 1)
   RETURNING id INTO r2;
 
@@ -202,7 +202,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'subic-dive-stay', 'Family Suite', 'subic-family-suite',
     'private', 'private', 4, true, true, false, true, 380000, true,
-    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/ba63a65c-6f19-4fdf-ad27-50013c4ac7c1.jpg',
     'Spacious suite with queen bed + two singles. Great for families exploring the bay.', 2)
   RETURNING id INTO r3;
 
@@ -217,10 +217,10 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'subic-dive-stay', 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80', 1),
-    (pid, 'subic-dive-stay', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', 2),
-    (pid, 'subic-dive-stay', 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80', 3),
-    (pid, 'subic-dive-stay', 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80', 4);
+    (pid, 'subic-dive-stay', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/57cfd4f8-f594-4d82-9965-93e84255f7be.jpg', 1),
+    (pid, 'subic-dive-stay', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/cd3b9562-45f7-41a6-8bb6-be76ce2ae5d1.jpg', 2),
+    (pid, 'subic-dive-stay', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/1571ad1c-d061-4a1a-8a54-c380c217c925.jpg', 3),
+    (pid, 'subic-dive-stay', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/9fe64752-02f0-44b9-91cd-7a82a675b63f.jpg', 4);
 END $$;
 
 
@@ -246,7 +246,7 @@ BEGIN
     15.1950, 119.8420,
     'PHP', 'manual', '{"gcash":"09201234567"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f45c91bc-e602-4974-bf57-46939f87f78c.jpg',
     'Nagsasa Cove is a secluded paradise accessible only by boat from Pundaquit. Our eco camp is built entirely from bamboo and reclaimed materials, with solar power and composting toilets. This is off-grid living at its finest — no electricity after 9 PM, just stars, waves, and agoho pines. Two-hour boat ride from Pundaquit included in your stay.',
     '{"wifi":false,"parking":false,"pool":false,"aircon":false,"restaurant":true,"gym":false}',
     '12:00 PM', '9:00 AM',
@@ -259,7 +259,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'nagsasa-eco-camp', 'Bamboo Dorm', 'nagsasa-bamboo-dorm',
     'dorm', 'shared', 10, false, true, false, false, 40000, true,
-    'https://images.unsplash.com/photo-1537953773345-d172ccf13cf1?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a0f5a067-25e1-40c6-aa66-9468b657052a.jpg',
     '10-bed bamboo bunkhouse with sea views from every bed. Mosquito nets provided.', 2)
   RETURNING id INTO r1;
 
@@ -268,7 +268,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'nagsasa-eco-camp', 'Glamping Tent', 'nagsasa-glamping-tent',
     'private', 'shared', 2, false, true, false, false, 160000, true,
-    'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a4bc93f1-42fa-428d-bbf2-3956d11debd9.jpg',
     'Furnished safari tent on a raised platform, 10 meters from the waterline. Includes dinner and breakfast.', 2)
   RETURNING id INTO r2;
 
@@ -280,9 +280,9 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'nagsasa-eco-camp', 'https://images.unsplash.com/photo-1510798831971-661eb04b3739?w=800&q=80', 1),
-    (pid, 'nagsasa-eco-camp', 'https://images.unsplash.com/photo-1504280390367-361c6d9f38f4?w=800&q=80', 2),
-    (pid, 'nagsasa-eco-camp', 'https://images.unsplash.com/photo-1532339142463-fd0a8979791a?w=800&q=80', 3);
+    (pid, 'nagsasa-eco-camp', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f45c91bc-e602-4974-bf57-46939f87f78c.jpg', 1),
+    (pid, 'nagsasa-eco-camp', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a4bc93f1-42fa-428d-bbf2-3956d11debd9.jpg', 2),
+    (pid, 'nagsasa-eco-camp', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/6520c418-8c41-4984-8fd6-da76e3cab9a4.jpg', 3);
 END $$;
 
 
@@ -308,7 +308,7 @@ BEGIN
     14.8289, 120.2827,
     'PHP', 'manual', '{"gcash":"09211234567","maya":"09211234567"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/07627cc2-6fbe-41d8-bf5b-2b2c8f51aee0.jpg',
     'Centrally located in Olongapo City, two minutes walk from the Subic Bay Freeport Zone entrance. Great jumping-off point for day trips to Zambales beaches and Subic historical sites. Our social common area and rooftop bar make it easy to meet fellow travelers.',
     '{"wifi":true,"parking":true,"pool":false,"aircon":true,"restaurant":false,"gym":true}',
     '2:00 PM', '11:00 AM',
@@ -321,7 +321,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'olongapo-city-hostel', 'A/C Mixed Dorm 6-Bed', 'olongapo-ac-mixed-6',
     'dorm', 'shared', 6, true, true, true, true, 65000, true,
-    'https://images.unsplash.com/photo-1560448204-e02f11c3d0e2?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/83a02164-1201-451d-8b58-8b1bd733aa3c.jpg',
     'Air-conditioned 6-bed mixed dorm with individual reading lights and power outlets.', 1)
   RETURNING id INTO r1;
 
@@ -330,7 +330,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'olongapo-city-hostel', 'Female Dorm 4-Bed', 'olongapo-female-4',
     'dorm', 'shared', 4, true, true, true, true, 70000, true,
-    'https://images.unsplash.com/photo-1555854877-bab0e564b8d5?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/f2d4084a-e78c-4e2c-81fb-1225e70f7595.jpg',
     'Female-only A/C dorm with private bathroom and vanity area.', 1)
   RETURNING id INTO r2;
 
@@ -339,7 +339,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'olongapo-city-hostel', 'Private Double', 'olongapo-private-double',
     'private', 'private', 2, true, true, false, true, 200000, true,
-    'https://images.unsplash.com/photo-1618773928121-c32242e63f39?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/922a399b-b515-441c-a8c8-c9129af12f28.jpg',
     'Private A/C double room with en-suite bathroom and city view.', 1)
   RETURNING id INTO r3;
 
@@ -354,10 +354,10 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'olongapo-city-hostel', 'https://images.unsplash.com/photo-1571896349842-33c89424de2d?w=800&q=80', 1),
-    (pid, 'olongapo-city-hostel', 'https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=800&q=80', 2),
-    (pid, 'olongapo-city-hostel', 'https://images.unsplash.com/photo-1566665797739-1674de7a421a?w=800&q=80', 3),
-    (pid, 'olongapo-city-hostel', 'https://images.unsplash.com/photo-1586611292717-f828b167408c?w=800&q=80', 4);
+    (pid, 'olongapo-city-hostel', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/07627cc2-6fbe-41d8-bf5b-2b2c8f51aee0.jpg', 1),
+    (pid, 'olongapo-city-hostel', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a3a2dc8d-79f3-411d-8636-d3c49f0a76cf.jpg', 2),
+    (pid, 'olongapo-city-hostel', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/ed038bbb-8d02-4f77-831c-7b5454b545c1.jpg', 3),
+    (pid, 'olongapo-city-hostel', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/718659b9-f748-4d98-886b-9e06b5b1bda5.jpg', 4);
 END $$;
 
 
@@ -383,7 +383,7 @@ BEGIN
     15.1842, 119.8612,
     'PHP', 'manual', '{"gcash":"09221234567","maya":"09221234567","bank":"Metrobank 9876543210 Pundaquit Resort"}',
     'active', now(), true,
-    'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/9fe64752-02f0-44b9-91cd-7a82a675b63f.jpg',
     'Pundaquit is the gateway to Zambales'' most beautiful island coves. Our resort offers beachfront accommodations, a swimming pool, and daily bangka boat tours to Anawangin, Nagsasa, and Camara islands. Ideal for families and groups looking for a comfortable base with easy island access.',
     '{"wifi":true,"parking":true,"pool":true,"aircon":true,"restaurant":true,"gym":false}',
     '2:00 PM', '12:00 PM',
@@ -396,7 +396,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'pundaquit-beach-resort', 'Deluxe Beachfront Room', 'pundaquit-deluxe-beachfront',
     'private', 'private', 3, true, true, false, true, 350000, true,
-    'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/1571ad1c-d061-4a1a-8a54-c380c217c925.jpg',
     'Spacious A/C room directly on the beach with a private terrace. Sleeps 3.', 2)
   RETURNING id INTO r1;
 
@@ -405,7 +405,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'pundaquit-beach-resort', 'Family Cottage', 'pundaquit-family-cottage',
     'private', 'private', 6, true, true, false, true, 550000, true,
-    'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a6c08aa6-7364-46cf-b683-83c76ed502d9.jpg',
     'Stand-alone cottage with two bedrooms, living area, and kitchenette. Fits groups up to 6.', 2)
   RETURNING id INTO r2;
 
@@ -414,7 +414,7 @@ BEGIN
     is_mock, cover_image_url, description, min_nights)
   VALUES (pid, 'pundaquit-beach-resort', 'Standard Room', 'pundaquit-standard-room',
     'private', 'private', 2, true, true, false, true, 220000, true,
-    'https://images.unsplash.com/photo-1631049307264-da0ec9d70304?w=600&q=80',
+    'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/ba63a65c-6f19-4fdf-ad27-50013c4ac7c1.jpg',
     'Garden-facing A/C room with double bed. Budget-friendly with resort facilities access.', 1)
   RETURNING id INTO r3;
 
@@ -429,11 +429,11 @@ BEGIN
 
   INSERT INTO property_images (property_id, tenant_id, url, position)
   VALUES
-    (pid, 'pundaquit-beach-resort', 'https://images.unsplash.com/photo-1566073771259-6a8506099945?w=800&q=80', 1),
-    (pid, 'pundaquit-beach-resort', 'https://images.unsplash.com/photo-1571003123894-1f0594d2b5d9?w=800&q=80', 2),
-    (pid, 'pundaquit-beach-resort', 'https://images.unsplash.com/photo-1568605114967-8130f3a36994?w=800&q=80', 3),
-    (pid, 'pundaquit-beach-resort', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=800&q=80', 4),
-    (pid, 'pundaquit-beach-resort', 'https://images.unsplash.com/photo-1544551763-46a013bb70d5?w=800&q=80', 5);
+    (pid, 'pundaquit-beach-resort', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/9fe64752-02f0-44b9-91cd-7a82a675b63f.jpg', 1),
+    (pid, 'pundaquit-beach-resort', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/1571ad1c-d061-4a1a-8a54-c380c217c925.jpg', 2),
+    (pid, 'pundaquit-beach-resort', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/a6c08aa6-7364-46cf-b683-83c76ed502d9.jpg', 3),
+    (pid, 'pundaquit-beach-resort', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/cd3b9562-45f7-41a6-8bb6-be76ce2ae5d1.jpg', 4),
+    (pid, 'pundaquit-beach-resort', 'https://pub-9b3c6c52ef10449a887ad24b73985c83.r2.dev/seed/57cfd4f8-f594-4d82-9965-93e84255f7be.jpg', 5);
 END $$;
 
 
