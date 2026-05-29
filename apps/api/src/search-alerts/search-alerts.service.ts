@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { db } from '@tara/db/client';
 import { searchAlerts, properties } from '@tara/db';
@@ -7,6 +7,7 @@ import { EmailService } from '../email/email.service.js';
 
 @Injectable()
 export class SearchAlertsService {
+  private readonly logger = new Logger(SearchAlertsService.name);
   constructor(private readonly email: EmailService) {}
 
   async save(
@@ -70,14 +71,23 @@ export class SearchAlertsService {
       });
       if (matches.length === 0) continue;
 
-      await this.email.sendSearchAlert(
-        alert.guestEmail,
-        matches.map((m) => m.name),
-      );
-      await db
-        .update(searchAlerts)
-        .set({ lastNotifiedAt: new Date() })
-        .where(eq(searchAlerts.id, alert.id));
+      try {
+        await this.email.sendSearchAlert(
+          alert.guestEmail,
+          matches.map((m) => m.name),
+        );
+        await db
+          .update(searchAlerts)
+          .set({ lastNotifiedAt: new Date() })
+          .where(eq(searchAlerts.id, alert.id));
+      } catch (err) {
+        // Log and continue — a failure for one alert must not skip remaining entries
+        this.logger.warn({
+          event: 'search_alert.notify_failed',
+          alertId: alert.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
 }

@@ -336,9 +336,11 @@ function ReceiptButton({
   function printReceipt() {
     const w = window.open('', '_blank');
     if (!w) return;
+    const esc = (s: string) =>
+      s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
     const total = (booking.totalMinor / 100).toLocaleString('en-PH', { minimumFractionDigits: 2 });
     w.document.write(`<!DOCTYPE html>
-<html><head><title>Receipt – ${booking.referenceCode}</title>
+<html><head><title>Receipt – ${esc(booking.referenceCode)}</title>
 <style>
   body { font-family: system-ui, sans-serif; max-width: 480px; margin: 40px auto; color: #111; }
   h1 { font-size: 20px; margin-bottom: 4px; }
@@ -351,15 +353,15 @@ function ReceiptButton({
 </style></head>
 <body>
 <h1>Booking Receipt</h1>
-<p class="ref">Ref: ${booking.referenceCode} &bull; ${new Date().toLocaleDateString('en-PH')}</p>
+<p class="ref">Ref: ${esc(booking.referenceCode)} &bull; ${new Date().toLocaleDateString('en-PH')}</p>
 <table>
-  <tr><td>Property</td><td>${propertyName}</td></tr>
-  <tr><td>Room</td><td>${roomName}</td></tr>
-  <tr><td>Guest</td><td>${booking.guestName}</td></tr>
-  <tr><td>Check-in</td><td>${booking.checkIn}</td></tr>
-  <tr><td>Check-out</td><td>${booking.checkOut}</td></tr>
+  <tr><td>Property</td><td>${esc(propertyName)}</td></tr>
+  <tr><td>Room</td><td>${esc(roomName)}</td></tr>
+  <tr><td>Guest</td><td>${esc(booking.guestName)}</td></tr>
+  <tr><td>Check-in</td><td>${esc(booking.checkIn)}</td></tr>
+  <tr><td>Check-out</td><td>${esc(booking.checkOut)}</td></tr>
   <tr><td>Nights</td><td>${booking.nights}</td></tr>
-  <tr class="total"><td>Total paid</td><td>₱${total}</td></tr>
+  <tr class="total"><td>Total paid</td><td>₱${esc(total)}</td></tr>
 </table>
 <p class="footer">Tara Stays &bull; tara-stays.com &bull; Thank you for your stay!</p>
 </body></html>`);

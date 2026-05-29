@@ -462,9 +462,13 @@ export class BookingsService {
             : Promise.resolve(),
         ]);
 
-        // Increment promo code usage if one was applied
+        // Atomically increment promo code usage — conditional UPDATE prevents TOCTOU race
         if (promoCodeId) {
-          void this.promoCodesService.incrementUses(promoCodeId);
+          const incremented = await this.promoCodesService.incrementUses(promoCodeId);
+          if (!incremented) {
+            // Another concurrent booking just hit the limit; roll back by throwing
+            throw new ConflictException('Promo code has reached its usage limit');
+          }
         }
 
         // Fire webhook for property owner

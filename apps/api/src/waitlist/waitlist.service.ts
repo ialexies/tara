@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { waitlist, rooms } from '@tara/db';
 import { and, eq, isNull, lte, gte } from 'drizzle-orm';
@@ -6,6 +6,7 @@ import { EmailService } from '../email/email.service.js';
 
 @Injectable()
 export class WaitlistService {
+  private readonly logger = new Logger(WaitlistService.name);
   constructor(private readonly email: EmailService) {}
 
   async join(
@@ -45,14 +46,23 @@ export class WaitlistService {
     const [room] = await db.select({ name: rooms.name }).from(rooms).where(eq(rooms.id, roomId));
 
     for (const entry of entries) {
-      await this.email.sendWaitlistAvailable(
-        entry.guestEmail,
-        entry.guestName,
-        room?.name ?? 'room',
-        checkIn,
-        checkOut,
-      );
-      await db.update(waitlist).set({ notifiedAt: new Date() }).where(eq(waitlist.id, entry.id));
+      try {
+        await this.email.sendWaitlistAvailable(
+          entry.guestEmail,
+          entry.guestName,
+          room?.name ?? 'room',
+          checkIn,
+          checkOut,
+        );
+        await db.update(waitlist).set({ notifiedAt: new Date() }).where(eq(waitlist.id, entry.id));
+      } catch (err) {
+        // Log and continue — a failure for one guest must not skip remaining entries
+        this.logger.warn({
+          event: 'waitlist.notify_failed',
+          waitlistId: entry.id,
+          error: err instanceof Error ? err.message : String(err),
+        });
+      }
     }
   }
 }

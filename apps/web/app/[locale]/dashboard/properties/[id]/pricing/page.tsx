@@ -345,8 +345,11 @@ function PricingCalendar({
   onMonthChange: (m: string) => void;
 }): React.ReactElement {
   const [year, mon] = month.split('-').map(Number) as [number, number];
-  const daysInMonth = new Date(year, mon, 0).getDate();
-  const firstDow = new Date(year, mon - 1, 1).getDay();
+  // Use UTC-based Date construction so calendar columns are timezone-agnostic.
+  // Price rule dates are stored as YYYY-MM-DD strings (no time component), so
+  // interpreting them in UTC prevents grid misalignment for owners outside Manila.
+  const daysInMonth = new Date(Date.UTC(year, mon, 0)).getUTCDate();
+  const firstDow = new Date(Date.UTC(year, mon - 1, 1)).getUTCDay();
 
   function rulesForDate(day: number): PriceRule[] {
     const date = `${year}-${String(mon).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
@@ -354,15 +357,15 @@ function PricingCalendar({
   }
 
   function prevMonth() {
-    const d = new Date(year, mon - 2, 1);
-    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    const d = new Date(Date.UTC(year, mon - 2, 1));
+    onMonthChange(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
   }
   function nextMonth() {
-    const d = new Date(year, mon, 1);
-    onMonthChange(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+    const d = new Date(Date.UTC(year, mon, 1));
+    onMonthChange(`${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, '0')}`);
   }
 
-  const monthLabel = new Date(year, mon - 1, 1).toLocaleDateString('en-PH', {
+  const monthLabel = new Date(Date.UTC(year, mon - 1, 1)).toLocaleDateString('en-PH', {
     month: 'long',
     year: 'numeric',
   });
@@ -408,7 +411,9 @@ function PricingCalendar({
               {hasRate && (
                 <span className="text-[8px] text-emerald-600 dark:text-emerald-400">
                   ₱
-                  {(dayRules.find((r) => r.rateOverrideMinor)!.rateOverrideMinor! / 100).toFixed(0)}
+                  {(
+                    dayRules.find((r) => r.rateOverrideMinor)!.rateOverrideMinor! / 100
+                  ).toLocaleString('en-PH', { maximumFractionDigits: 2 })}
                 </span>
               )}
             </div>

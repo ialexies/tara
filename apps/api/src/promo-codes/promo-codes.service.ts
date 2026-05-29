@@ -83,10 +83,22 @@ export class PromoCodesService {
     };
   }
 
-  async incrementUses(id: string) {
-    await db
+  /**
+   * Atomically increments usesCount only if the code hasn't hit maxUses.
+   * Returns false when the limit was already reached (caller should abort the booking).
+   * Using a conditional UPDATE avoids the TOCTOU race between validate() and increment.
+   */
+  async incrementUses(id: string): Promise<boolean> {
+    const [updated] = await db
       .update(promoCodes)
       .set({ usesCount: sql`${promoCodes.usesCount} + 1` })
-      .where(eq(promoCodes.id, id));
+      .where(
+        and(
+          eq(promoCodes.id, id),
+          or(isNull(promoCodes.maxUses), sql`${promoCodes.usesCount} < ${promoCodes.maxUses}`),
+        ),
+      )
+      .returning({ id: promoCodes.id });
+    return !!updated;
   }
 }

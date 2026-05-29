@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { users, type User } from '@tara/db/schema';
-import { eq } from 'drizzle-orm';
+import { and, eq, isNull } from 'drizzle-orm';
 import { getFirebaseAdmin } from './firebase-admin.js';
 
 type SyncProfileInput = {
@@ -141,17 +141,33 @@ export class AuthService {
   }
 
   async getOrCreateReferralCode(uid: string): Promise<{ code: string }> {
+    // Fast path: code already exists
     const [user] = await db
       .select({ referralCode: users.referralCode })
       .from(users)
       .where(eq(users.firebaseUid, uid))
       .limit(1);
     if (user?.referralCode) return { code: user.referralCode };
+
+    // Use UPDATE … WHERE referral_code IS NULL so only the first concurrent
+    // writer wins — subsequent calls return the already-set code. This avoids
+    // the read-then-write race where two requests both see null and the second
+    // overwrites the first with a different code.
     const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
     for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-    await db.update(users).set({ referralCode: code }).where(eq(users.firebaseUid, uid));
-    return { code };
+    await db
+      .update(users)
+      .set({ referralCode: code })
+      .where(and(eq(users.firebaseUid, uid), isNull(users.referralCode)));
+
+    // Re-read to get whichever code won (ours or a concurrent request's)
+    const [updated] = await db
+      .select({ referralCode: users.referralCode })
+      .from(users)
+      .where(eq(users.firebaseUid, uid))
+      .limit(1);
+    return { code: updated!.referralCode! };
   }
 
   async listUsers(limit = 100, offset = 0): Promise<User[]> {
