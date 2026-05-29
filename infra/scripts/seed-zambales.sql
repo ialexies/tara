@@ -5,9 +5,20 @@
 -- ============================================================
 
 -- Wipe existing mock properties owned by the test owner so this is idempotent
-DELETE FROM properties
-WHERE is_mock = true
-  AND owner_id = '4e737f48-27ca-4fef-adf0-b613b8af7ad0';
+-- Must delete dependents first (bookings → messages, etc.)
+DO $$
+DECLARE mock_ids uuid[];
+BEGIN
+  SELECT array_agg(id) INTO mock_ids
+  FROM properties
+  WHERE is_mock = true AND owner_id = '4e737f48-27ca-4fef-adf0-b613b8af7ad0';
+
+  IF mock_ids IS NOT NULL THEN
+    DELETE FROM messages   WHERE booking_id IN (SELECT id FROM bookings WHERE property_id = ANY(mock_ids));
+    DELETE FROM bookings   WHERE property_id = ANY(mock_ids);
+    DELETE FROM properties WHERE id = ANY(mock_ids);
+  END IF;
+END $$;
 
 -- ============================================================
 -- 1. Anawangin Cove Backpackers  (San Antonio, hostel) — 22 beds
