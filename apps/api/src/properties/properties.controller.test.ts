@@ -31,7 +31,7 @@ describe('SkipThrottle named-throttler format', () => {
   });
 
   it('partial skip leaves remaining throttlers active', () => {
-    const partialSkip = { global: true };
+    const partialSkip: Record<string, boolean | undefined> = { global: true };
     expect(partialSkip['auth']).toBeUndefined();
     expect(partialSkip['guest_action']).toBeUndefined();
   });
@@ -93,7 +93,7 @@ describe('property slug format', () => {
 
 // ─── Property price display ────────────────────────────────────────────────────
 
-function formatPriceFrom(minorAmount: number | null, currency = 'PHP'): string {
+function formatPriceFrom(minorAmount: number | null): string {
   if (minorAmount == null || minorAmount === 0) return 'Price on request';
   const pesos = minorAmount / 100;
   return `₱${pesos.toLocaleString('en-PH')} / night`;
