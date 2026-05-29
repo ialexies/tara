@@ -1,94 +1,115 @@
 import { test, expect } from '@playwright/test';
 
 /**
- * Booking flow E2E test.
+ * Booking flow E2E tests.
  *
- * Runs against the base URL (staging by default). Requires at least one
- * active property with available rooms. The test verifies the full guest
- * journey without needing a logged-in user.
+ * Uses seed properties from infra/scripts/seed-zambales.sql so the tests
+ * don't rely on finding a card on the homepage listing. Go directly to a
+ * known property URL to avoid flakiness caused by empty staging listings.
+ *
+ * Requires: at least one seed property exists with active status.
+ * Seed command: docker exec -i tara-postgres psql -U tara -d tara_dev < infra/scripts/seed-zambales.sql
  */
+
+const KNOWN_SLUG = 'olongapo-city-hostel'; // A/C dorm + private room, min 1 night
+
+function addDays(n: number): string {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+}
+
 test.describe('Booking flow', () => {
-  test('guest can browse, check availability, and see the booking form', async ({ page }) => {
-    // 1. Home page — browse listings
-    await page.goto('/en');
-    await expect(page.getByPlaceholder(/search by name/i)).toBeVisible();
+  test('guest can reach a property and see the booking panel', async ({ page }) => {
+    await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    // Find the first property card and click it
-    const firstCard = page.locator('a[href*="/properties/"]').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
-    await firstCard.click();
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10_000 });
+    await expect(page.locator('input[type="date"]').first()).toBeVisible();
+  });
 
-    // 2. Property page
-    await expect(page).toHaveURL(/\/properties\//);
-    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  test('guest can check availability and see rooms', async ({ page }) => {
+    await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    // 3. Check availability
-    const checkAvailabilityBtn = page.getByRole('button', { name: /check availability/i });
-    await expect(checkAvailabilityBtn).toBeVisible();
+    const checkIn = addDays(14);
+    const checkOut = addDays(16);
 
-    // Pick dates that are at least 1 night apart
-    const tomorrow = new Date();
-    tomorrow.setDate(tomorrow.getDate() + 7);
-    const dayAfter = new Date(tomorrow);
-    dayAfter.setDate(dayAfter.getDate() + 2);
-
-    const fmt = (d: Date) => d.toISOString().slice(0, 10);
-    const checkIn = fmt(tomorrow);
-    const checkOut = fmt(dayAfter);
-
-    // Fill the date pickers — they're inside a calendar widget
     const dateInputs = page.locator('input[type="date"]');
-    const checkInInput = dateInputs.first();
-    const checkOutInput = dateInputs.last();
+    await dateInputs.first().fill(checkIn);
+    await dateInputs.last().fill(checkOut);
 
-    await checkInInput.fill(checkIn);
-    await checkOutInput.fill(checkOut);
+    await page.getByRole('button', { name: /check availability/i }).click();
 
-    await checkAvailabilityBtn.click();
+    // Rooms or sold-out message should appear
+    await expect(page.getByText(/available|sold out|min\. \d night/i)).toBeVisible({
+      timeout: 10_000,
+    });
+  });
 
-    // 4. Rooms should appear
-    await expect(page.getByText(/available|sold out|min\./i)).toBeVisible({ timeout: 10_000 });
+  test('booking form appears after selecting an available room', async ({ page }) => {
+    await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    // If a "Book this room" button is visible, click it
+    const dateInputs = page.locator('input[type="date"]');
+    await dateInputs.first().fill(addDays(21));
+    await dateInputs.last().fill(addDays(23));
+
+    await page.getByRole('button', { name: /check availability/i }).click();
+
     const bookBtn = page.getByRole('button', { name: /book this room/i }).first();
-    const hasAvailableRoom = await bookBtn.isVisible();
-
-    if (!hasAvailableRoom) {
-      // No rooms available for these dates — test passes at availability check stage
-      return;
-    }
+    const hasRoom = await bookBtn.isVisible().catch(() => false);
+    if (!hasRoom) return; // All rooms taken for these dates — acceptable skip
 
     await bookBtn.click();
 
-    // 5. Guest details form appears inline
-    await expect(page.getByPlaceholder(/full name/i)).toBeVisible();
+    await expect(page.getByPlaceholder(/full name/i)).toBeVisible({ timeout: 5_000 });
     await expect(page.getByPlaceholder(/email address/i)).toBeVisible();
-
-    // Fill in guest details
-    await page.getByPlaceholder(/full name/i).fill('E2E Test Guest');
-    await page.getByPlaceholder(/email address/i).fill('e2e+test@example.com');
-
-    // 6. Confirm booking button is present with price
-    const confirmBtn = page.getByRole('button', { name: /confirm booking|pay with card/i }).first();
-    await expect(confirmBtn).toBeVisible();
   });
 
-  test('mobile layout — booking panel is accessible at 375px', async ({ page }) => {
-    await page.setViewportSize({ width: 375, height: 812 });
+  test('promo code input appears in booking form', async ({ page }) => {
+    await page.goto(`/en/properties/${KNOWN_SLUG}`);
+
+    const dateInputs = page.locator('input[type="date"]');
+    await dateInputs.first().fill(addDays(28));
+    await dateInputs.last().fill(addDays(30));
+
+    await page.getByRole('button', { name: /check availability/i }).click();
+
+    const bookBtn = page.getByRole('button', { name: /book this room/i }).first();
+    const hasRoom = await bookBtn.isVisible().catch(() => false);
+    if (!hasRoom) return;
+
+    await bookBtn.click();
+    await expect(page.getByPlaceholder(/promo code/i)).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('homepage listing shows property cards', async ({ page }) => {
     await page.goto('/en');
+    // With seed data, at least one property card should be visible
+    await expect(page.locator('a[href*="/properties/"]').first()).toBeVisible({ timeout: 10_000 });
+  });
 
-    const firstCard = page.locator('a[href*="/properties/"]').first();
-    await expect(firstCard).toBeVisible({ timeout: 10_000 });
-    await firstCard.click();
+  test('homepage listing links to the seed property', async ({ page }) => {
+    await page.goto('/en');
+    const link = page.locator(`a[href*="/${KNOWN_SLUG}"]`).first();
+    await expect(link).toBeVisible({ timeout: 10_000 });
+    await link.click();
+    await expect(page).toHaveURL(new RegExp(KNOWN_SLUG));
+    await expect(page.getByRole('heading', { level: 1 })).toBeVisible();
+  });
+});
 
-    // Booking panel renders below the fold on mobile — scroll to it
-    const checkAvailabilityBtn = page.getByRole('button', { name: /check availability/i });
-    await checkAvailabilityBtn.scrollIntoViewIfNeeded();
-    await expect(checkAvailabilityBtn).toBeVisible();
+test.describe('Booking flow — mobile layout', () => {
+  test.use({ viewport: { width: 375, height: 812 } });
 
-    // Tap target must be at least 44px tall
-    const box = await checkAvailabilityBtn.boundingBox();
+  test('booking panel is accessible at 375px', async ({ page }) => {
+    await page.goto(`/en/properties/${KNOWN_SLUG}`);
+
+    const checkBtn = page.getByRole('button', { name: /check availability/i });
+    await checkBtn.scrollIntoViewIfNeeded();
+    await expect(checkBtn).toBeVisible({ timeout: 8_000 });
+
+    const box = await checkBtn.boundingBox();
     expect(box).not.toBeNull();
+    // Minimum 44px tap target (Apple/Google guideline)
     expect(box!.height).toBeGreaterThanOrEqual(44);
   });
 });

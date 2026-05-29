@@ -92,6 +92,50 @@ Owner's WhatsApp number is `properties.contact_phone` — set in Dashboard → E
 
 `UserThrottlerGuard` (replaces `ThrottlerGuard`) keys by Firebase UID for authenticated requests, IP for unauthenticated. Prevents noisy clients on shared WiFi from throttling other users on the same IP.
 
+**Three named throttlers** — always use the full name set when decorating:
+
+```typescript
+@SkipThrottle({ global: true, auth: true, guest_action: true })
+```
+
+`@SkipThrottle()` alone defaults to `{ default: true }` in Throttler v6, which does **not** match our named throttlers and silently has no effect.
+
+**Public SSR endpoints** (`GET /properties`, `GET /properties/slug/:slug`, `GET /:id/images`, `GET /*/reviews`, `GET /*/reviews/stats`) are decorated with `@SkipThrottle({ global: true, auth: true, guest_action: true })`. Without this, Next.js SSR requests — which all share the same internal Docker/VPS IP — quickly exhaust the 120 req/min global bucket and trigger 429s that surface as 404s on the property page.
+
+**Dev limit**: global throttler uses 2000 req/min when `NODE_ENV !== 'production'` to prevent the above during local development and E2E runs.
+
+### Image domain allowlist (next.config.ts)
+
+`images.remotePatterns` allows:
+
+- `*.r2.dev` — Cloudflare R2 public URLs (all environments)
+- Custom R2 hostname if `R2_PUBLIC_URL` is not `*.r2.dev` (production)
+- `images.unsplash.com` — seed/test property images (all environments)
+- `**` wildcard — development only (`NODE_ENV === 'development'`)
+
+Adding a new image source for production: add a `{ protocol: 'https', hostname: '...' }` entry to `remotePatterns` in `next.config.ts` and rebuild the web image (it's a build-time config).
+
+### Next.js Server Components + event handlers
+
+`<Image onLoad={...}>` (and any other event handler) **cannot be used in Server Components** — Next.js cannot serialize function props across the server/client boundary. You'll get:
+
+> Error: Event handlers cannot be passed to Client Component props.
+
+Fix: either remove the handler or extract the image element into a `'use client'` component. The property page gallery previously used `onLoad` for a shimmer effect; it was removed since images load correctly without it.
+
+### NEXT*PUBLIC*\* env vars — build args, not runtime
+
+`NEXT_PUBLIC_FIREBASE_*` and other `NEXT_PUBLIC_` vars are **baked into the bundle at `next build` time**. Setting them only as runtime env vars in the container has no effect on the client-side bundle.
+
+When rebuilding the web Docker image locally, export them first:
+
+```bash
+export $(grep -v '^#' .env | grep "NEXT_PUBLIC_FIREBASE" | xargs)
+docker compose -f infra/docker-compose.dev.yml build web
+```
+
+Or ensure they're available in the shell/CI environment before `docker compose build`. The `docker-compose.dev.yml` passes them as `args:`, so they must be in the environment at build time — not just at container start time.
+
 ## Code style
 
 - No comments unless the WHY is non-obvious
@@ -313,3 +357,24 @@ Owner can mark a booking's ID as verified.
 - **Endpoint**: `POST /bookings/:id/verify-id` (owner-auth)
 - **Schema**: `bookings.id_verified` (boolean), `bookings.id_verified_at` (timestamp)
 - High-value booking prompts are shown based on `totalMinor > 500000` (₱5,000) — UI flag only, no automated block
+
+## Local dev seed data
+
+Test properties for local development are in `infra/scripts/seed-zambales.sql`. Re-run anytime to reset mock data:
+
+```bash
+docker exec -i tara-postgres psql -U tara -d tara_dev < infra/scripts/seed-zambales.sql
+```
+
+The script deletes then re-inserts 6 properties owned by `owner@test.tara-stays.com`:
+
+| Property                   | City        | Type       | Rooms | From         |
+| -------------------------- | ----------- | ---------- | ----- | ------------ |
+| Anawangin Cove Backpackers | San Antonio | Hostel     | 2     | ₱450/night   |
+| Liwliwa Surf House         | San Felipe  | Guesthouse | 3     | ₱550/night   |
+| Subic Bay Dive & Stay      | Olongapo    | Hotel      | 3     | ₱750/night   |
+| Nagsasa Cove Eco Camp      | San Antonio | Hostel     | 2     | ₱400/night   |
+| Olongapo City Hostel       | Olongapo    | Hostel     | 3     | ₱650/night   |
+| Pundaquit Beach Resort     | San Antonio | Resort     | 3     | ₱2,200/night |
+
+Each has cover + gallery images (Unsplash), amenities, GCash payment info, and units. All are `is_mock = true` so the script can safely delete and re-create them.
