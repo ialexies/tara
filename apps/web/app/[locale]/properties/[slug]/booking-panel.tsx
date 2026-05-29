@@ -2,10 +2,8 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getIdToken } from 'firebase/auth';
 import Image from 'next/image';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
-import { api } from '@/lib/api-client';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
 
 type Room = {
@@ -97,51 +95,6 @@ export function BookingPanel({
   const [checking, setChecking] = useState(false);
   const [checkError, setCheckError] = useState<string | null>(null);
 
-  const [bookingRoom, setBookingRoom] = useState<AvailabilityResult | null>(null);
-  const [guestName, setGuestName] = useState('');
-  const [guestEmail, setGuestEmail] = useState('');
-  const [guestPhone, setGuestPhone] = useState('');
-  const [specialRequests, setSpecialRequests] = useState('');
-  const [promoCode, setPromoCode] = useState('');
-  const [promoResult, setPromoResult] = useState<{
-    discountMinor: number;
-    finalAmountMinor: number;
-    code: string;
-  } | null>(null);
-  const [promoError, setPromoError] = useState<string | null>(null);
-  const [checkingPromo, setCheckingPromo] = useState(false);
-  const [submitting, setSubmitting] = useState(false);
-  const [bookError, setBookError] = useState<string | null>(null);
-
-  // Pre-fill guest details from the saved profile (DB) then fall back to Firebase
-  useEffect(() => {
-    const user = isFirebaseConfigured ? firebaseAuth.currentUser : null;
-    if (!user) return;
-    if (user.email) setGuestEmail(user.email);
-
-    api.profile
-      .get()
-      .then((res) => {
-        const p = res as {
-          profile?: {
-            firstName?: string | null;
-            lastName?: string | null;
-            phone?: string | null;
-          };
-        };
-        const profile = p.profile;
-        const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
-        if (fullName) setGuestName(fullName);
-        else if (user.displayName) setGuestName(user.displayName);
-        if (profile?.phone) setGuestPhone(profile.phone);
-        else if (user.phoneNumber) setGuestPhone(user.phoneNumber);
-      })
-      .catch(() => {
-        if (user.displayName) setGuestName(user.displayName);
-        if (user.phoneNumber) setGuestPhone(user.phoneNumber);
-      });
-  }, []);
-
   // Show email-unverified warning for logged-in users
   const emailUnverified =
     isFirebaseConfigured &&
@@ -155,7 +108,6 @@ export function BookingPanel({
     setChecking(true);
     setCheckError(null);
     setAvailability(null);
-    setBookingRoom(null);
     try {
       const res = await fetch(
         `${API_URL}/properties/${property.id}/availability?checkIn=${checkIn}&checkOut=${checkOut}`,
@@ -173,48 +125,17 @@ export function BookingPanel({
     }
   }
 
-  async function handleBook(e: React.FormEvent) {
-    e.preventDefault();
-    if (!bookingRoom) return;
-    setSubmitting(true);
-    setBookError(null);
-    try {
-      const authHeaders: Record<string, string> = {};
-      const currentUser = firebaseAuth.currentUser;
-      if (currentUser) {
-        const token = await getIdToken(currentUser);
-        authHeaders['Authorization'] = `Bearer ${token}`;
-      }
-
-      const res = await fetch(`${API_URL}/bookings`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', ...authHeaders },
-        body: JSON.stringify({
-          propertyId: property.id,
-          roomId: bookingRoom.roomId,
+  function handleBookRoom(room: AvailabilityResult) {
+    router.push(
+      `/${locale}/properties/${property.slug}/book?` +
+        new URLSearchParams({
+          roomId: room.roomId,
           checkIn,
           checkOut,
-          guestName,
-          guestEmail,
-          guestPhone: guestPhone || undefined,
-          specialRequests: specialRequests || undefined,
-          promoCode: promoResult?.code || undefined,
-        }),
-      });
-      if (!res.ok) {
-        const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(body.message ?? 'Booking failed');
-      }
-      const booking = (await res.json()) as { id: string; checkoutUrl?: string };
-      if (booking.checkoutUrl) {
-        window.location.href = booking.checkoutUrl;
-      } else {
-        router.push(`/${locale}/bookings/${booking.id}`);
-      }
-    } catch (e: unknown) {
-      setBookError(e instanceof Error ? e.message : 'Something went wrong');
-      setSubmitting(false);
-    }
+          roomName: room.roomName,
+          rate: String(room.baseNightlyRateMinor),
+        }).toString(),
+    );
   }
 
   return (
@@ -266,24 +187,19 @@ export function BookingPanel({
       {/* Availability results */}
       {availability !== null && (
         <div className="space-y-3">
-          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">Rooms</h2>
+          <h2 className="text-base font-semibold text-zinc-900 dark:text-zinc-50">
+            Available rooms
+          </h2>
           {availability.length === 0 && (
             <p className="text-sm text-zinc-500">No rooms listed for this property.</p>
           )}
           {availability.map((room) => {
-            const isSelected = bookingRoom?.roomId === room.roomId;
             const unavailable = room.availableUnits === 0 || !room.meetsMinNights;
-            const baseTotal = room.baseNightlyRateMinor * nights;
-            const total = promoResult && isSelected ? promoResult.finalAmountMinor : baseTotal;
 
             return (
               <div
                 key={room.roomId}
-                className={`overflow-hidden rounded-xl border bg-white dark:bg-zinc-900 ${
-                  isSelected
-                    ? 'border-zinc-900 dark:border-zinc-50'
-                    : 'border-zinc-200 dark:border-zinc-800'
-                }`}
+                className="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-800 dark:bg-zinc-900"
               >
                 {(() => {
                   const coverImg = property.rooms.find((r) => r.id === room.roomId)?.coverImageUrl;
@@ -310,7 +226,7 @@ export function BookingPanel({
                       <p className="mt-1 text-xs font-medium text-red-500">Sold out</p>
                     ) : !room.meetsMinNights ? (
                       <p className="mt-1 text-xs font-medium text-amber-600 dark:text-amber-400">
-                        Min. {room.minNights} nights required for these dates
+                        Min. {room.minNights} nights required
                       </p>
                     ) : (
                       <p className="mt-1 text-xs text-emerald-600 dark:text-emerald-400">
@@ -342,7 +258,7 @@ export function BookingPanel({
                     )}
                     {nights > 0 && (
                       <p className="mt-0.5 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                        ₱{(total / 100).toLocaleString('en-PH')}
+                        ₱{((room.baseNightlyRateMinor * nights) / 100).toLocaleString('en-PH')}
                       </p>
                     )}
                   </div>
@@ -351,161 +267,12 @@ export function BookingPanel({
                 {!unavailable && (
                   <div className="px-4 pb-4">
                     <button
-                      onClick={() => setBookingRoom(isSelected ? null : room)}
-                      className={`mt-3 flex h-10 w-full items-center justify-center rounded-lg text-sm font-semibold transition-colors ${
-                        isSelected
-                          ? 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
-                          : 'bg-zinc-900 text-white dark:bg-zinc-50 dark:text-zinc-900'
-                      }`}
+                      onClick={() => handleBookRoom(room)}
+                      className="flex h-11 w-full items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 active:bg-emerald-800"
                     >
-                      {isSelected ? 'Cancel' : 'Book this room'}
+                      Book this room →
                     </button>
                   </div>
-                )}
-
-                {/* Inline booking form */}
-                {isSelected && (
-                  <form
-                    onSubmit={handleBook}
-                    className="mx-4 mb-4 mt-0 space-y-3 border-t border-zinc-100 pt-4 dark:border-zinc-800"
-                  >
-                    {/* Price summary */}
-                    <div className="rounded-xl bg-zinc-50 px-4 py-3 dark:bg-zinc-800">
-                      <div className="flex justify-between text-sm text-zinc-600 dark:text-zinc-400">
-                        <span>
-                          ₱{(room.baseNightlyRateMinor / 100).toLocaleString('en-PH')} × {nights}{' '}
-                          night{nights !== 1 ? 's' : ''}
-                        </span>
-                        <span>₱{(total / 100).toLocaleString('en-PH')}</span>
-                      </div>
-                      <div className="mt-2 flex justify-between border-t border-zinc-200 pt-2 text-sm font-semibold text-zinc-900 dark:border-zinc-700 dark:text-zinc-50">
-                        <span>Total</span>
-                        <span>₱{(total / 100).toLocaleString('en-PH')}</span>
-                      </div>
-                    </div>
-                    <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
-                      Your details
-                    </p>
-                    {bookError && (
-                      <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-600 dark:bg-red-950 dark:text-red-400">
-                        {bookError}
-                      </p>
-                    )}
-                    <input
-                      type="text"
-                      placeholder="Full name *"
-                      value={guestName}
-                      onChange={(e) => setGuestName(e.target.value)}
-                      required
-                      minLength={2}
-                      className={inputClass}
-                    />
-                    <input
-                      type="email"
-                      placeholder="Email address *"
-                      value={guestEmail}
-                      onChange={(e) => setGuestEmail(e.target.value)}
-                      required
-                      className={inputClass}
-                    />
-                    <input
-                      type="tel"
-                      placeholder={
-                        property.paymentMode === 'manual'
-                          ? 'Phone / WhatsApp *'
-                          : 'Phone / WhatsApp (optional)'
-                      }
-                      value={guestPhone}
-                      onChange={(e) => setGuestPhone(e.target.value)}
-                      required={property.paymentMode === 'manual'}
-                      className={inputClass}
-                    />
-                    <textarea
-                      placeholder="Special requests (optional)"
-                      value={specialRequests}
-                      onChange={(e) => setSpecialRequests(e.target.value)}
-                      rows={2}
-                      maxLength={500}
-                      className={`${inputClass} resize-none`}
-                    />
-                    {/* Promo code */}
-                    <div className="flex gap-2">
-                      <input
-                        type="text"
-                        value={promoCode}
-                        onChange={(e) => {
-                          setPromoCode(e.target.value.toUpperCase());
-                          setPromoResult(null);
-                          setPromoError(null);
-                        }}
-                        placeholder="Promo code (optional)"
-                        className={`${inputClass} flex-1 uppercase`}
-                        maxLength={30}
-                      />
-                      <button
-                        type="button"
-                        disabled={!promoCode || checkingPromo}
-                        onClick={async () => {
-                          setCheckingPromo(true);
-                          setPromoError(null);
-                          try {
-                            const r = await fetch(
-                              `${API_URL}/promo-codes/validate?code=${encodeURIComponent(promoCode)}&propertyId=${property.id}&amount=${room.baseNightlyRateMinor * nights}`,
-                            );
-                            if (!r.ok) {
-                              const b = (await r.json()) as { message?: string };
-                              throw new Error(b.message ?? 'Invalid code');
-                            }
-                            const data = (await r.json()) as {
-                              discountMinor: number;
-                              finalAmountMinor: number;
-                              code: string;
-                            };
-                            setPromoResult(data);
-                          } catch (e) {
-                            setPromoError(e instanceof Error ? e.message : 'Invalid code');
-                          } finally {
-                            setCheckingPromo(false);
-                          }
-                        }}
-                        className="flex h-11 items-center rounded-lg border border-zinc-300 px-3 text-sm font-medium text-zinc-700 disabled:opacity-40 dark:border-zinc-700 dark:text-zinc-300"
-                      >
-                        {checkingPromo ? '…' : 'Apply'}
-                      </button>
-                    </div>
-                    {promoResult && (
-                      <p className="text-sm font-medium text-emerald-600 dark:text-emerald-400">
-                        ✓ Code applied — saving ₱
-                        {(promoResult.discountMinor / 100).toLocaleString('en-PH')}
-                      </p>
-                    )}
-                    {promoError && (
-                      <p className="text-sm text-red-600 dark:text-red-400">{promoError}</p>
-                    )}
-
-                    {/* Cancellation policy */}
-                    <div className="rounded-lg border border-amber-100 bg-amber-50 px-3 py-2.5 text-xs text-amber-800 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-300">
-                      <p className="font-semibold">Cancellation policy</p>
-                      <p className="mt-0.5">
-                        Cancel free up to 48 hours before check-in for a full refund. Cancellations
-                        within 48 hours are non-refundable. Contact the property for special
-                        circumstances.
-                      </p>
-                    </div>
-                    <button
-                      type="submit"
-                      disabled={submitting}
-                      className="flex h-11 w-full items-center justify-center rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700 disabled:opacity-50"
-                    >
-                      {submitting
-                        ? property.paymentMode === 'stripe'
-                          ? 'Redirecting…'
-                          : 'Confirming…'
-                        : property.paymentMode === 'stripe'
-                          ? `Pay with card · ₱${(total / 100).toLocaleString('en-PH')}`
-                          : `Confirm booking · ₱${(total / 100).toLocaleString('en-PH')}`}
-                    </button>
-                  </form>
                 )}
               </div>
             );
@@ -515,6 +282,3 @@ export function BookingPanel({
     </section>
   );
 }
-
-const inputClass =
-  'w-full rounded-lg border border-zinc-300 bg-white px-3 py-2.5 text-sm text-zinc-900 placeholder-zinc-400 focus:border-zinc-500 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50 dark:placeholder-zinc-600';
