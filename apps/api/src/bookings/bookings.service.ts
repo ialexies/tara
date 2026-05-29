@@ -783,6 +783,9 @@ export class BookingsService {
       .where(eq(bookings.id, id))
       .returning();
 
+    // Release the units so the dates become bookable again
+    await db.delete(bookingItems).where(eq(bookingItems.bookingId, id));
+
     this.logger.log({
       event: 'booking.cancelled_by_guest',
       bookingId: id,
@@ -1053,6 +1056,11 @@ export class BookingsService {
       .set({ status: to, updatedAt: new Date() })
       .where(eq(bookings.id, id))
       .returning();
+
+    // Release the units when cancelling so dates become bookable again
+    if (to === 'cancelled') {
+      await db.delete(bookingItems).where(eq(bookingItems.bookingId, id));
+    }
 
     this.logger.log({ event: `booking.${to}`, bookingId: id, tenantId: user.tenantId });
 
