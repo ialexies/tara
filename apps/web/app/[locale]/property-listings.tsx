@@ -2,10 +2,21 @@
 
 import { useState, useMemo, useEffect, useCallback, useRef } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import Image from 'next/image';
 import { api } from '@/lib/api-client';
 import { isFirebaseConfigured } from '@/lib/firebase-client';
+
+const PropertiesMap = dynamic(
+  () => import('@/components/properties-map').then((m) => m.PropertiesMap),
+  {
+    ssr: false,
+    loading: () => (
+      <div className="h-[420px] animate-pulse rounded-xl bg-zinc-100 dark:bg-zinc-800" />
+    ),
+  },
+);
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -87,6 +98,7 @@ export function PropertyListings({
   const [view, setView] = useState<'grid' | 'map'>(() =>
     searchParams.get('view') === 'map' ? 'map' : 'grid',
   );
+  const [hoveredId, setHoveredId] = useState<string | null>(null);
   const [page, setPage] = useState(() => parseInt(searchParams.get('page') ?? '1') || 1);
 
   const [serverProps, setServerProps] = useState<Property[] | null>(null);
@@ -431,13 +443,20 @@ export function PropertyListings({
             </div>
           </div>
 
-          {view === 'map' && <MapView properties={filtered} locale={locale} />}
+          {view === 'map' && (
+            <PropertiesMap properties={filtered} locale={locale} hoveredId={hoveredId} />
+          )}
 
           {view === 'grid' && (
             <>
               <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
                 {paginated.map((p) => (
-                  <li key={p.id} className="relative">
+                  <li
+                    key={p.id}
+                    className="relative"
+                    onMouseEnter={() => setHoveredId(p.id)}
+                    onMouseLeave={() => setHoveredId(null)}
+                  >
                     <button
                       type="button"
                       onClick={() => toggleWishlist(p.id)}
@@ -526,81 +545,6 @@ export function PropertyListings({
           )}
         </>
       )}
-    </div>
-  );
-}
-
-function MapView({
-  properties,
-  locale,
-}: {
-  properties: Property[];
-  locale: string;
-}): React.ReactElement {
-  const mapped = properties.filter((p) => p.latitude && p.longitude);
-
-  if (mapped.length === 0) {
-    return (
-      <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700">
-        <p className="text-sm text-zinc-500">No properties with map coordinates yet.</p>
-      </div>
-    );
-  }
-
-  const lats = mapped.map((p) => p.latitude!);
-  const lngs = mapped.map((p) => p.longitude!);
-  const minLat = Math.min(...lats);
-  const maxLat = Math.max(...lats);
-  const minLng = Math.min(...lngs);
-  const maxLng = Math.max(...lngs);
-  const padLat = Math.max((maxLat - minLat) * 0.3, 0.01);
-  const padLng = Math.max((maxLng - minLng) * 0.3, 0.01);
-  const bbox = `${minLng - padLng},${minLat - padLat},${maxLng + padLng},${maxLat + padLat}`;
-  const centerLat = (minLat + maxLat) / 2;
-  const centerLng = (minLng + maxLng) / 2;
-  const src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${centerLat},${centerLng}`;
-
-  return (
-    <div className="space-y-3">
-      <div className="overflow-hidden rounded-xl border border-zinc-200 dark:border-zinc-700">
-        <iframe
-          title="Properties map"
-          src={src}
-          width="100%"
-          height="400"
-          className="block"
-          loading="lazy"
-          referrerPolicy="no-referrer"
-        />
-      </div>
-      <p className="text-xs text-zinc-400">
-        Showing {mapped.length} of {properties.length} properties with location data.{' '}
-        {properties.length - mapped.length > 0 &&
-          `${properties.length - mapped.length} without coordinates are hidden from the map.`}
-      </p>
-      <ul className="grid grid-cols-1 gap-2 sm:grid-cols-2">
-        {mapped.map((p) => (
-          <li key={p.id}>
-            <Link
-              href={`/${locale}/properties/${p.slug}`}
-              className="flex items-center gap-3 rounded-xl border border-zinc-200 bg-white p-3 hover:shadow-sm dark:border-zinc-800 dark:bg-zinc-900"
-            >
-              <span className="text-xl">📍</span>
-              <div className="min-w-0">
-                <p className="truncate font-medium text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                <p className="truncate text-xs text-zinc-500">
-                  {p.city}, {p.region}
-                </p>
-              </div>
-              {p.priceFrom != null && (
-                <p className="ml-auto shrink-0 text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                  ₱{(p.priceFrom / 100).toLocaleString('en-PH')}
-                </p>
-              )}
-            </Link>
-          </li>
-        ))}
-      </ul>
     </div>
   );
 }

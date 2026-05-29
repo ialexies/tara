@@ -7,6 +7,7 @@ import { headers } from 'next/headers';
 import Script from 'next/script';
 import { routing } from '@/i18n/routing';
 import '../globals.css';
+import 'leaflet/dist/leaflet.css';
 
 const PLAUSIBLE_DOMAIN = process.env['NEXT_PUBLIC_PLAUSIBLE_DOMAIN'] ?? '';
 

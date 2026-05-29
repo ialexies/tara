@@ -366,8 +366,14 @@ export class BookingsService {
 
         return {
           ...booking!,
-          paymentInstructions:
-            property.paymentMode === 'stripe' ? null : property.manualPaymentMethods,
+          paymentInstructions: (() => {
+            if (property.paymentMode === 'stripe' || !property.manualPaymentMethods) return null;
+            const m = property.manualPaymentMethods as Record<string, string>;
+            return Object.entries(m)
+              .filter(([, v]) => v)
+              .map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`)
+              .join('\n');
+          })(),
         };
       })
       .then(async (result) => {
