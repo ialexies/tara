@@ -194,7 +194,12 @@ export function BookConfirmClient({
       });
       if (!res.ok) {
         const body = (await res.json().catch(() => ({}))) as { message?: string };
-        throw new Error(body.message ?? 'Booking failed');
+        const raw = body.message ?? '';
+        // Translate internal service errors into user-friendly messages
+        const msg = raw.toLowerCase().includes('stripe is not configured')
+          ? 'Card payments are not available for this property right now. Please contact the property directly.'
+          : raw || 'Booking failed. Please try again.';
+        throw new Error(msg);
       }
       const booking = (await res.json()) as { id: string; checkoutUrl?: string };
 
