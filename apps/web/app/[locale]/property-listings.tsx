@@ -7,6 +7,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { api } from '@/lib/api-client';
 import { isFirebaseConfigured } from '@/lib/firebase-client';
+import { DateRangeCalendar } from '@/components/date-range-calendar';
 
 const PropertiesMap = dynamic(
   () => import('@/components/properties-map').then((m) => m.PropertiesMap),
@@ -42,11 +43,6 @@ function PropertyTypeBadge({ type }: { type: string }): React.ReactElement {
 
 function todayStr() {
   return new Date().toISOString().slice(0, 10);
-}
-function minCheckOut(checkIn: string) {
-  const d = new Date(checkIn);
-  d.setDate(d.getDate() + 1);
-  return d.toISOString().slice(0, 10);
 }
 
 export type Property = {
@@ -282,39 +278,23 @@ export function PropertyListings({
 
   return (
     <div className="space-y-4">
-      {/* Date row */}
-      <div className="flex flex-col gap-2 rounded-xl border border-zinc-200 bg-white p-3 sm:flex-row sm:items-center dark:border-zinc-700 dark:bg-zinc-900">
-        <div className="flex flex-1 items-center gap-2">
-          <span className="text-xs font-medium text-zinc-500">Check-in</span>
-          <input
-            type="date"
-            value={checkIn}
-            min={todayStr()}
-            onChange={(e) => {
-              setCheckIn(e.target.value);
-              if (checkOut && e.target.value >= checkOut) setCheckOut('');
-            }}
-            className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-          />
-        </div>
-        <div className="flex flex-1 items-center gap-2">
-          <span className="text-xs font-medium text-zinc-500">Check-out</span>
-          <input
-            type="date"
-            value={checkOut}
-            min={checkIn ? minCheckOut(checkIn) : todayStr()}
-            disabled={!checkIn}
-            onChange={(e) => setCheckOut(e.target.value)}
-            className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm text-zinc-900 focus:border-zinc-400 focus:outline-none disabled:opacity-40 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
-          />
-        </div>
-        {loading && <span className="text-xs text-zinc-400">Loading…</span>}
-        {!loading && serverProps !== null && checkIn && checkOut && (
-          <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">
-            {serverProps.length} available
-          </span>
-        )}
-      </div>
+      {/* Date picker */}
+      <DateBar
+        checkIn={checkIn}
+        checkOut={checkOut}
+        loading={loading}
+        availableCount={
+          !loading && serverProps !== null && checkIn && checkOut ? serverProps.length : null
+        }
+        onRangeChange={(ci, co) => {
+          setCheckIn(ci);
+          setCheckOut(co);
+        }}
+        onClear={() => {
+          setCheckIn('');
+          setCheckOut('');
+        }}
+      />
 
       {/* Search + type + city + price row */}
       <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
@@ -544,6 +524,110 @@ export function PropertyListings({
             </>
           )}
         </>
+      )}
+    </div>
+  );
+}
+
+function fmtDateShort(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+}
+
+function DateBar({
+  checkIn,
+  checkOut,
+  loading,
+  availableCount,
+  onRangeChange,
+  onClear,
+}: {
+  checkIn: string;
+  checkOut: string;
+  loading: boolean;
+  availableCount: number | null;
+  onRangeChange: (ci: string, co: string) => void;
+  onClear: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    function onOutside(e: MouseEvent) {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    }
+    if (open) document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, [open]);
+
+  const nights =
+    checkIn && checkOut
+      ? Math.max(0, (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / 86400000)
+      : 0;
+
+  const label =
+    checkIn && checkOut
+      ? `${fmtDateShort(checkIn)} → ${fmtDateShort(checkOut)} · ${nights} night${nights !== 1 ? 's' : ''}`
+      : checkIn
+        ? `${fmtDateShort(checkIn)} → Add check-out`
+        : 'When are you going?';
+
+  return (
+    <div ref={ref} className="relative">
+      <div className="flex items-center gap-2 rounded-xl border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-700 dark:bg-zinc-900">
+        <button
+          type="button"
+          onClick={() => setOpen((o) => !o)}
+          className="flex flex-1 items-center gap-2 text-left"
+        >
+          <svg
+            className="h-4 w-4 shrink-0 text-emerald-500"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
+            strokeWidth={2}
+          >
+            <rect x="3" y="4" width="18" height="18" rx="2" />
+            <path d="M16 2v4M8 2v4M3 10h18" />
+          </svg>
+          <span
+            className={`text-sm ${checkIn ? 'font-medium text-zinc-900 dark:text-zinc-50' : 'text-zinc-400'}`}
+          >
+            {label}
+          </span>
+          {loading && <span className="ml-auto text-xs text-zinc-400">Loading…</span>}
+          {availableCount !== null && (
+            <span className="ml-auto text-xs font-medium text-emerald-600 dark:text-emerald-400">
+              {availableCount} available
+            </span>
+          )}
+        </button>
+        {checkIn && (
+          <button
+            type="button"
+            onClick={(e) => {
+              e.stopPropagation();
+              onClear();
+              setOpen(false);
+            }}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-zinc-400 hover:bg-zinc-100 hover:text-zinc-600 dark:hover:bg-zinc-800"
+          >
+            ✕
+          </button>
+        )}
+      </div>
+
+      {open && (
+        <div className="absolute left-0 right-0 top-full z-20 mt-1 rounded-2xl border border-zinc-200 bg-white p-4 shadow-xl dark:border-zinc-700 dark:bg-zinc-900">
+          <DateRangeCalendar
+            checkIn={checkIn}
+            checkOut={checkOut}
+            onRangeChange={(ci, co) => {
+              onRangeChange(ci, co);
+              if (ci && co) setOpen(false);
+            }}
+          />
+        </div>
       )}
     </div>
   );
