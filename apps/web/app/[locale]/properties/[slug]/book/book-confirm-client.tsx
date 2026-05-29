@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { getIdToken } from 'firebase/auth';
+import { getIdToken, sendEmailVerification } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
 import { api } from '@/lib/api-client';
 
@@ -72,14 +72,19 @@ export function BookConfirmClient({
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
 
+  const [emailUnverified, setEmailUnverified] = useState(false);
+  const [sendingVerification, setSendingVerification] = useState(false);
+  const [verificationSent, setVerificationSent] = useState(false);
+
   const baseTotal = rateMinor * nights;
   const total = promoResult ? promoResult.finalAmountMinor : baseTotal;
 
-  // Pre-fill from saved profile, fall back to Firebase
+  // Pre-fill from saved profile, fall back to Firebase; check email verification
   useEffect(() => {
     const user = isFirebaseConfigured ? firebaseAuth.currentUser : null;
     if (!user) return;
     if (user.email) setGuestEmail(user.email);
+    if (!user.emailVerified) setEmailUnverified(true);
 
     api.profile
       .get()
@@ -103,6 +108,28 @@ export function BookConfirmClient({
         if (user.phoneNumber) setGuestPhone(user.phoneNumber);
       });
   }, []);
+
+  async function handleSendVerification() {
+    const user = firebaseAuth.currentUser;
+    if (!user) return;
+    setSendingVerification(true);
+    try {
+      await sendEmailVerification(user);
+      setVerificationSent(true);
+    } catch {
+      // silently ignore (already sent recently, etc.)
+      setVerificationSent(true);
+    } finally {
+      setSendingVerification(false);
+    }
+  }
+
+  async function handleCheckVerified() {
+    const user = firebaseAuth.currentUser;
+    if (!user) return;
+    await user.reload();
+    if (firebaseAuth.currentUser?.emailVerified) setEmailUnverified(false);
+  }
 
   async function handleApplyPromo() {
     if (!promoCode) return;
@@ -228,6 +255,41 @@ export function BookConfirmClient({
           </div>
         </div>
       </div>
+
+      {/* Email verification banner */}
+      {emailUnverified && (
+        <div className="mb-4 rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-800 dark:bg-amber-950">
+          <p className="text-sm font-semibold text-amber-800 dark:text-amber-300">
+            Verify your email to complete your booking
+          </p>
+          <p className="mt-0.5 text-xs text-amber-700 dark:text-amber-400">
+            We sent a link to <strong>{guestEmail}</strong>. Check your inbox (and spam folder).
+          </p>
+          {!verificationSent ? (
+            <button
+              type="button"
+              onClick={handleSendVerification}
+              disabled={sendingVerification}
+              className="mt-3 flex h-9 items-center rounded-lg bg-amber-600 px-4 text-xs font-semibold text-white hover:bg-amber-700 disabled:opacity-50"
+            >
+              {sendingVerification ? 'Sending…' : 'Send verification email'}
+            </button>
+          ) : (
+            <div className="mt-3 flex flex-wrap items-center gap-2">
+              <span className="text-xs text-amber-700 dark:text-amber-400">
+                ✓ Email sent — check your inbox
+              </span>
+              <button
+                type="button"
+                onClick={handleCheckVerified}
+                className="text-xs font-semibold text-amber-800 underline dark:text-amber-300"
+              >
+                I&apos;ve verified →
+              </button>
+            </div>
+          )}
+        </div>
+      )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
         {/* Guest details */}
