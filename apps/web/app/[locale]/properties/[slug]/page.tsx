@@ -231,7 +231,6 @@ export default async function PropertyPage({
                   key={img.id}
                   className="relative h-20 w-28 shrink-0 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800"
                 >
-                  <div className="absolute inset-0 animate-pulse bg-zinc-200 dark:bg-zinc-700" />
                   <Image
                     src={img.url}
                     alt=""
@@ -239,10 +238,6 @@ export default async function PropertyPage({
                     className="object-cover"
                     sizes="112px"
                     loading="lazy"
-                    onLoad={(e) => {
-                      const el = e.currentTarget.previousSibling as HTMLElement;
-                      if (el) el.style.display = 'none';
-                    }}
                   />
                 </div>
               ))}

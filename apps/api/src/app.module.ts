@@ -32,7 +32,13 @@ import { ScheduleModule } from '@nestjs/schedule';
   imports: [
     LoggerModule.forRoot(buildLoggerConfig()),
     ThrottlerModule.forRoot([
-      { name: 'global', ttl: 60_000, limit: 120 }, // 120 req/min default
+      {
+        name: 'global',
+        ttl: 60_000,
+        // In production 120 req/min; in dev 2000 — Next.js SSR fires many parallel
+        // server-side fetches from one container IP, which would otherwise trigger the limiter.
+        limit: process.env['NODE_ENV'] === 'production' ? 120 : 2000,
+      },
       { name: 'auth', ttl: 60_000, limit: 10 }, // 10 req/min on auth endpoints
       { name: 'guest_action', ttl: 60_000, limit: 5 }, // 5 req/min for unauthenticated mutations
     ]),

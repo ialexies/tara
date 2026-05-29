@@ -10,6 +10,7 @@ import {
   UseGuards,
   HttpCode,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { PropertiesService } from './properties.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { RolesGuard, Roles } from '../auth/roles.guard.js';
@@ -35,6 +36,7 @@ export class PropertiesController {
 
   /** Public — active properties for the guest listing page. Supports date, amenity, and price filters. */
   @Get()
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async list(
     @Query('checkIn') checkIn?: string,
     @Query('checkOut') checkOut?: string,
@@ -91,6 +93,7 @@ export class PropertiesController {
 
   /** Public — property detail by slug (active only). */
   @Get('slug/:slug')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async getBySlug(@Param('slug') slug: string) {
     return this.svc.getBySlug(slug);
   }
@@ -171,6 +174,7 @@ export class PropertiesController {
 
   /** Public — list images for a property (shown on property page). */
   @Get(':id/images')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async listImages(@Param('id') id: string) {
     const data = await this.svc.listPropertyImages(id);
     return { data };

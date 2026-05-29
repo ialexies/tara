@@ -9,7 +9,7 @@ import {
   Req,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle, ThrottlerGuard } from '@nestjs/throttler';
+import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { ReviewsService } from './reviews.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
@@ -31,6 +31,7 @@ export class ReviewsController {
 
   /** Public — list published reviews for a property. */
   @Get('properties/:propertyId/reviews')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async list(@Param('propertyId') propertyId: string) {
     const data = await this.svc.listByProperty(propertyId);
     return { data };
@@ -38,6 +39,7 @@ export class ReviewsController {
 
   /** Public — rating stats for a property. */
   @Get('properties/:propertyId/reviews/stats')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async stats(@Param('propertyId') propertyId: string) {
     return this.svc.stats(propertyId);
   }

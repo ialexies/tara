@@ -42,6 +42,8 @@ const nextConfig: NextConfig = {
       ...(r2PublicHostname && !r2PublicHostname.endsWith('.r2.dev')
         ? [{ protocol: 'https' as const, hostname: r2PublicHostname }]
         : []),
+      // Unsplash — used for test/seed property images
+      { protocol: 'https' as const, hostname: 'images.unsplash.com' },
       // Allow any https image in development for convenience
       ...(process.env.NODE_ENV === 'development'
         ? [{ protocol: 'https' as const, hostname: '**' }]
