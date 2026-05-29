@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIdToken, sendEmailVerification } from 'firebase/auth';
 import { firebaseAuth, isFirebaseConfigured } from '@/lib/firebase-client';
@@ -76,6 +76,9 @@ export function BookConfirmClient({
   const [sendingVerification, setSendingVerification] = useState(false);
   const [verificationSent, setVerificationSent] = useState(false);
 
+  // Track whether the profile already had a phone so we know to save after booking
+  const profileHasPhone = useRef(false);
+
   const baseTotal = rateMinor * nights;
   const total = promoResult ? promoResult.finalAmountMinor : baseTotal;
 
@@ -100,8 +103,13 @@ export function BookConfirmClient({
         const fullName = [profile?.firstName, profile?.lastName].filter(Boolean).join(' ');
         if (fullName) setGuestName(fullName);
         else if (user.displayName) setGuestName(user.displayName);
-        if (profile?.phone) setGuestPhone(profile.phone);
-        else if (user.phoneNumber) setGuestPhone(user.phoneNumber);
+        if (profile?.phone) {
+          setGuestPhone(profile.phone);
+          profileHasPhone.current = true;
+        } else if (user.phoneNumber) {
+          setGuestPhone(user.phoneNumber);
+          profileHasPhone.current = true;
+        }
       })
       .catch(() => {
         if (user.displayName) setGuestName(user.displayName);
@@ -188,6 +196,12 @@ export function BookConfirmClient({
         throw new Error(body.message ?? 'Booking failed');
       }
       const booking = (await res.json()) as { id: string; checkoutUrl?: string };
+
+      // Save phone to profile if user is logged in and didn't already have one
+      if (guestPhone && !profileHasPhone.current && firebaseAuth.currentUser) {
+        api.profile.update({ phone: guestPhone }).catch(() => {});
+      }
+
       if (booking.checkoutUrl) {
         window.location.href = booking.checkoutUrl;
       } else {
@@ -197,6 +211,18 @@ export function BookConfirmClient({
       setBookError(e instanceof Error ? e.message : 'Something went wrong');
       setSubmitting(false);
     }
+  }
+
+  function formatPhone(raw: string): string {
+    const digits = raw.replace(/\D/g, '');
+    // Philippine mobile: 09XXXXXXXXX → +639XXXXXXXXX
+    if (digits.startsWith('09') && digits.length === 11) return `+63${digits.slice(1)}`;
+    // Already international format 639XXXXXXXXX
+    if (digits.startsWith('639') && digits.length === 12) return `+${digits}`;
+    // +63 already present
+    if (raw.startsWith('+63') && digits.length === 12) return `+${digits}`;
+    // Return as-is if we can't normalise
+    return raw.trim();
   }
 
   const cancelPolicy =
@@ -317,11 +343,14 @@ export function BookConfirmClient({
               type="tel"
               placeholder={
                 property.paymentMode === 'manual'
-                  ? 'Phone / WhatsApp *'
-                  : 'Phone / WhatsApp (optional)'
+                  ? 'Phone / WhatsApp * (e.g. 09171234567)'
+                  : 'Phone / WhatsApp (e.g. 09171234567)'
               }
               value={guestPhone}
               onChange={(e) => setGuestPhone(e.target.value)}
+              onBlur={(e) => {
+                if (e.target.value) setGuestPhone(formatPhone(e.target.value));
+              }}
               required={property.paymentMode === 'manual'}
               className={inputClass}
             />
