@@ -4,7 +4,7 @@ import { z } from 'zod';
 import { AuthService } from './auth.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { FirebaseGuard, type AuthedUser } from './firebase.guard.js';
-import { RolesGuard } from './roles.guard.js';
+import { RolesGuard, Roles } from './roles.guard.js';
 import { CurrentUser } from './current-user.decorator.js';
 
 const SessionSchema = z.object({ idToken: z.string().min(1) });
@@ -69,31 +69,27 @@ export class AuthController {
   }
 
   @Get('admin/users')
+  @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
-  async adminListUsers(@CurrentUser() user: AuthedUser) {
-    if (user.role !== 'admin') throw new Error('Forbidden');
+  async adminListUsers() {
     const list = await this.auth.listUsers();
     return { data: list };
   }
 
   @Post('admin/users/:id/role')
   @HttpCode(200)
+  @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
-  async adminSetRole(
-    @CurrentUser() user: AuthedUser,
-    @Param('id') id: string,
-    @Body() body: unknown,
-  ) {
-    if (user.role !== 'admin') throw new Error('Forbidden');
+  async adminSetRole(@Param('id') id: string, @Body() body: unknown) {
     const { role } = z.object({ role: z.enum(['guest', 'owner', 'admin']) }).parse(body);
     const updated = await this.auth.setUserRole(id, role);
     return { id: updated.id, email: updated.email, role: updated.role };
   }
 
   @Get('admin/audit')
+  @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
-  async adminAuditLog(@CurrentUser() user: AuthedUser, @Query('limit') limit?: string) {
-    if (user.role !== 'admin') throw new Error('Forbidden');
+  async adminAuditLog(@Query('limit') limit?: string) {
     const data = await this.auditSvc.listRecent(limit ? parseInt(limit, 10) : 100);
     return { data };
   }
