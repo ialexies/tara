@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { getIdToken } from 'firebase/auth';
 import Image from 'next/image';
@@ -111,6 +111,15 @@ export function BookingPanel({
   const [checkingPromo, setCheckingPromo] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [bookError, setBookError] = useState<string | null>(null);
+
+  // Pre-fill guest details from the logged-in Firebase user
+  useEffect(() => {
+    const user = isFirebaseConfigured ? firebaseAuth.currentUser : null;
+    if (!user) return;
+    if (user.displayName) setGuestName(user.displayName);
+    if (user.email) setGuestEmail(user.email);
+    if (user.phoneNumber) setGuestPhone(user.phoneNumber);
+  }, []);
 
   // Show email-unverified warning for logged-in users
   const emailUnverified =
