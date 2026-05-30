@@ -396,6 +396,8 @@ export class BookingsService {
               connectAccountId: property.stripeConnectEnabled
                 ? (property.stripeConnectAccountId ?? null)
                 : null,
+              guestEmail: input.guestEmail,
+              guestName: input.guestName,
             });
             await db
               .update(bookings)

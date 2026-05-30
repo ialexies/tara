@@ -38,6 +38,8 @@ export class StripeService implements OnModuleInit {
     nights: number;
     totalMinor: number;
     connectAccountId?: string | null;
+    guestEmail?: string;
+    guestName?: string;
   }): Promise<{ url: string; sessionId: string }> {
     if (!this.client) throw new ServiceUnavailableException('Stripe is not configured');
 
@@ -47,6 +49,7 @@ export class StripeService implements OnModuleInit {
 
     const session = await this.client.checkout.sessions.create({
       payment_method_types: ['card'],
+      ...(params.guestEmail ? { customer_email: params.guestEmail } : {}),
       line_items: [
         {
           price_data: {
