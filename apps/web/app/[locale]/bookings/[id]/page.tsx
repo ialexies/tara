@@ -7,6 +7,7 @@ import { ReviewForm } from './review-form';
 import { DateChangeForm } from './date-change-form';
 import { MessageThread } from './message-thread';
 import { ReceiptButton } from './receipt-button';
+import { AddToCalendarButton } from './add-to-calendar';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -312,7 +313,14 @@ export default async function BookingConfirmationPage({
         )}
 
         {(isConfirmed || isCheckedOut) && (
-          <div className="mt-4">
+          <div className="mt-4 space-y-2">
+            <AddToCalendarButton
+              propertyName={propertyName}
+              roomName={roomName}
+              checkIn={booking.checkIn}
+              checkOut={booking.checkOut}
+              referenceCode={booking.referenceCode}
+            />
             <ReceiptButton booking={booking} propertyName={propertyName} roomName={roomName} />
           </div>
         )}

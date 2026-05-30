@@ -524,6 +524,31 @@ export class BookingsService {
     return booking;
   }
 
+  async getByReferenceCode(code: string) {
+    const [booking] = await db
+      .select({
+        booking: bookings,
+        propertyName: properties.name,
+        propertySlug: properties.slug,
+        propertyCity: properties.city,
+        propertyRegion: properties.region,
+        manualPaymentMethods: properties.manualPaymentMethods,
+        propertyContactPhone: properties.contactPhone,
+        freeCancelDays: properties.freeCancelDays,
+        partialRefundPercent: properties.partialRefundPercent,
+        roomName: rooms.name,
+        roomType: rooms.roomType,
+      })
+      .from(bookings)
+      .innerJoin(properties, eq(bookings.propertyId, properties.id))
+      .innerJoin(rooms, eq(bookings.roomId, rooms.id))
+      .where(eq(bookings.referenceCode, code.toUpperCase()))
+      .limit(1);
+
+    if (!booking) throw new NotFoundException('Booking not found');
+    return booking;
+  }
+
   async listByProperty(propertyId: string, user: AuthedUser) {
     const [prop] = await db
       .select({ id: properties.id, tenantId: properties.tenantId })

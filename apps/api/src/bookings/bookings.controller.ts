@@ -99,8 +99,16 @@ export class BookingsController {
 
   /** Public — fetch a booking by ID (UUID is unguessable; serves confirmation page). */
   @Get('bookings/:id')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async getById(@Param('id') id: string) {
     return this.svc.getById(id);
+  }
+
+  /** Public — look up a booking by reference code (e.g. TARA-ABC123). */
+  @Get('bookings/ref/:code')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  async getByRef(@Param('code') code: string) {
+    return this.svc.getByReferenceCode(code);
   }
 
   /** Owner — confirm a booking once payment is verified. */

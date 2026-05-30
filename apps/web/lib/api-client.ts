@@ -146,6 +146,7 @@ export const api = {
         `/properties/${propertyId}/availability?checkIn=${checkIn}&checkOut=${checkOut}`,
       ),
     mine: () => apiFetch<{ data: unknown[] }>('/bookings/mine'),
+    getByRef: (code: string) => apiFetch<unknown>(`/bookings/ref/${encodeURIComponent(code)}`),
     create: (body: unknown) =>
       apiFetch<unknown>('/bookings', { method: 'POST', body: JSON.stringify(body) }),
     listByProperty: (propertyId: string) =>

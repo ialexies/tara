@@ -234,6 +234,11 @@ export function BookingPanel({
                         {room.minNights ? ` · Min. ${room.minNights} nights` : ''}
                       </p>
                     )}
+                    {room.availableUnits > 0 && room.meetsMinNights && room.availableUnits <= 2 && (
+                      <p className="mt-1 text-xs font-semibold text-orange-500">
+                        🔥 Only {room.availableUnits} left!
+                      </p>
+                    )}
                     <AmenityBadges
                       room={property.rooms.find((r) => r.id === room.roomId) ?? null}
                     />
