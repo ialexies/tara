@@ -519,9 +519,9 @@ Object.entries(manualPaymentMethods)
   .join('\n');
 ```
 
-## Manual deploy to staging (CI runner down)
+## Deploying to staging
 
-When the GitHub Actions self-hosted runner is unavailable, deploy directly via SSH:
+CI runner is not in use. All deploys are done directly via SSH:
 
 ```bash
 ssh ialexies@192.168.0.253 << 'ENDSSH'

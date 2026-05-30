@@ -1,8 +1,7 @@
 name: Deploy to Staging
 
 on:
-  push:
-    branches: [staging]
+  workflow_dispatch: # manual trigger only — runner is not in use
 
 jobs:
   test:
