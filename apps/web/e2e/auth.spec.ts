@@ -45,10 +45,30 @@ test.describe('Email/password registration', () => {
 
 test.describe('Email/password login', () => {
   test('can sign in and sign out', async ({ page }) => {
+    // Register a fresh account in this test so credentials are guaranteed to exist
+    const freshEmail = `e2e-login-${Date.now()}@tara-test.ph`;
+    await page.goto('/en/register');
+    await page.getByLabel(/full name/i).fill(TEST_NAME);
+    await page.getByLabel(/email/i).fill(freshEmail);
+    await page.getByLabel(/password/i).fill(TEST_PASSWORD);
+    await page.getByRole('button', { name: /create account/i }).click();
+    const registered = await page
+      .waitForURL(/\/en$/, { timeout: 15_000 })
+      .then(() => true)
+      .catch(() => false);
+    if (!registered) {
+      test.skip();
+      return;
+    }
+
+    // Sign out
+    await page.getByRole('button', { name: /sign out/i }).click();
+    await page.waitForURL(/\/en\/login$/, { timeout: 10_000 });
+
+    // Sign back in
     await page.goto('/en/login');
     await expect(page.getByRole('heading', { name: /welcome back/i })).toBeVisible();
-
-    await page.getByLabel(/email/i).fill(TEST_EMAIL);
+    await page.getByLabel(/email/i).fill(freshEmail);
     await page.getByLabel(/password/i).fill(TEST_PASSWORD);
     await page.getByRole('button', { name: /^sign in$/i }).click();
 

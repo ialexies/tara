@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import type { Page } from '@playwright/test';
 
 /**
  * Booking flow E2E tests.
@@ -13,10 +14,27 @@ import { test, expect } from '@playwright/test';
 
 const KNOWN_SLUG = 'olongapo-city-hostel'; // A/C dorm + private room, min 1 night
 
-function addDays(n: number): string {
-  const d = new Date();
-  d.setDate(d.getDate() + n);
-  return d.toISOString().slice(0, 10);
+// Pick checkout date using the custom calendar (check-in is pre-filled to today)
+async function pickCheckout(page: Page, daysOut: number) {
+  const co = new Date();
+  co.setDate(co.getDate() + daysOut);
+  const coDay = co.getDate();
+  const coMonth = co.getMonth();
+  const nowMonth = new Date().getMonth();
+
+  // Put calendar in check-out mode
+  await page.getByText('Check-out', { exact: true }).click();
+
+  // Navigate to next month if checkout is there
+  if (coMonth !== nowMonth) {
+    await page.getByRole('button', { name: '›' }).click();
+  }
+
+  // Click the checkout day (exact match to avoid matching other numbers)
+  await page
+    .getByRole('button', { name: String(coDay), exact: true })
+    .first()
+    .click();
 }
 
 test.describe('Booking flow', () => {
@@ -24,18 +42,13 @@ test.describe('Booking flow', () => {
     await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
     await expect(page.getByRole('heading', { level: 1 })).toBeVisible({ timeout: 10_000 });
-    await expect(page.locator('input[type="date"]').first()).toBeVisible();
+    await expect(page.getByText('Check-in', { exact: true })).toBeVisible();
   });
 
   test('guest can check availability and see rooms', async ({ page }) => {
     await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    const checkIn = addDays(14);
-    const checkOut = addDays(16);
-
-    const dateInputs = page.locator('input[type="date"]');
-    await dateInputs.first().fill(checkIn);
-    await dateInputs.last().fill(checkOut);
+    await pickCheckout(page, 16);
 
     await page.getByRole('button', { name: /check availability/i }).click();
 
@@ -48,9 +61,7 @@ test.describe('Booking flow', () => {
   test('booking form appears after selecting an available room', async ({ page }) => {
     await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    const dateInputs = page.locator('input[type="date"]');
-    await dateInputs.first().fill(addDays(21));
-    await dateInputs.last().fill(addDays(23));
+    await pickCheckout(page, 23);
 
     await page.getByRole('button', { name: /check availability/i }).click();
 
@@ -67,9 +78,7 @@ test.describe('Booking flow', () => {
   test('promo code input appears in booking form', async ({ page }) => {
     await page.goto(`/en/properties/${KNOWN_SLUG}`);
 
-    const dateInputs = page.locator('input[type="date"]');
-    await dateInputs.first().fill(addDays(28));
-    await dateInputs.last().fill(addDays(30));
+    await pickCheckout(page, 30);
 
     await page.getByRole('button', { name: /check availability/i }).click();
 

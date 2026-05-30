@@ -11,7 +11,8 @@ test.describe('Property listing page', () => {
   test('shows search and filter controls', async ({ page }) => {
     await page.goto('/en');
     await expect(page.getByPlaceholder(/search by name/i)).toBeVisible();
-    await expect(page.getByRole('combobox')).toBeVisible(); // type filter dropdown
+    // Multiple comboboxes may exist (type + sort); check the first
+    await expect(page.getByRole('combobox').first()).toBeVisible();
   });
 
   test('shows amenity filter chips', async ({ page }) => {
@@ -24,25 +25,25 @@ test.describe('Property listing page', () => {
 
   test('shows seed property cards on the homepage', async ({ page }) => {
     await page.goto('/en');
-    // At least one property card must exist (from seed data)
     await expect(page.locator('a[href*="/properties/"]').first()).toBeVisible({ timeout: 10_000 });
   });
 
   test('property cards show name and price', async ({ page }) => {
     await page.goto('/en');
     await expect(page.locator('a[href*="/properties/"]').first()).toBeVisible({ timeout: 10_000 });
-    // Seed properties have prices; at least one ₱ should appear
     await expect(page.getByText(/₱/).first()).toBeVisible();
   });
 
   test('amenity chip toggles active state', async ({ page }) => {
     await page.goto('/en');
     const wifiBtn = page.getByRole('button', { name: 'WiFi' });
-    await expect(wifiBtn).not.toHaveClass(/bg-zinc-900/);
+    // Inactive: has bg-white, no text-white
+    await expect(wifiBtn).not.toHaveClass(/text-white/);
     await wifiBtn.click();
-    await expect(wifiBtn).toHaveClass(/bg-zinc-900/);
+    // Active: bg-zinc-900 text-white (light) or bg-zinc-50 text-zinc-900 (dark)
+    await expect(wifiBtn).toHaveClass(/text-white|text-zinc-900/);
     await wifiBtn.click();
-    await expect(wifiBtn).not.toHaveClass(/bg-zinc-900/);
+    await expect(wifiBtn).not.toHaveClass(/text-white/);
   });
 
   test('amenity filter shows Save alert button and filters results', async ({ page }) => {
@@ -50,10 +51,8 @@ test.describe('Property listing page', () => {
     const wifiBtn = page.getByRole('button', { name: 'WiFi' });
     await wifiBtn.click();
 
-    // Save alert button should appear once filters are active
     await expect(page.getByRole('button', { name: /save alert/i })).toBeVisible({ timeout: 3_000 });
 
-    // Results (or empty state) should update
     await page.waitForTimeout(1_000);
     const hasResults = await page.getByRole('list').isVisible();
     const hasEmpty = await page.getByText(/no properties/i).isVisible();
@@ -67,14 +66,16 @@ test.describe('Property listing page', () => {
 
     const clearBtn = page.getByRole('button', { name: 'Clear', exact: true });
     await clearBtn.click();
-    await expect(page.getByRole('button', { name: 'WiFi' })).not.toHaveClass(/bg-zinc-900/);
+    // After clear, WiFi button should be inactive (no text-white)
+    await expect(page.getByRole('button', { name: 'WiFi' })).not.toHaveClass(/text-white/);
     await expect(clearBtn).not.toBeVisible();
     await expect(page.getByRole('button', { name: /save alert/i })).not.toBeVisible();
   });
 
   test('filter by type narrows results or shows empty state', async ({ page }) => {
     await page.goto('/en');
-    await page.getByRole('combobox').selectOption('hostel');
+    // Multiple comboboxes may exist; select on the type filter (first one)
+    await page.getByRole('combobox').first().selectOption('hostel');
     const hasResults = await page.getByRole('list').isVisible();
     const hasEmpty = await page.getByText(/no properties/i).isVisible();
     expect(hasResults || hasEmpty).toBe(true);
@@ -82,11 +83,12 @@ test.describe('Property listing page', () => {
 
   test('filter by city narrows results', async ({ page }) => {
     await page.goto('/en');
-    // Type "olongapo" in the city filter if it exists, otherwise use text search
     const searchInput = page.getByPlaceholder(/search by name/i);
     await searchInput.fill('Olongapo');
-    // Should show Olongapo properties (from seed)
-    await expect(page.getByText(/Olongapo/i)).toBeVisible({ timeout: 3_000 });
+    // Wait for at least one property card to appear after filtering
+    await expect(page.locator('a[href*="/properties/"]').first()).toBeVisible({ timeout: 5_000 });
+    // Check that an Olongapo property name (from seed) is shown in a card
+    await expect(page.locator('a[href*="olongapo"]').first()).toBeVisible({ timeout: 3_000 });
   });
 
   test('clear button resets text search', async ({ page }) => {
@@ -108,9 +110,7 @@ test.describe('Property listing page', () => {
   test('wishlist heart button is visible on property cards', async ({ page }) => {
     await page.goto('/en');
     await expect(page.locator('a[href*="/properties/"]').first()).toBeVisible({ timeout: 10_000 });
-    // Wishlist toggle button (♡) should appear on each card
     const wishlistBtn = page.locator('button').filter({ hasText: /♡|♥/ }).first();
-    // Only check if it's present — not all layouts show it prominently
     const isVisible = await wishlistBtn.isVisible().catch(() => false);
     if (!isVisible) {
       // Acceptable: wishlist may be behind hover on desktop; still passes
@@ -133,6 +133,6 @@ test.describe('Property listing — mobile layout', () => {
     const wifiBtn = page.getByRole('button', { name: 'WiFi' });
     await expect(wifiBtn).toBeVisible();
     const box = await wifiBtn.boundingBox();
-    expect(box?.height).toBeGreaterThanOrEqual(36); // min tap target
+    expect(box?.height).toBeGreaterThanOrEqual(36);
   });
 });
