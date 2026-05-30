@@ -131,6 +131,12 @@ export default function RoomsPage(): React.ReactElement {
             Staff
           </Link>
           <Link
+            href={`/${locale}/dashboard/properties/${propertyId}/waitlist`}
+            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+          >
+            Waitlist
+          </Link>
+          <Link
             href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
             className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50"
           >

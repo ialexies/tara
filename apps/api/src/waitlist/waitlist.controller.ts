@@ -8,6 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
+import { SkipThrottle } from '@nestjs/throttler';
 import { WaitlistService } from './waitlist.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { RolesGuard, Roles } from '../auth/roles.guard.js';
@@ -42,7 +43,17 @@ export class WaitlistController {
   @Get('property/:propertyId')
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('owner', 'admin')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   async listForProperty(@Param('propertyId') propertyId: string, @CurrentUser() _user: AuthedUser) {
     return { data: await this.svc.listForProperty(propertyId) };
+  }
+
+  /** Owner — per-room waitlist counts for a property */
+  @Get('property/:propertyId/counts')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  async countsByRoom(@Param('propertyId') propertyId: string, @CurrentUser() _user: AuthedUser) {
+    return { data: await this.svc.countsByRoom(propertyId) };
   }
 }

@@ -76,6 +76,28 @@ export class ReviewsService {
     return review!;
   }
 
+  async listByOwner(tenantId: string) {
+    return db
+      .select({
+        id: reviews.id,
+        propertyId: reviews.propertyId,
+        propertyName: properties.name,
+        bookingId: reviews.bookingId,
+        guestName: reviews.guestName,
+        rating: reviews.rating,
+        body: reviews.body,
+        status: reviews.status,
+        ownerReply: reviews.ownerReply,
+        ownerRepliedAt: reviews.ownerRepliedAt,
+        createdAt: reviews.createdAt,
+      })
+      .from(reviews)
+      .innerJoin(properties, eq(properties.id, reviews.propertyId))
+      .where(eq(properties.tenantId, tenantId))
+      .orderBy(desc(reviews.createdAt))
+      .limit(200);
+  }
+
   async listAll() {
     return db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(200);
   }

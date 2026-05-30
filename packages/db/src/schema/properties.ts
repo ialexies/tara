@@ -102,6 +102,7 @@ export const properties = pgTable(
     checkInTime: text('check_in_time'), // e.g. "14:00"
     checkOutTime: text('check_out_time'), // e.g. "12:00"
     houseRules: text('house_rules'),
+    checkInMessage: text('check_in_message'), // custom message sent to guests on booking confirmation
     contactPhone: text('contact_phone'), // owner WhatsApp / Viber number shown to confirmed guests
 
     // Cancellation policy

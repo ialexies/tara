@@ -1,7 +1,7 @@
 import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { waitlist, rooms } from '@tara/db';
-import { and, eq, isNull, lte, gte } from 'drizzle-orm';
+import { and, eq, isNull, lte, gte, count } from 'drizzle-orm';
 import { EmailService } from '../email/email.service.js';
 
 @Injectable()
@@ -30,6 +30,15 @@ export class WaitlistService {
 
   async listForProperty(propertyId: string) {
     return db.select().from(waitlist).where(eq(waitlist.propertyId, propertyId));
+  }
+
+  async countsByRoom(propertyId: string) {
+    return db
+      .select({ roomId: waitlist.roomId, roomName: rooms.name, count: count() })
+      .from(waitlist)
+      .innerJoin(rooms, eq(rooms.id, waitlist.roomId))
+      .where(and(eq(waitlist.propertyId, propertyId), isNull(waitlist.notifiedAt)))
+      .groupBy(waitlist.roomId, rooms.name);
   }
 
   /** Called when a booking is cancelled — notify waitlisted guests for that room/dates */

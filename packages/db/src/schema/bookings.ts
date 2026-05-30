@@ -71,6 +71,7 @@ export const bookings = pgTable(
     ownerNotes: text('owner_notes'),
     idVerified: boolean('id_verified').notNull().default(false),
     idVerifiedAt: timestamp('id_verified_at', { withTimezone: true }),
+    idDocumentUrl: text('id_document_url'),
 
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()

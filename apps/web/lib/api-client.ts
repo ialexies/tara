@@ -65,6 +65,10 @@ export const api = {
     publish: (id: string) => apiFetch<unknown>(`/properties/${id}/publish`, { method: 'POST' }),
     unpublish: (id: string) => apiFetch<unknown>(`/properties/${id}/unpublish`, { method: 'POST' }),
     revenue: () => apiFetch<{ data: unknown[] }>('/properties/revenue'),
+    revenueByMonth: () =>
+      apiFetch<{ data: { month: string; totalMinor: number; bookingCount: number }[] }>(
+        '/properties/revenue/monthly',
+      ),
     occupancy: (id: string, months?: number) =>
       apiFetch<{ data: unknown[] }>(
         `/properties/${id}/occupancy${months ? `?months=${months}` : ''}`,
@@ -157,6 +161,16 @@ export const api = {
     checkOut: (id: string) => apiFetch<unknown>(`/bookings/${id}/check-out`, { method: 'POST' }),
     verifyId: (id: string) =>
       apiFetch<{ ok: boolean }>(`/bookings/${id}/verify-id`, { method: 'POST' }),
+    getIdUploadUrl: (id: string, contentType: string, guestEmail: string) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(`/bookings/${id}/id-upload-url`, {
+        method: 'POST',
+        body: JSON.stringify({ contentType, guestEmail }),
+      }),
+    saveIdDocument: (id: string, documentUrl: string, guestEmail: string) =>
+      apiFetch<{ ok: boolean }>(`/bookings/${id}/id-document`, {
+        method: 'POST',
+        body: JSON.stringify({ documentUrl, guestEmail }),
+      }),
     cancelByGuest: (id: string, guestEmail: string) =>
       apiFetch<unknown>(`/bookings/${id}/cancel-guest`, {
         method: 'POST',
@@ -229,6 +243,7 @@ export const api = {
       ),
   },
   reviews: {
+    listMine: () => apiFetch<{ data: unknown[] }>('/reviews/mine'),
     replyToReview: (reviewId: string, reply: string) =>
       apiFetch<unknown>(`/reviews/${reviewId}/reply`, {
         method: 'POST',
@@ -354,5 +369,9 @@ export const api = {
       }),
     listForProperty: (propertyId: string) =>
       apiFetch<{ data: unknown[] }>(`/waitlist/property/${propertyId}`),
+    countsByRoom: (propertyId: string) =>
+      apiFetch<{ data: { roomId: string; roomName: string; count: number }[] }>(
+        `/waitlist/property/${propertyId}/counts`,
+      ),
   },
 };

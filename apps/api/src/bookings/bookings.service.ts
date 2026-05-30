@@ -28,6 +28,7 @@ import { PromoCodesService } from '../promo-codes/promo-codes.service.js';
 import { GuestBlacklistService } from '../guest-blacklist/guest-blacklist.service.js';
 import { WaitlistService } from '../waitlist/waitlist.service.js';
 import { WebhooksService } from '../webhooks/webhooks.service.js';
+import { UploadsService } from '../uploads/uploads.service.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -62,6 +63,7 @@ export class BookingsService {
     private readonly blacklistService: GuestBlacklistService,
     private readonly waitlistService: WaitlistService,
     private readonly webhooksService: WebhooksService,
+    private readonly uploadsService: UploadsService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -509,6 +511,7 @@ export class BookingsService {
         propertyRegion: properties.region,
         manualPaymentMethods: properties.manualPaymentMethods,
         propertyContactPhone: properties.contactPhone,
+        checkInMessage: properties.checkInMessage,
         freeCancelDays: properties.freeCancelDays,
         partialRefundPercent: properties.partialRefundPercent,
         roomName: rooms.name,
@@ -534,6 +537,7 @@ export class BookingsService {
         propertyRegion: properties.region,
         manualPaymentMethods: properties.manualPaymentMethods,
         propertyContactPhone: properties.contactPhone,
+        checkInMessage: properties.checkInMessage,
         freeCancelDays: properties.freeCancelDays,
         partialRefundPercent: properties.partialRefundPercent,
         roomName: rooms.name,
@@ -776,6 +780,35 @@ export class BookingsService {
     return { ok: true };
   }
 
+  async getIdUploadUrl(id: string, contentType: string, guestEmail: string) {
+    const [booking] = await db
+      .select({ id: bookings.id, guestEmail: bookings.guestEmail, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase()) {
+      throw new ForbiddenException('Email does not match');
+    }
+    const key = `id-docs/${id}/${Date.now()}`;
+    return this.uploadsService.presignUpload({ key, contentType });
+  }
+
+  async saveIdDocumentUrl(id: string, documentUrl: string, guestEmail: string) {
+    const [booking] = await db
+      .select({ id: bookings.id, guestEmail: bookings.guestEmail })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase()) {
+      throw new ForbiddenException('Email does not match');
+    }
+    await db.update(bookings).set({ idDocumentUrl: documentUrl }).where(eq(bookings.id, id));
+    this.logger.log({ event: 'booking.id_document_uploaded', bookingId: id });
+    return { ok: true };
+  }
+
   async cancelByGuest(id: string, guestEmail: string) {
     const [booking] = await db.select().from(bookings).where(eq(bookings.id, id)).limit(1);
 
@@ -842,7 +875,11 @@ export class BookingsService {
   ) {
     try {
       const [prop] = await db
-        .select({ name: properties.name, city: properties.city })
+        .select({
+          name: properties.name,
+          city: properties.city,
+          checkInMessage: properties.checkInMessage,
+        })
         .from(properties)
         .where(eq(properties.id, booking.propertyId))
         .limit(1);
@@ -865,6 +902,7 @@ export class BookingsService {
         totalMinor: booking.totalMinor,
         currency: booking.currency,
         bookingUrl: `${process.env['WEB_URL'] ?? 'http://localhost:3000'}/en/bookings/${booking.id}`,
+        checkInMessage: prop?.checkInMessage ?? null,
       };
 
       const phone = booking.guestPhone ?? '';

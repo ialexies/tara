@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { api } from '@/lib/api-client';
 import { isFirebaseConfigured } from '@/lib/firebase-client';
 import { DateRangeCalendar } from '@/components/date-range-calendar';
+import { PropertyCardSkeleton } from '@/components/skeleton';
 
 const PropertiesMap = dynamic(
   () => import('@/components/properties-map').then((m) => m.PropertiesMap),
@@ -430,67 +431,77 @@ export function PropertyListings({
           {view === 'grid' && (
             <>
               <ul className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-                {paginated.map((p) => (
-                  <li
-                    key={p.id}
-                    className="relative"
-                    onMouseEnter={() => setHoveredId(p.id)}
-                    onMouseLeave={() => setHoveredId(null)}
-                  >
-                    <button
-                      type="button"
-                      onClick={() => toggleWishlist(p.id)}
-                      aria-label={wishlist.has(p.id) ? 'Remove from wishlist' : 'Save to wishlist'}
-                      className="absolute right-6 top-6 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-sm backdrop-blur-sm transition hover:scale-110 dark:bg-zinc-900/80"
-                    >
-                      {wishlist.has(p.id) ? '❤️' : '🤍'}
-                    </button>
-                    <Link
-                      href={`/${locale}/properties/${p.slug}`}
-                      className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
-                    >
-                      <div className="relative mb-3 h-36 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
-                        {p.coverImageUrl ? (
-                          <Image
-                            src={p.coverImageUrl}
-                            alt={p.name}
-                            fill
-                            className="object-cover transition-opacity duration-300"
-                            sizes="(max-width:640px) 100vw, 50vw"
-                            placeholder="blur"
-                            blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjMiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjMiIGZpbGw9IiNmNGY0ZjUiLz48L3N2Zz4="
-                          />
-                        ) : (
-                          <div className="flex h-full items-center justify-center">
-                            <span className="text-3xl">🏨</span>
+                {loading
+                  ? Array.from({ length: 6 }).map((_, i) => (
+                      <li key={i}>
+                        <PropertyCardSkeleton />
+                      </li>
+                    ))
+                  : paginated.map((p) => (
+                      <li
+                        key={p.id}
+                        className="relative"
+                        onMouseEnter={() => setHoveredId(p.id)}
+                        onMouseLeave={() => setHoveredId(null)}
+                      >
+                        <button
+                          type="button"
+                          onClick={() => toggleWishlist(p.id)}
+                          aria-label={
+                            wishlist.has(p.id) ? 'Remove from wishlist' : 'Save to wishlist'
+                          }
+                          className="absolute right-6 top-6 z-10 flex h-8 w-8 items-center justify-center rounded-full bg-white/80 text-sm backdrop-blur-sm transition hover:scale-110 dark:bg-zinc-900/80"
+                        >
+                          {wishlist.has(p.id) ? '❤️' : '🤍'}
+                        </button>
+                        <Link
+                          href={`/${locale}/properties/${p.slug}`}
+                          className="flex h-full flex-col rounded-xl border border-zinc-200 bg-white p-4 transition-shadow hover:shadow-md dark:border-zinc-800 dark:bg-zinc-900"
+                        >
+                          <div className="relative mb-3 h-36 overflow-hidden rounded-lg bg-zinc-100 dark:bg-zinc-800">
+                            {p.coverImageUrl ? (
+                              <Image
+                                src={p.coverImageUrl}
+                                alt={p.name}
+                                fill
+                                className="object-cover transition-opacity duration-300"
+                                sizes="(max-width:640px) 100vw, 50vw"
+                                placeholder="blur"
+                                blurDataURL="data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSI0IiBoZWlnaHQ9IjMiPjxyZWN0IHdpZHRoPSI0IiBoZWlnaHQ9IjMiIGZpbGw9IiNmNGY0ZjUiLz48L3N2Zz4="
+                              />
+                            ) : (
+                              <div className="flex h-full items-center justify-center">
+                                <span className="text-3xl">🏨</span>
+                              </div>
+                            )}
+                            <PropertyTypeBadge type={p.propertyType} />
                           </div>
-                        )}
-                        <PropertyTypeBadge type={p.propertyType} />
-                      </div>
-                      <div className="flex flex-1 flex-col gap-1">
-                        <p className="font-semibold text-zinc-900 dark:text-zinc-50">{p.name}</p>
-                        <p className="text-sm text-zinc-500">
-                          {p.city}, {p.region}
-                        </p>
-                      </div>
-                      <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
-                        {p.priceFrom != null ? (
-                          <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
-                            From{' '}
-                            <span className="text-base">
-                              ₱{(p.priceFrom / 100).toLocaleString('en-PH')}
-                            </span>
-                            <span className="font-normal text-zinc-500"> /night</span>
-                          </p>
-                        ) : (
-                          <p className="text-sm text-zinc-400">Price on request</p>
-                        )}
-                      </div>
-                    </Link>
-                  </li>
-                ))}
+                          <div className="flex flex-1 flex-col gap-1">
+                            <p className="font-semibold text-zinc-900 dark:text-zinc-50">
+                              {p.name}
+                            </p>
+                            <p className="text-sm text-zinc-500">
+                              {p.city}, {p.region}
+                            </p>
+                          </div>
+                          <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+                            {p.priceFrom != null ? (
+                              <p className="text-sm font-semibold text-zinc-900 dark:text-zinc-50">
+                                From{' '}
+                                <span className="text-base">
+                                  ₱{(p.priceFrom / 100).toLocaleString('en-PH')}
+                                </span>
+                                <span className="font-normal text-zinc-500"> /night</span>
+                              </p>
+                            ) : (
+                              <p className="text-sm text-zinc-400">Price on request</p>
+                            )}
+                          </div>
+                        </Link>
+                      </li>
+                    ))}
               </ul>
-              {totalPages > 1 && (
+              {!loading && totalPages > 1 && (
                 <div className="flex items-center justify-center gap-2 pt-2">
                   <button
                     onClick={() => setPage((p) => Math.max(1, p - 1))}

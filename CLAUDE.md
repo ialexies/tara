@@ -352,11 +352,14 @@ Explicit user preference stored in `localStorage`.
 
 ## ID verification
 
-Owner can mark a booking's ID as verified.
+Two-step flow: guest uploads document, owner marks as verified.
 
-- **Endpoint**: `POST /bookings/:id/verify-id` (owner-auth)
-- **Schema**: `bookings.id_verified` (boolean), `bookings.id_verified_at` (timestamp)
-- High-value booking prompts are shown based on `totalMinor > 500000` (₱5,000) — UI flag only, no automated block
+- **Guest upload**: `POST /bookings/:id/id-upload-url` (email-verified, no Firebase auth) → R2 presigned URL → PUT file → `POST /bookings/:id/id-document` to save URL
+- **Owner verify**: `POST /bookings/:id/verify-id` (owner-auth) — sets `id_verified = true`
+- **Schema**: `bookings.id_verified`, `bookings.id_verified_at`, `bookings.id_document_url`
+- **UI**: "Upload ID document" card shown on guest booking page for `confirmed` status bookings
+- High-value booking prompts shown when `totalMinor > 500000` (₱5,000) — UI flag only, no automated block
+- `UploadsService` accepts `application/pdf` in addition to image types for ID uploads
 
 ## Booking flow (two-step)
 
@@ -542,6 +545,7 @@ docker build -f apps/web/Dockerfile \
   --build-arg NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID="$(read_env NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID)" \
   --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="$(read_env NEXT_PUBLIC_FIREBASE_APP_ID)" \
   --build-arg R2_PUBLIC_URL="$(read_env R2_PUBLIC_URL)" \
+  --build-arg NEXT_PUBLIC_SENTRY_DSN="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
   -t tara-web:staging .
 
 # Restart
@@ -553,6 +557,23 @@ ENDSSH
 Web Firebase env vars live in `/home/ialexies/stacks/tara-staging/.env` on the home server. The web container also needs `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` at runtime for server actions (session cookie creation) — these are passed via the compose `--env-file`.
 
 **Split-brain warning**: if two Compose projects are both running (e.g. old `stacks-*` stack alongside `tara-staging-*`), both cloudflared connectors register to the same tunnel and Cloudflare splits traffic between them. `docker ps | grep cloudflared` — only `tara-staging-cloudflared-1` should be running.
+
+**Before a Portainer manual redeploy**, verify env vars are in sync:
+
+```bash
+ssh ialexies@192.168.0.253 'bash /home/ialexies/projects/tara/infra/scripts/check-staging-env.sh'
+```
+
+## DB backup
+
+`infra/scripts/backup-db.sh` dumps the staging DB and prunes files older than 14 days. Run it daily via cron on the home server:
+
+```bash
+# On home server: crontab -e
+0 2 * * * /home/ialexies/projects/tara/infra/scripts/backup-db.sh >> /home/ialexies/backups/tara/backup.log 2>&1
+```
+
+Backups land in `~/backups/tara/`. Before launch: do a restore drill — spin up a fresh postgres container, restore the latest `.sql.gz`, verify the app boots.
 
 ## Local dev seed data
 
@@ -576,3 +597,49 @@ The script deletes then re-inserts **8 properties** owned by `owner@test.tara-st
 | Zambales Backpacker Inn      | San Felipe  | Hostel     | 20    | ₱350/night   |
 
 All are `is_mock = true`. The delete step cascades through bookings → messages before removing properties. On staging, owner_id differs from local dev — the script uses a hardcoded UUID that must match `owner@test.tara-stays.com`'s actual `users.id` in the target DB.
+
+## Owner check-in message
+
+Owner sets a custom message sent to guests on booking confirmation.
+
+- **Schema**: `properties.check_in_message` (text, nullable) — migration `0034_property_check_in_message.sql`
+- **API**: included in `UpdatePropertySchema` (`checkInMessage`, max 1000 chars); `PATCH /properties/:id` accepts and persists it
+- **Email**: `bookingConfirmedHtml` renders a green "Message from the property" block when present
+- **Guest booking page**: shown inside the "Booking confirmed" banner when status is `confirmed`
+- **Dashboard edit form**: "Check-in message" textarea below House rules
+
+## Revenue chart
+
+Monthly bar chart on the owner dashboard.
+
+- **Endpoint**: `GET /properties/revenue/monthly` — returns last 6 months of revenue grouped by `date_trunc('month', check_in)` across all owner properties
+- **Component**: `apps/web/components/revenue-chart.tsx` — pure SVG/CSS bar chart, no external library
+- Rendered below the per-property revenue cards on the dashboard home page
+
+## Reviews — owner dashboard
+
+Owner can see and reply to all guest reviews across their properties.
+
+- **Page**: `/dashboard/reviews` — lists reviews with star rating, guest name, property, date
+- **Reply**: inline textarea per review; calls `POST /reviews/:id/reply` (already existed in backend)
+- **Endpoint**: `GET /reviews/mine` (new) — owner-auth, joins reviews with properties on tenantId
+
+## Waitlist — owner per-room counts
+
+Owner sees how many guests are waiting per room.
+
+- **Page**: `/dashboard/properties/[id]/waitlist` — table of rooms with waiting count badge
+- **Endpoint**: `GET /waitlist/property/:id/counts` (new) — groups by roomId, joins room name, excludes already-notified entries
+- Nav link added to the rooms page header
+
+## Loading skeletons
+
+Animated loading states replace blank flashes on slow page loads.
+
+- **Component**: `apps/web/components/skeleton.tsx` exports `Skeleton`, `PropertyCardSkeleton`, `BookingCardSkeleton`, `TableRowSkeleton`
+- `loading.tsx` files: `/app/[locale]/loading.tsx`, `/bookings/loading.tsx`, `/dashboard/loading.tsx` — Next.js route-level Suspense boundaries
+- `PropertyCardSkeleton` also used inline in `PropertyListings` while the listings fetch is in-flight
+
+## PWA service worker — CSP fix
+
+`worker-src 'self'` must be explicit in the CSP. Without it, `strict-dynamic` in `script-src` propagates to `worker-src` and blocks SW registration — the offline page never gets cached and `/sw.js` silently fails. Added to `apps/web/middleware.ts` `buildCsp`.

@@ -55,6 +55,16 @@ export class ReviewsController {
     return this.svc.create(input, guestUid);
   }
 
+  /** Owner — list all reviews across their properties. */
+  @Get('reviews/mine')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  async listMine(@CurrentUser() user: AuthedUser) {
+    const data = await this.svc.listByOwner(user.tenantId);
+    return { data };
+  }
+
   /** Owner — reply to a guest review on their property. */
   @Post('reviews/:id/reply')
   @HttpCode(200)

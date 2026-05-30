@@ -8,6 +8,7 @@ import { PromoCodesModule } from '../promo-codes/promo-codes.module.js';
 import { GuestBlacklistModule } from '../guest-blacklist/guest-blacklist.module.js';
 import { WaitlistModule } from '../waitlist/waitlist.module.js';
 import { WebhooksModule } from '../webhooks/webhooks.module.js';
+import { UploadsModule } from '../uploads/uploads.module.js';
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module.js';
     GuestBlacklistModule,
     WaitlistModule,
     WebhooksModule,
+    UploadsModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, RolesGuard],

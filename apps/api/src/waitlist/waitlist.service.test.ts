@@ -71,3 +71,44 @@ describe('waitlist deduplication key', () => {
     expect(k1).not.toBe(k2);
   });
 });
+
+// ─── countsByRoom aggregation (mirrors GROUP BY logic) ────────────────────────
+
+type WaitlistEntry = { roomId: string; roomName: string };
+
+function groupByRoom(
+  entries: WaitlistEntry[],
+): { roomId: string; roomName: string; count: number }[] {
+  const map = new Map<string, { roomName: string; count: number }>();
+  for (const e of entries) {
+    const existing = map.get(e.roomId);
+    if (existing) {
+      existing.count += 1;
+    } else {
+      map.set(e.roomId, { roomName: e.roomName, count: 1 });
+    }
+  }
+  return Array.from(map.entries()).map(([roomId, v]) => ({ roomId, ...v }));
+}
+
+describe('countsByRoom grouping', () => {
+  it('counts entries per room correctly', () => {
+    const entries: WaitlistEntry[] = [
+      { roomId: 'r1', roomName: 'Dorm A' },
+      { roomId: 'r1', roomName: 'Dorm A' },
+      { roomId: 'r2', roomName: 'Private' },
+    ];
+    const result = groupByRoom(entries);
+    expect(result.find((r) => r.roomId === 'r1')?.count).toBe(2);
+    expect(result.find((r) => r.roomId === 'r2')?.count).toBe(1);
+  });
+
+  it('returns empty array for no entries', () => {
+    expect(groupByRoom([])).toHaveLength(0);
+  });
+
+  it('preserves room name', () => {
+    const result = groupByRoom([{ roomId: 'r1', roomName: 'Sea View' }]);
+    expect(result[0]?.roomName).toBe('Sea View');
+  });
+});

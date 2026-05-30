@@ -80,6 +80,16 @@ export class PropertiesController {
     return { data };
   }
 
+  /** Owner — monthly revenue breakdown across all owned properties. */
+  @Get('revenue/monthly')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async getRevenueByMonth(@CurrentUser() user: AuthedUser) {
+    const data = await this.svc.getRevenueByMonth(user);
+    return { data };
+  }
+
   /** Owner — occupancy report for a specific property (last N months). */
   @Get(':id/occupancy')
   @UseGuards(FirebaseGuard, RolesGuard)

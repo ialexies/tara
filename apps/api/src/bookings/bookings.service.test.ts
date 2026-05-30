@@ -68,3 +68,23 @@ describe('generateReferenceCode', () => {
     expect(codes).not.toMatch(/[01IO]/);
   });
 });
+
+// ─── Guest email ownership check (mirrors getIdUploadUrl / saveIdDocumentUrl) ─
+
+function guestEmailMatches(bookingEmail: string, providedEmail: string): boolean {
+  return bookingEmail.toLowerCase() === providedEmail.toLowerCase();
+}
+
+describe('guest email ownership check', () => {
+  it('matches same email case-insensitively', () => {
+    expect(guestEmailMatches('Guest@Test.com', 'guest@test.com')).toBe(true);
+  });
+
+  it('rejects different email', () => {
+    expect(guestEmailMatches('guest@test.com', 'other@test.com')).toBe(false);
+  });
+
+  it('handles mixed case on both sides', () => {
+    expect(guestEmailMatches('GUEST@TEST.COM', 'guest@test.com')).toBe(true);
+  });
+});

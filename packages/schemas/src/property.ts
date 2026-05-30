@@ -61,6 +61,7 @@ export const UpdatePropertySchema = z.object({
   checkInTime: z.string().max(10).optional(),
   checkOutTime: z.string().max(10).optional(),
   houseRules: z.string().max(3000).optional(),
+  checkInMessage: z.string().max(1000).optional(),
   contactPhone: z.string().max(30).optional(),
   freeCancelDays: z.number().int().min(0).max(60).optional(),
   partialRefundPercent: z.number().int().min(0).max(100).optional(),

@@ -297,6 +297,7 @@ export class PropertiesService {
         ...(input.checkInTime !== undefined && { checkInTime: input.checkInTime }),
         ...(input.checkOutTime !== undefined && { checkOutTime: input.checkOutTime }),
         ...(input.houseRules !== undefined && { houseRules: input.houseRules }),
+        ...(input.checkInMessage !== undefined && { checkInMessage: input.checkInMessage }),
         updatedAt: new Date(),
       })
       .where(eq(properties.id, id))
@@ -498,6 +499,38 @@ export class PropertiesService {
         bookingCount: rev?.count ?? 0,
       };
     });
+  }
+
+  async getRevenueByMonth(user: AuthedUser, months = 6) {
+    const owned = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(and(eq(properties.tenantId, user.tenantId), isNull(properties.deletedAt)));
+    if (owned.length === 0) return [];
+
+    const propertyIds = owned.map((p) => p.id);
+    const rows = await db
+      .select({
+        month: sql<string>`to_char(date_trunc('month', ${bookings.checkIn}::date), 'YYYY-MM')`,
+        total: sum(bookings.totalMinor),
+        count: count(),
+      })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.propertyId, propertyIds),
+          inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+          sql`${bookings.checkIn}::date >= date_trunc('month', now()) - interval '${sql.raw(String(months - 1))} months'`,
+        ),
+      )
+      .groupBy(sql`date_trunc('month', ${bookings.checkIn}::date)`)
+      .orderBy(sql`date_trunc('month', ${bookings.checkIn}::date)`);
+
+    return rows.map((r) => ({
+      month: r.month,
+      totalMinor: r.total ? parseInt(String(r.total)) : 0,
+      bookingCount: r.count,
+    }));
   }
 
   async adminListAll() {

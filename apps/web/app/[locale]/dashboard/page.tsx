@@ -8,6 +8,7 @@ import Image from 'next/image';
 import { useParams } from 'next/navigation';
 import { api } from '@/lib/api-client';
 import { ImageUploader } from '@/components/image-uploader';
+import { RevenueChart } from '@/components/revenue-chart';
 
 type Amenities = {
   wifi?: boolean;
@@ -39,6 +40,7 @@ type Property = {
   checkInTime?: string | null;
   checkOutTime?: string | null;
   houseRules?: string | null;
+  checkInMessage?: string | null;
   contactPhone?: string | null;
   freeCancelDays?: number | null;
   partialRefundPercent?: number | null;
@@ -117,6 +119,12 @@ export default function DashboardPage(): React.ReactElement {
             Promo codes
           </Link>
           <Link
+            href={`/${locale}/dashboard/reviews`}
+            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            Reviews
+          </Link>
+          <Link
             href={`/${locale}/dashboard/properties/new`}
             className="flex h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
           >
@@ -167,6 +175,8 @@ export default function DashboardPage(): React.ReactElement {
           </div>
         </section>
       )}
+
+      {!loading && <RevenueChart />}
 
       {!loading && !error && properties.length === 0 && (
         <div className="flex flex-col items-center gap-4 rounded-xl border border-dashed border-zinc-300 py-16 text-center dark:border-zinc-700">
@@ -253,6 +263,7 @@ function EditPropertyForm({
   const [checkInTime, setCheckInTime] = useState(property.checkInTime ?? '');
   const [checkOutTime, setCheckOutTime] = useState(property.checkOutTime ?? '');
   const [houseRules, setHouseRules] = useState(property.houseRules ?? '');
+  const [checkInMessage, setCheckInMessage] = useState(property.checkInMessage ?? '');
   const [contactPhone, setContactPhone] = useState(property.contactPhone ?? '');
   const [freeCancelDays, setFreeCancelDays] = useState(property.freeCancelDays ?? 3);
   const [partialRefundPercent, setPartialRefundPercent] = useState(
@@ -300,6 +311,7 @@ function EditPropertyForm({
         checkInTime: checkInTime || undefined,
         checkOutTime: checkOutTime || undefined,
         houseRules: houseRules || undefined,
+        checkInMessage: checkInMessage || undefined,
         contactPhone: contactPhone || undefined,
         freeCancelDays,
         partialRefundPercent,
@@ -640,6 +652,20 @@ function EditPropertyForm({
             rows={3}
             maxLength={3000}
             placeholder="No smoking indoors · Quiet hours after 10pm · No outside guests"
+            className={`${inputClass} resize-none`}
+          />
+        </Field>
+
+        <Field
+          label="Check-in message (optional)"
+          hint="Sent to guests when their booking is confirmed"
+        >
+          <textarea
+            value={checkInMessage}
+            onChange={(e) => setCheckInMessage(e.target.value)}
+            rows={3}
+            maxLength={1000}
+            placeholder="Welcome! Check-in is at the front desk. Our WiFi password is TaraStays2025."
             className={`${inputClass} resize-none`}
           />
         </Field>

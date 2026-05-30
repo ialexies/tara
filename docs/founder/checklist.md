@@ -15,13 +15,13 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Stripe Connect PH onboarding tested end-to-end (do a test onboarding with your own info, get to "active", then close the test account)
 - [ ] Manual payment mode flow tested with mock data (screenshot upload, owner verification, dispute path)
 - [ ] All notification channels tested (email, WhatsApp, web push) — actual send and receipt confirmed
-- [ ] T&C + Privacy Policy + Cookie Policy published (from Termly or similar templates — lawyer review can wait until Phase C)
-- [ ] Backup restore drill completed successfully (don't trust untested backups)
-- [ ] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
-- [ ] Status page is public at `status.tara-stays.com`
+- [x] T&C + Privacy Policy + Cookie Policy published (from Termly or similar templates — lawyer review can wait until Phase C)
+- [ ] Backup restore drill completed successfully — script is at `infra/scripts/backup-db.sh`, cron in CLAUDE.md; run the drill before Phase B
+- [x] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
+- [x] Status page is public at `status.tara-stays.com`
 - [ ] Founder support WhatsApp number is pinned in owner dashboard
-- [ ] Audit log table exists and is being written to
-- [ ] Risk register reviewed; top 5 risks have mitigations in place
+- [x] Audit log table exists and is being written to
+- [x] Risk register reviewed; top 5 risks have mitigations in place
 - [ ] You've personally visited every onboarded property at least once
 
 ### Before Phase B → Phase C (public listings + take rate begins)

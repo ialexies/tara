@@ -8,6 +8,7 @@ import { DateChangeForm } from './date-change-form';
 import { MessageThread } from './message-thread';
 import { ReceiptButton } from './receipt-button';
 import { AddToCalendarButton } from './add-to-calendar';
+import { IdUpload } from './id-upload';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -34,6 +35,7 @@ type BookingDetail = {
   roomType: string;
   manualPaymentMethods: { gcash?: string; maya?: string; bank?: string } | null;
   propertyContactPhone?: string | null;
+  checkInMessage?: string | null;
   freeCancelDays?: number;
   partialRefundPercent?: number;
 };
@@ -81,6 +83,7 @@ export default async function BookingConfirmationPage({
     roomName,
     manualPaymentMethods,
     propertyContactPhone,
+    checkInMessage,
     freeCancelDays,
     partialRefundPercent,
   } = data;
@@ -127,6 +130,11 @@ export default async function BookingConfirmationPage({
                     </p>
                   </div>
                 </div>
+                {checkInMessage && (
+                  <p className="mt-3 text-sm text-emerald-700 dark:text-emerald-300">
+                    {checkInMessage}
+                  </p>
+                )}
                 {propertyContactPhone && (
                   <a
                     href={`https://wa.me/${propertyContactPhone.replace(/\D/g, '')}`}
@@ -309,6 +317,12 @@ export default async function BookingConfirmationPage({
         {canReview && (
           <div className="mt-4">
             <ReviewForm bookingId={booking.id} />
+          </div>
+        )}
+
+        {isConfirmed && (
+          <div className="mt-4">
+            <IdUpload bookingId={booking.id} guestEmail={booking.guestEmail} />
           </div>
         )}
 

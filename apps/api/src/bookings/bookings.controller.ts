@@ -156,6 +156,30 @@ export class BookingsController {
     return this.svc.markIdVerified(id, user);
   }
 
+  /** Guest — get presigned URL to upload ID document (verified by email). */
+  @Post('bookings/:id/id-upload-url')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async getIdUploadUrl(
+    @Param('id') id: string,
+    @Body() body: { contentType: string; guestEmail: string },
+  ) {
+    return this.svc.getIdUploadUrl(id, body.contentType, body.guestEmail);
+  }
+
+  /** Guest — save uploaded ID document URL (verified by email). */
+  @Post('bookings/:id/id-document')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async saveIdDocument(
+    @Param('id') id: string,
+    @Body() body: { documentUrl: string; guestEmail: string },
+  ) {
+    return this.svc.saveIdDocumentUrl(id, body.documentUrl, body.guestEmail);
+  }
+
   /** Guest — cancel their own booking (verified by email). */
   @Post('bookings/:id/cancel-guest')
   @HttpCode(200)

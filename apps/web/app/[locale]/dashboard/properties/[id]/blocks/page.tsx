@@ -176,53 +176,53 @@ export default function BlockedDatesPage(): React.ReactElement {
       </div>
 
       {/* Range block */}
-      <div className="flex flex-wrap items-end gap-3 rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
-        <div className="flex-1 space-y-1">
-          <p className="text-xs font-medium text-zinc-500">Block a date range</p>
-          <div className="flex gap-2">
+      <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+        <p className="mb-3 text-xs font-medium text-zinc-500">Block a date range</p>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <div className="flex flex-1 items-center gap-2">
             <input
               type="date"
               value={rangeFrom}
               min={today}
               onChange={(e) => setRangeFrom(e.target.value)}
-              className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+              className="h-11 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
             />
-            <span className="flex items-center text-zinc-400">→</span>
+            <span className="shrink-0 text-zinc-400">→</span>
             <input
               type="date"
               value={rangeTo}
               min={rangeFrom || today}
               onChange={(e) => setRangeTo(e.target.value)}
-              className="h-9 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-2 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
+              className="h-11 flex-1 rounded-lg border border-zinc-200 bg-zinc-50 px-3 text-sm dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-50"
             />
           </div>
-        </div>
-        <button
-          disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom || ranging}
-          onClick={async () => {
-            setRanging(true);
-            try {
-              const dates: string[] = [];
-              const cursor = new Date(rangeFrom);
-              const end = new Date(rangeTo);
-              while (cursor <= end) {
-                dates.push(isoDate(cursor));
-                cursor.setDate(cursor.getDate() + 1);
+          <button
+            disabled={!rangeFrom || !rangeTo || rangeTo < rangeFrom || ranging}
+            onClick={async () => {
+              setRanging(true);
+              try {
+                const dates: string[] = [];
+                const cursor = new Date(rangeFrom);
+                const end = new Date(rangeTo);
+                while (cursor <= end) {
+                  dates.push(isoDate(cursor));
+                  cursor.setDate(cursor.getDate() + 1);
+                }
+                await Promise.all(dates.map((d) => api.bookings.setOwnerBlock(propertyId, d)));
+                setBlocked((prev) => new Set([...prev, ...dates]));
+                setRangeFrom('');
+                setRangeTo('');
+              } catch (e: unknown) {
+                setError(e instanceof Error ? e.message : 'Failed');
+              } finally {
+                setRanging(false);
               }
-              await Promise.all(dates.map((d) => api.bookings.setOwnerBlock(propertyId, d)));
-              setBlocked((prev) => new Set([...prev, ...dates]));
-              setRangeFrom('');
-              setRangeTo('');
-            } catch (e: unknown) {
-              setError(e instanceof Error ? e.message : 'Failed');
-            } finally {
-              setRanging(false);
-            }
-          }}
-          className="flex h-9 items-center rounded-lg bg-red-500 px-4 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
-        >
-          {ranging ? '…' : 'Block range'}
-        </button>
+            }}
+            className="flex h-11 items-center justify-center rounded-lg bg-red-500 px-5 text-sm font-semibold text-white hover:bg-red-600 disabled:opacity-40"
+          >
+            {ranging ? '…' : 'Block range'}
+          </button>
+        </div>
       </div>
 
       {error && (
@@ -236,7 +236,7 @@ export default function BlockedDatesPage(): React.ReactElement {
         <div className="mb-4 flex items-center justify-between">
           <button
             onClick={() => setMonthStart((m) => addMonths(m, -1))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-400"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-300 text-lg text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-400"
           >
             ‹
           </button>
@@ -245,7 +245,7 @@ export default function BlockedDatesPage(): React.ReactElement {
           </p>
           <button
             onClick={() => setMonthStart((m) => addMonths(m, 1))}
-            className="flex h-9 w-9 items-center justify-center rounded-lg border border-zinc-300 text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-400"
+            className="flex h-11 w-11 items-center justify-center rounded-lg border border-zinc-300 text-lg text-zinc-600 hover:border-zinc-400 dark:border-zinc-700 dark:text-zinc-400"
           >
             ›
           </button>
@@ -274,12 +274,14 @@ export default function BlockedDatesPage(): React.ReactElement {
                   key={date}
                   onClick={() => !isPast && toggleDate(date)}
                   disabled={isPast || isActing}
-                  className={`flex h-10 w-full items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-default ${
+                  className={`flex h-11 w-full items-center justify-center rounded-lg text-sm font-medium transition-colors disabled:cursor-default ${
                     isPast
                       ? 'text-zinc-300 dark:text-zinc-700'
                       : isBlocked
                         ? 'bg-red-500 text-white hover:bg-red-600'
-                        : 'bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
+                        : date === today
+                          ? 'bg-zinc-50 text-zinc-900 ring-2 ring-inset ring-zinc-400 dark:bg-zinc-800 dark:text-zinc-50 dark:ring-zinc-500'
+                          : 'bg-zinc-50 text-zinc-700 hover:bg-zinc-100 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700'
                   } ${isActing ? 'opacity-50' : ''}`}
                 >
                   {new Date(date + 'T00:00:00').getDate()}
@@ -289,10 +291,14 @@ export default function BlockedDatesPage(): React.ReactElement {
           </div>
         )}
 
-        <div className="mt-4 flex items-center gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
+        <div className="mt-4 flex flex-wrap items-center gap-4 border-t border-zinc-100 pt-4 dark:border-zinc-800">
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <div className="h-4 w-4 rounded bg-red-500" />
             Blocked
+          </div>
+          <div className="flex items-center gap-2 text-xs text-zinc-500">
+            <div className="h-4 w-4 rounded bg-zinc-100 ring-2 ring-inset ring-zinc-400 dark:bg-zinc-800" />
+            Today
           </div>
           <div className="flex items-center gap-2 text-xs text-zinc-500">
             <div className="h-4 w-4 rounded bg-zinc-100 dark:bg-zinc-800" />

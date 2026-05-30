@@ -15,6 +15,7 @@ type BookingEmailContext = {
   currency: string;
   bookingUrl: string;
   paymentInstructions?: string | null;
+  checkInMessage?: string | null;
 };
 
 function pesos(minor: number, currency: string) {
@@ -270,6 +271,12 @@ function ownerNewBookingHtml(ctx: BookingEmailContext) {
 }
 
 function bookingConfirmedHtml(ctx: BookingEmailContext) {
+  const checkInBlock = ctx.checkInMessage
+    ? `<div style="background:#f0fdf4;border-radius:8px;padding:16px;margin:16px 0">
+        <p style="margin:0 0 4px;font-weight:600;font-size:14px;color:#16a34a">Message from the property</p>
+        <p style="margin:0;font-size:14px;color:#374151">${ctx.checkInMessage.replace(/\n/g, '<br>')}</p>
+       </div>`
+    : '';
   return shell(
     'Booking confirmed',
     `
@@ -277,6 +284,7 @@ function bookingConfirmedHtml(ctx: BookingEmailContext) {
     <h2 style="margin:16px 0 4px">You're all set, ${ctx.guestName.split(' ')[0]}!</h2>
     <p style="color:#71717a;font-size:14px;margin:0 0 4px">Your booking at ${ctx.propertyName} is confirmed.</p>
     ${summaryTable(ctx)}
+    ${checkInBlock}
     <a href="${ctx.bookingUrl}" class="btn">View booking</a>
   `,
   );

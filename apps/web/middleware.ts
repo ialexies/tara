@@ -39,6 +39,7 @@ function buildCsp(nonce: string, apiUrl: string, isDev: boolean): string {
       .filter(Boolean)
       .join(' '),
     'frame-src https://tara-stays.firebaseapp.com https://accounts.google.com https://*.firebaseapp.com https://www.openstreetmap.org',
+    "worker-src 'self'",
     "font-src 'self'",
     "frame-ancestors 'none'",
     "base-uri 'self'",
