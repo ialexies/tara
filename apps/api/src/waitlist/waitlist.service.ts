@@ -1,4 +1,4 @@
-import { Injectable, Logger } from '@nestjs/common';
+import { Injectable, Logger, NotFoundException } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { waitlist, rooms } from '@tara/db';
 import { and, eq, isNull, lte, gte } from 'drizzle-orm';
@@ -17,6 +17,9 @@ export class WaitlistService {
     checkIn: string,
     checkOut: string,
   ) {
+    const [room] = await db.select({ id: rooms.id }).from(rooms).where(eq(rooms.id, roomId));
+    if (!room) throw new NotFoundException('Room not found');
+
     const [row] = await db
       .insert(waitlist)
       .values({ roomId, propertyId, guestEmail, guestName, checkIn, checkOut })

@@ -1,4 +1,13 @@
-import { Body, Controller, Get, HttpCode, Param, Post, UseGuards } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  HttpCode,
+  Param,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
 import { WaitlistService } from './waitlist.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { RolesGuard, Roles } from '../auth/roles.guard.js';
@@ -23,7 +32,9 @@ export class WaitlistController {
   @Post()
   @HttpCode(201)
   async join(@Body() body: unknown) {
-    const d = JoinSchema.parse(body);
+    const result = JoinSchema.safeParse(body);
+    if (!result.success) throw new BadRequestException(result.error.issues);
+    const d = result.data;
     return this.svc.join(d.roomId, d.propertyId, d.guestEmail, d.guestName, d.checkIn, d.checkOut);
   }
 
