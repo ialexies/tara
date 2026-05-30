@@ -426,6 +426,84 @@ Color map lives in `PropertyTypeBadge` in [apps/web/app/[locale]/property-listin
 
 **CSP**: `frame-src` in `apps/web/middleware.ts` must include `https://www.openstreetmap.org` for the property-page single-property OSM iframe (used on property detail pages, not the listings map).
 
+## Date picker
+
+`DateRangeCalendar` component ([apps/web/components/date-range-calendar.tsx](apps/web/components/date-range-calendar.tsx)):
+
+- Single full-width month (mobile-first). `propertyId` prop is optional — omit for the listing page (no blocked-dates fetch).
+- **Check-in / Check-out header** — two tappable panels showing selected dates, active panel highlighted in emerald.
+- 48px day cells, 44px nav arrows, touch swipe left/right to navigate months.
+- Emerald-filled circles for selected dates; light emerald background for range.
+- Used on the property page booking panel (with `propertyId`) and the listings date-bar dropdown (without).
+
+The **listings page** wraps it in a `DateBar` component — a single button showing `"Jun 23 → Jun 25 · 2 nights"` that opens the calendar as a dropdown. Replaces the previous native `<input type="date">`.
+
+## Phone input
+
+`PhoneInput` component ([apps/web/components/phone-input.tsx](apps/web/components/phone-input.tsx)):
+
+- Shows `🇵🇭 +63` as a fixed prefix badge; user types only the 10 local digits.
+- Formats digits live as `917 123 4567` (`inputMode="numeric"` triggers numeric keyboard on mobile).
+- Stores E.164 format (`+639171234567`) in state.
+- Used on the booking form (`/properties/[slug]/book`) and profile page (`/bookings/profile`).
+- **Auto-save**: if a logged-in user enters a phone during booking and their profile had none, `PATCH /auth/me` is called after a successful booking to save it.
+
+## Booking cancellation — booking_items must be deleted
+
+When a booking is cancelled (owner via `transitionStatus` or guest via `cancelByGuest`), the associated `booking_items` rows **must be deleted** so those dates become bookable again. The unique constraint on `(unit_id, night)` will permanently block the dates otherwise — the unit-selection query correctly ignores cancelled bookings, but the INSERT into `booking_items` for a new booking will still hit the constraint.
+
+Both cancel paths in `bookings.service.ts` now call:
+
+```typescript
+await db.delete(bookingItems).where(eq(bookingItems.bookingId, id));
+```
+
+If you find orphaned rows from old cancelled bookings blocking dates, clean them up with:
+
+```sql
+DELETE FROM booking_items
+WHERE booking_id IN (SELECT id FROM bookings WHERE status IN ('cancelled', 'refunded'));
+```
+
+## Rate limiting — dashboard read endpoints skip throttle
+
+Global throttler: **500 req/min** per Firebase UID in production (was 120).
+
+The following owner/auth read endpoints are decorated `@SkipThrottle({ global: true, auth: true, guest_action: true })` because they're auth-gated (no security benefit from throttling) and the dashboard fires them in parallel on every load:
+
+- `GET /properties/mine`, `GET /properties/revenue`
+- `GET /properties/:id/blocked-dates`, `GET /properties/:id/availability`
+- `GET /properties/:propertyId/bookings`, `GET /bookings/mine`
+- All `WishlistController` routes
+
+**`@SkipThrottle()` with no args** silently has no effect on our named throttlers — always pass all three: `{ global: true, auth: true, guest_action: true }`.
+
+## Seed — tenant_id must equal owner UUID
+
+`listByOwner` filters by `properties.tenant_id = user.tenantId` (the user's DB UUID from Firebase custom claims). The seed SQL uses the owner's UUID for **both** `owner_id` and `tenant_id`. If you change the owner user account, update the UUID in the seed.
+
+On staging: `tenant_id = owner_id = 4e737f48-27ca-4fef-adf0-b613b8af7ad0` (`owner@test.tara-stays.com`).
+
+## Server Components + event handlers (recurring gotcha)
+
+Any function (`onClick`, `onXxx`, `window.*`) used inside a Server Component file causes a runtime 500:
+
+> Error: Event handlers cannot be passed to Client Component props.
+
+**Fix**: extract the component to its own file with `'use client'` at the top. Past instances:
+
+- `ReceiptButton` in `bookings/[id]/page.tsx` → moved to `receipt-button.tsx`
+- Property gallery `<Image onLoad>` → removed
+
+**Rule**: if a function in a `.tsx` file uses `window`, `document`, `useState`, `useEffect`, or any `onXxx` handler, that file must have `'use client'` or the function must be in a separate client component file.
+
+## Stripe integration notes
+
+- `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are stored in Portainer's stack environment for the `tara-staging` stack.
+- The `.env` file on disk (`/home/ialexies/stacks/tara-staging/.env`) is what SSH/CI deploys read. These two sources can get out of sync — after any manual Portainer "Update stack", the running containers have the Portainer vars; after an SSH deploy, they have the disk vars.
+- To keep in sync: after a Portainer update that adds new vars, also add them to the disk `.env`.
+- `StripeService.createCheckoutSession` accepts `guestEmail` and `guestName` — pass them when creating sessions so Stripe Checkout pre-fills the customer's details.
+
 ## Admin endpoints — @Roles decorator required
 
 All `GET/POST /auth/admin/*` routes use `@Roles('admin')` + `@UseGuards(FirebaseGuard, RolesGuard)`. Do **not** use `throw new Error('Forbidden')` manually — it produces a 500 instead of 403 because NestJS doesn't recognize plain `Error` as an `HttpException`. Always use the `@Roles` decorator on the handler.
