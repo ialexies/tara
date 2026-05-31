@@ -545,7 +545,7 @@ git pull origin main -q
 # Sync Portainer stack env vars → .env before every deploy (single source of truth = Portainer)
 PORTAINER_API_TOKEN="<your-portainer-api-token>" python3 infra/scripts/sync-portainer-env.sh
 
-read_env() { grep "^$1=" /home/ialexies/stacks/tara-staging/.env | cut -d= -f2-; }
+read_env() { grep "^$1=" /home/ialexies/stacks/tara-staging/.env | cut -d= -f2- | tr -d '"'; }
 
 # Build API
 docker build -f apps/api/Dockerfile -t tara-api:staging .
