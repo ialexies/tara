@@ -9,6 +9,7 @@ import { GuestBlacklistModule } from '../guest-blacklist/guest-blacklist.module.
 import { WaitlistModule } from '../waitlist/waitlist.module.js';
 import { WebhooksModule } from '../webhooks/webhooks.module.js';
 import { UploadsModule } from '../uploads/uploads.module.js';
+import { MessagesModule } from '../messages/messages.module.js';
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { UploadsModule } from '../uploads/uploads.module.js';
     WaitlistModule,
     WebhooksModule,
     UploadsModule,
+    MessagesModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, RolesGuard],

@@ -45,8 +45,8 @@ export function BottomNav(): React.ReactElement {
       ),
     },
     {
-      href: `/${locale}/dashboard/reviews`,
-      label: 'Reviews',
+      href: `/${locale}/dashboard/messages`,
+      label: 'Messages',
       exact: false,
       icon: (
         <svg
@@ -56,7 +56,7 @@ export function BottomNav(): React.ReactElement {
           stroke="currentColor"
           strokeWidth={1.75}
         >
-          <path d="M12 2l2.9 6.1L22 9.2l-5 5 1.2 7L12 18l-6.2 3.2 1.2-7-5-5 7.1-1.1z" />
+          <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
         </svg>
       ),
     },

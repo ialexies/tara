@@ -1,6 +1,6 @@
 import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { db, messages, bookings } from '@tara/db';
-import { eq, and, asc } from 'drizzle-orm';
+import { eq, and, asc, sql } from 'drizzle-orm';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 
 @Injectable()
@@ -54,6 +54,57 @@ export class MessagesService {
 
     this.logger.log({ event: 'message.sent', bookingId, senderUid: user.uid });
     return msg!;
+  }
+
+  async getOwnerInbox(user: AuthedUser) {
+    const rows = await db.execute(sql`
+      SELECT
+        b.id            AS booking_id,
+        b.reference_code,
+        b.guest_name,
+        b.guest_email,
+        b.check_in,
+        b.check_out,
+        b.status,
+        p.id            AS property_id,
+        p.name          AS property_name,
+        lm.body         AS last_message_body,
+        lm.created_at   AS last_message_at,
+        lm.sender_name  AS last_sender_name,
+        COUNT(m2.id) FILTER (
+          WHERE m2.is_read = false AND m2.sender_uid != ${user.uid}
+        )::int          AS unread_count
+      FROM bookings b
+      JOIN properties p ON b.property_id = p.id
+      JOIN LATERAL (
+        SELECT body, created_at, sender_name
+        FROM messages
+        WHERE booking_id = b.id
+        ORDER BY created_at DESC
+        LIMIT 1
+      ) lm ON true
+      LEFT JOIN messages m2 ON m2.booking_id = b.id
+      WHERE p.tenant_id = ${user.tenantId}
+        AND p.deleted_at IS NULL
+      GROUP BY b.id, p.id, p.name, lm.body, lm.created_at, lm.sender_name
+      ORDER BY unread_count DESC, lm.created_at DESC
+    `);
+
+    return Array.from(rows) as unknown as {
+      booking_id: string;
+      reference_code: string;
+      guest_name: string;
+      guest_email: string;
+      check_in: string;
+      check_out: string;
+      status: string;
+      property_id: string;
+      property_name: string;
+      last_message_body: string;
+      last_message_at: string;
+      last_sender_name: string;
+      unread_count: number;
+    }[];
   }
 
   async unreadCount(bookingIds: string[]): Promise<Map<string, number>> {

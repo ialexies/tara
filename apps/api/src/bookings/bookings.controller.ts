@@ -13,6 +13,7 @@ import {
 import { SkipThrottle, Throttle, ThrottlerGuard } from '@nestjs/throttler';
 import type { FastifyRequest } from 'fastify';
 import { BookingsService } from './bookings.service.js';
+import { MessagesService } from '../messages/messages.service.js';
 import { FirebaseGuard, type AuthedUser } from '../auth/firebase.guard.js';
 import { RolesGuard, Roles } from '../auth/roles.guard.js';
 import { CurrentUser } from '../auth/current-user.decorator.js';
@@ -21,7 +22,10 @@ import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 @Controller()
 export class BookingsController {
-  constructor(private readonly svc: BookingsService) {}
+  constructor(
+    private readonly svc: BookingsService,
+    private readonly msgSvc: MessagesService,
+  ) {}
 
   /** Public — dates where all units are fully booked (for calendar display). */
   @Get('properties/:propertyId/blocked-dates')
@@ -91,6 +95,16 @@ export class BookingsController {
   @Roles('owner', 'admin')
   async ownerSummary(@CurrentUser() user: AuthedUser) {
     return this.svc.getOwnerSummary(user);
+  }
+
+  /** Owner — all message threads across all properties, sorted by unread then recency. */
+  @Get('bookings/owner/messages-inbox')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async ownerMessagesInbox(@CurrentUser() user: AuthedUser) {
+    const data = await this.msgSvc.getOwnerInbox(user);
+    return { data };
   }
 
   /** Public — create a booking (guest may or may not be logged in). */

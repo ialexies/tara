@@ -135,12 +135,20 @@ export default function DashboardPage(): React.ReactElement {
               Today's check-ins
             </p>
           </Link>
-          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <Link
+            href={`/${locale}/dashboard/messages`}
+            className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+          >
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
               {summary.unreadMessages}
             </p>
-            <p className="mt-0.5 text-xs font-medium text-zinc-500">Unread messages</p>
-          </div>
+            <p className="mt-0.5 text-xs font-medium text-zinc-500">
+              Unread messages
+              {summary.unreadMessages > 0 && (
+                <span className="ml-1 text-emerald-600 dark:text-emerald-400">→</span>
+              )}
+            </p>
+          </Link>
           <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
             <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
               ₱{(summary.monthRevenueMinor / 100).toLocaleString('en-PH')}
@@ -155,6 +163,7 @@ export default function DashboardPage(): React.ReactElement {
         {[
           { href: `/${locale}/dashboard/calendar`, label: 'Calendar' },
           { href: `/${locale}/dashboard/compare`, label: 'Compare' },
+          { href: `/${locale}/dashboard/reviews`, label: 'Reviews' },
           { href: `/${locale}/dashboard/promo-codes`, label: 'Promo codes' },
           { href: `/${locale}/dashboard/refer`, label: 'Refer' },
           { href: `/${locale}/dashboard/webhooks`, label: 'Webhooks' },

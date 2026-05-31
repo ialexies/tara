@@ -157,6 +157,7 @@ export const api = {
         unreadMessages: number;
         monthRevenueMinor: number;
       }>('/bookings/owner/summary'),
+    ownerMessagesInbox: () => apiFetch<{ data: unknown[] }>('/bookings/owner/messages-inbox'),
     getByRef: (code: string) => apiFetch<unknown>(`/bookings/ref/${encodeURIComponent(code)}`),
     create: (body: unknown) =>
       apiFetch<unknown>('/bookings', { method: 'POST', body: JSON.stringify(body) }),
