@@ -350,6 +350,17 @@ Explicit user preference stored in `localStorage`.
 - Applies immediately by toggling the `dark` class on `<html>`
 - Persists across sessions via `localStorage.getItem('tara_theme')`
 
+## Manual payment proof
+
+Guest uploads a screenshot of their GCash/Maya/bank transfer so the owner can verify before confirming the booking.
+
+- **Guest upload**: `POST /bookings/:id/payment-proof-upload-url` (email-verified, no Firebase auth, only for `manual_pending` status) → R2 presigned URL → PUT file → `POST /bookings/:id/payment-proof` to save URL
+- **Schema**: `bookings.payment_proof_url` (text, nullable) — migration `0036_booking_payment_proof_url.sql`
+- **UI**: "Upload payment screenshot" card shown on guest booking page for `manual_pending` status bookings, below payment instructions
+- **Owner view**: screenshot thumbnail appears in the owner booking card above "Confirm payment" button when proof exists; tap to open full-size
+- Only image types accepted (no PDF — screenshots are always images)
+- Owner can still confirm without a screenshot — the proof is optional but shown prominently when present
+
 ## ID verification
 
 Two-step flow: guest uploads document, owner marks as verified.

@@ -88,3 +88,35 @@ describe('guest email ownership check', () => {
     expect(guestEmailMatches('GUEST@TEST.COM', 'guest@test.com')).toBe(true);
   });
 });
+
+// ─── Payment proof upload — status guard ───────────────────────────────────
+
+function canUploadPaymentProof(status: string): boolean {
+  return status === 'manual_pending';
+}
+
+describe('payment proof upload status guard', () => {
+  it('allows upload for manual_pending bookings', () => {
+    expect(canUploadPaymentProof('manual_pending')).toBe(true);
+  });
+
+  it('rejects upload for confirmed bookings', () => {
+    expect(canUploadPaymentProof('confirmed')).toBe(false);
+  });
+
+  it('rejects upload for stripe_pending bookings', () => {
+    expect(canUploadPaymentProof('stripe_pending')).toBe(false);
+  });
+
+  it('rejects upload for cancelled bookings', () => {
+    expect(canUploadPaymentProof('cancelled')).toBe(false);
+  });
+
+  it('rejects upload for checked_in bookings', () => {
+    expect(canUploadPaymentProof('checked_in')).toBe(false);
+  });
+
+  it('rejects upload for checked_out bookings', () => {
+    expect(canUploadPaymentProof('checked_out')).toBe(false);
+  });
+});

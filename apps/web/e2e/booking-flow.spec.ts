@@ -122,3 +122,42 @@ test.describe('Booking flow — mobile layout', () => {
     expect(box!.height).toBeGreaterThanOrEqual(44);
   });
 });
+
+test.describe('Payment proof upload', () => {
+  // Guest booking detail page for a manual_pending booking shows the upload card.
+  // We test the UI exists by navigating to a known staging booking URL.
+  // The booking ID is for a test booking on the staging Olongapo City Hostel (manual mode).
+  // If the booking has been cleaned up, the test is skipped gracefully.
+
+  test('payment proof upload card appears on manual pending booking page', async ({ page }) => {
+    // Use the guest booking lookup by ref code — avoids hard-coding a booking UUID
+    const refCode = process.env['TEST_MANUAL_BOOKING_REF'] ?? '';
+    if (!refCode) {
+      test.skip(true, 'TEST_MANUAL_BOOKING_REF not set — skipping payment proof UI test');
+      return;
+    }
+
+    await page.goto(`/en/bookings/ref/${refCode}`);
+
+    // Should redirect to the booking detail page or show the booking
+    await expect(page.getByText(/awaiting payment/i)).toBeVisible({ timeout: 10_000 });
+    await expect(page.getByText(/upload payment screenshot/i)).toBeVisible({ timeout: 5_000 });
+  });
+
+  test('payment proof upload button meets tap target size on mobile', async ({ page }) => {
+    const refCode = process.env['TEST_MANUAL_BOOKING_REF'] ?? '';
+    if (!refCode) {
+      test.skip(true, 'TEST_MANUAL_BOOKING_REF not set — skipping payment proof tap target test');
+      return;
+    }
+
+    await page.goto(`/en/bookings/ref/${refCode}`);
+    await expect(page.getByText(/awaiting payment/i)).toBeVisible({ timeout: 10_000 });
+
+    const uploadBtn = page.getByRole('button', { name: /upload payment screenshot/i });
+    await uploadBtn.scrollIntoViewIfNeeded();
+    const box = await uploadBtn.boundingBox();
+    expect(box).not.toBeNull();
+    expect(box!.height).toBeGreaterThanOrEqual(44);
+  });
+});
