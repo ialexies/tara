@@ -368,6 +368,10 @@ export default async function PropertyPage({
 
         <BookingPanel property={property} locale={locale} />
 
+        <div id="enquiry">
+          <EnquiryForm slug={property.slug} />
+        </div>
+
         {propertyReviews.length > 0 && (
           <section id="reviews" className="mt-8">
             <h2 className="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">
@@ -408,7 +412,6 @@ export default async function PropertyPage({
             </ul>
           </section>
         )}
-        <EnquiryForm slug={property.slug} />
       </main>
 
       <footer className="pb-safe border-t border-zinc-200 px-4 py-6 text-center text-xs text-zinc-400 dark:border-zinc-800">

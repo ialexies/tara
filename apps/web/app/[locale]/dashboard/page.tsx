@@ -87,50 +87,31 @@ export default function DashboardPage(): React.ReactElement {
     <div className="space-y-6">
       <div className="flex items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">My Properties</h1>
-        <div className="flex items-center gap-2">
+        <Link
+          href={`/${locale}/dashboard/properties/new`}
+          className="flex h-11 shrink-0 items-center rounded-lg bg-zinc-900 px-4 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
+        >
+          + Add
+        </Link>
+      </div>
+
+      <div className="flex flex-wrap gap-2">
+        {[
+          { href: `/${locale}/dashboard/calendar`, label: 'Calendar' },
+          { href: `/${locale}/dashboard/compare`, label: 'Compare' },
+          { href: `/${locale}/dashboard/promo-codes`, label: 'Promo codes' },
+          { href: `/${locale}/dashboard/reviews`, label: 'Reviews' },
+          { href: `/${locale}/dashboard/refer`, label: 'Refer' },
+          { href: `/${locale}/dashboard/webhooks`, label: 'Webhooks' },
+        ].map(({ href, label }) => (
           <Link
-            href={`/${locale}/dashboard/calendar`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
+            key={href}
+            href={href}
+            className="flex h-9 items-center rounded-lg border border-zinc-200 px-3 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
           >
-            Calendar
+            {label}
           </Link>
-          <Link
-            href={`/${locale}/dashboard/compare`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Compare
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/refer`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Refer
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/webhooks`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Webhooks
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/promo-codes`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Promo codes
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/reviews`}
-            className="flex h-11 items-center rounded-lg border border-zinc-200 px-4 text-sm font-medium text-zinc-600 hover:bg-zinc-50 dark:border-zinc-700 dark:text-zinc-300 dark:hover:bg-zinc-800"
-          >
-            Reviews
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/properties/new`}
-            className="flex h-11 items-center rounded-lg bg-zinc-900 px-5 text-sm font-semibold text-white dark:bg-zinc-50 dark:text-zinc-900"
-          >
-            + Add property
-          </Link>
-        </div>
+        ))}
       </div>
 
       {loading && <div className="py-16 text-center text-sm text-zinc-400">Loading…</div>}
@@ -428,24 +409,22 @@ function EditPropertyForm({
         </Field>
 
         <Field label="URL slug">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-zinc-400">tara-stays.com/en/properties/</span>
-            <input
-              type="text"
-              value={slug}
-              onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
-              minLength={2}
-              maxLength={120}
-              pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
-              className={`${inputClass} flex-1`}
-            />
-          </div>
+          <input
+            type="text"
+            value={slug}
+            onChange={(e) => setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9-]/g, ''))}
+            minLength={2}
+            maxLength={120}
+            pattern="[a-z0-9]+(?:-[a-z0-9]+)*"
+            className={inputClass}
+          />
           <p className="mt-1 text-xs text-zinc-400">
-            Lowercase letters, numbers, and hyphens only. Changing this breaks existing links.
+            tara-stays.com/en/properties/<strong>{slug || '…'}</strong> — lowercase letters,
+            numbers, hyphens only. Changing this breaks existing links.
           </p>
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Type" required>
             <select
               value={propertyType}
@@ -474,7 +453,7 @@ function EditPropertyForm({
           </Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="City" required>
             <input
               type="text"
@@ -626,7 +605,7 @@ function EditPropertyForm({
           </div>
         )}
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Check-in time" hint="e.g. 14:00">
             <input
               type="time"
@@ -670,7 +649,7 @@ function EditPropertyForm({
           />
         </Field>
 
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <Field label="Free cancel (days before)" hint="0 = no free cancellation">
             <input
               type="number"

@@ -184,6 +184,17 @@ export function BookingPanel({
         </div>
       )}
 
+      {/* Not ready to book */}
+      <p className="text-center text-sm text-zinc-500">
+        Not ready to book?{' '}
+        <a
+          href="#enquiry"
+          className="underline underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300"
+        >
+          Ask the property a question
+        </a>
+      </p>
+
       {/* Availability results */}
       {availability !== null && (
         <div className="space-y-3">

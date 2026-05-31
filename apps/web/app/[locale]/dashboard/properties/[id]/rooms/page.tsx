@@ -105,37 +105,25 @@ export default function RoomsPage(): React.ReactElement {
         >
           ← Properties
         </Link>
-        <div className="flex items-center gap-4">
-          <Link
-            href={`/${locale}/dashboard/properties/${propertyId}/blocks`}
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Blocked dates
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/properties/${propertyId}/pricing`}
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Pricing
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/properties/${propertyId}/blacklist`}
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Blacklist
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/properties/${propertyId}/staff`}
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Staff
-          </Link>
-          <Link
-            href={`/${locale}/dashboard/properties/${propertyId}/waitlist`}
-            className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
-          >
-            Waitlist
-          </Link>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+          {[
+            {
+              href: `/${locale}/dashboard/properties/${propertyId}/blocks`,
+              label: 'Blocked dates',
+            },
+            { href: `/${locale}/dashboard/properties/${propertyId}/pricing`, label: 'Pricing' },
+            { href: `/${locale}/dashboard/properties/${propertyId}/blacklist`, label: 'Blacklist' },
+            { href: `/${locale}/dashboard/properties/${propertyId}/staff`, label: 'Staff' },
+            { href: `/${locale}/dashboard/properties/${propertyId}/waitlist`, label: 'Waitlist' },
+          ].map(({ href, label }) => (
+            <Link
+              key={href}
+              href={href}
+              className="text-sm text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300"
+            >
+              {label}
+            </Link>
+          ))}
           <Link
             href={`/${locale}/dashboard/properties/${propertyId}/bookings`}
             className="text-sm font-medium text-zinc-700 hover:text-zinc-900 dark:text-zinc-300 dark:hover:text-zinc-50"
