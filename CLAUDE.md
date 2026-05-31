@@ -530,6 +530,10 @@ CI runner is not in use. All deploys are done directly via SSH:
 ssh ialexies@192.168.0.253 << 'ENDSSH'
 cd /home/ialexies/projects/tara
 git pull origin main -q
+
+# Sync Portainer stack env vars → .env before every deploy (single source of truth = Portainer)
+PORTAINER_API_TOKEN="<your-portainer-api-token>" python3 infra/scripts/sync-portainer-env.sh
+
 read_env() { grep "^$1=" /home/ialexies/stacks/tara-staging/.env | cut -d= -f2-; }
 
 # Build API
