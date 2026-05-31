@@ -66,6 +66,33 @@ export class BookingsController {
     return { data, meta: { count: data.length } };
   }
 
+  /** Admin — list all bookings across the platform with optional status filter. */
+  @Get('bookings/admin/all')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminListAll(
+    @Query('status') status?: string,
+    @Query('limit') limit?: string,
+    @Query('offset') offset?: string,
+  ) {
+    const data = await this.svc.adminListAllBookings({
+      status: status || undefined,
+      limit: limit ? parseInt(limit, 10) : 50,
+      offset: offset ? parseInt(offset, 10) : 0,
+    });
+    return { data };
+  }
+
+  /** Owner — summary counts for the dashboard at-a-glance cards. */
+  @Get('bookings/owner/summary')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async ownerSummary(@CurrentUser() user: AuthedUser) {
+    return this.svc.getOwnerSummary(user);
+  }
+
   /** Public — create a booking (guest may or may not be logged in). */
   @Post('bookings')
   @HttpCode(201)

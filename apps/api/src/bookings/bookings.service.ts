@@ -15,8 +15,9 @@ import {
   bookingItems,
   ownerBlocks,
   bookingDateChanges,
+  messages,
 } from '@tara/db';
-import { eq, and, isNull, inArray, notExists, gte, lte } from 'drizzle-orm';
+import { eq, and, isNull, inArray, notExists, gte, lte, sql, count, sum, desc } from 'drizzle-orm';
 import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
@@ -709,6 +710,93 @@ export class BookingsService {
       .innerJoin(rooms, eq(bookings.roomId, rooms.id))
       .where(eq(bookings.guestUid, guestUid))
       .orderBy(bookings.createdAt);
+  }
+
+  async getOwnerSummary(user: AuthedUser) {
+    const ownedProps = await db
+      .select({ id: properties.id })
+      .from(properties)
+      .where(and(eq(properties.tenantId, user.tenantId), isNull(properties.deletedAt)));
+
+    if (ownedProps.length === 0) {
+      return { pendingCount: 0, todayCheckIns: 0, unreadMessages: 0, monthRevenueMinor: 0 };
+    }
+
+    const propIds = ownedProps.map((p) => p.id);
+    const today = new Date().toISOString().slice(0, 10);
+
+    const [[pending], [todayCI], [unread], [revenue]] = await Promise.all([
+      db
+        .select({ c: count() })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.propertyId, propIds),
+            inArray(bookings.status, ['manual_pending', 'awaiting_verification']),
+          ),
+        ),
+      db
+        .select({ c: count() })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.propertyId, propIds),
+            eq(bookings.status, 'confirmed'),
+            eq(bookings.checkIn, today),
+          ),
+        ),
+      db
+        .select({ c: count() })
+        .from(messages)
+        .innerJoin(bookings, eq(messages.bookingId, bookings.id))
+        .where(
+          and(
+            inArray(bookings.propertyId, propIds),
+            eq(messages.isRead, false),
+            sql`${messages.senderUid} != ${user.uid}`,
+          ),
+        ),
+      db
+        .select({ s: sum(bookings.totalMinor) })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.propertyId, propIds),
+            inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+            sql`date_trunc('month', ${bookings.checkIn}::date) = date_trunc('month', now())`,
+          ),
+        ),
+    ]);
+
+    return {
+      pendingCount: pending?.c ?? 0,
+      todayCheckIns: todayCI?.c ?? 0,
+      unreadMessages: unread?.c ?? 0,
+      monthRevenueMinor: revenue?.s ? parseInt(String(revenue.s), 10) : 0,
+    };
+  }
+
+  async adminListAllBookings(opts: { status?: string; limit: number; offset: number }) {
+    return db
+      .select({
+        id: bookings.id,
+        referenceCode: bookings.referenceCode,
+        guestEmail: bookings.guestEmail,
+        guestName: bookings.guestName,
+        checkIn: bookings.checkIn,
+        checkOut: bookings.checkOut,
+        totalMinor: bookings.totalMinor,
+        status: bookings.status,
+        paymentMode: bookings.paymentMode,
+        createdAt: bookings.createdAt,
+        propertyName: properties.name,
+      })
+      .from(bookings)
+      .innerJoin(properties, eq(bookings.propertyId, properties.id))
+      .where(opts.status ? eq(bookings.status, opts.status as 'confirmed') : undefined)
+      .orderBy(desc(bookings.createdAt))
+      .limit(opts.limit)
+      .offset(opts.offset);
   }
 
   async confirm(id: string, user: AuthedUser) {

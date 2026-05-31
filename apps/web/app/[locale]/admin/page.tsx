@@ -44,7 +44,9 @@ const ROLE_COLOURS: Record<string, string> = {
 
 export default function AdminPage(): React.ReactElement {
   const { locale } = useParams<{ locale: string }>();
-  const [tab, setTab] = useState<'properties' | 'users' | 'reviews' | 'audit'>('properties');
+  const [tab, setTab] = useState<'properties' | 'users' | 'reviews' | 'audit' | 'bookings'>(
+    'properties',
+  );
 
   const [properties, setProperties] = useState<PropertyRow[]>([]);
   const [propsLoading, setPropsLoading] = useState(true);
@@ -55,6 +57,8 @@ export default function AdminPage(): React.ReactElement {
   const [usersLoading, setUsersLoading] = useState(false);
   const [usersError, setUsersError] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
+  const [propSearch, setPropSearch] = useState('');
+  const [propStatusFilter, setPropStatusFilter] = useState('');
 
   type ReviewRow = {
     id: string;
@@ -81,6 +85,14 @@ export default function AdminPage(): React.ReactElement {
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [auditLoading, setAuditLoading] = useState(false);
 
+  type PlatformStats = {
+    activeProperties: number;
+    totalUsers: number;
+    bookingsThisMonth: number;
+    revenueThisMonthMinor: number;
+  };
+  const [platformStats, setPlatformStats] = useState<PlatformStats | null>(null);
+
   function loadProperties() {
     setPropsLoading(true);
     api.properties
@@ -101,6 +113,10 @@ export default function AdminPage(): React.ReactElement {
 
   useEffect(() => {
     loadProperties();
+    api.admin
+      .stats()
+      .then(setPlatformStats)
+      .catch(() => {});
   }, []);
 
   function loadReviews() {
@@ -149,8 +165,20 @@ export default function AdminPage(): React.ReactElement {
     }
   }
 
-  const pending = properties.filter((p) => p.status === 'pending');
-  const others = properties.filter((p) => p.status !== 'pending');
+  const filterProps = (arr: PropertyRow[]) =>
+    arr.filter((p) => {
+      const q = propSearch.toLowerCase();
+      const matchesSearch =
+        !q ||
+        p.name.toLowerCase().includes(q) ||
+        p.city.toLowerCase().includes(q) ||
+        p.region.toLowerCase().includes(q);
+      const matchesStatus = !propStatusFilter || p.status === propStatusFilter;
+      return matchesSearch && matchesStatus;
+    });
+
+  const pending = filterProps(properties.filter((p) => p.status === 'pending'));
+  const others = filterProps(properties.filter((p) => p.status !== 'pending'));
 
   const filteredUsers = userSearch
     ? users.filter(
@@ -172,9 +200,32 @@ export default function AdminPage(): React.ReactElement {
         </Link>
       </div>
 
+      {/* Platform stats */}
+      {platformStats && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          {[
+            { label: 'Active properties', value: platformStats.activeProperties },
+            { label: 'Total users', value: platformStats.totalUsers },
+            { label: 'Bookings this month', value: platformStats.bookingsThisMonth },
+            {
+              label: 'Revenue this month',
+              value: `₱${(platformStats.revenueThisMonthMinor / 100).toLocaleString('en-PH')}`,
+            },
+          ].map(({ label, value }) => (
+            <div
+              key={label}
+              className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">{value}</p>
+              <p className="mt-0.5 text-xs font-medium text-zinc-500">{label}</p>
+            </div>
+          ))}
+        </div>
+      )}
+
       {/* Tabs */}
       <div className="flex gap-1 rounded-xl border border-zinc-200 bg-zinc-100 p-1 dark:border-zinc-800 dark:bg-zinc-900">
-        {(['properties', 'users', 'reviews', 'audit'] as const).map((t) => (
+        {(['properties', 'users', 'reviews', 'audit', 'bookings'] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -192,6 +243,27 @@ export default function AdminPage(): React.ReactElement {
       {/* Properties tab */}
       {tab === 'properties' && (
         <>
+          <div className="flex gap-2">
+            <input
+              type="search"
+              value={propSearch}
+              onChange={(e) => setPropSearch(e.target.value)}
+              placeholder="Search by name, city, region…"
+              className="h-10 flex-1 rounded-xl border border-zinc-200 bg-white px-4 text-sm focus:border-zinc-400 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-50"
+            />
+            <select
+              value={propStatusFilter}
+              onChange={(e) => setPropStatusFilter(e.target.value)}
+              className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+            >
+              <option value="">All statuses</option>
+              {['draft', 'pending', 'active', 'paused', 'suspended', 'archived'].map((s) => (
+                <option key={s} value={s}>
+                  {s.charAt(0).toUpperCase() + s.slice(1)}
+                </option>
+              ))}
+            </select>
+          </div>
           {propsError && (
             <div className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900 dark:bg-red-950 dark:text-red-400">
               {propsError} — you may not have admin access.
@@ -412,6 +484,175 @@ export default function AdminPage(): React.ReactElement {
             </div>
           )}
         </>
+      )}
+
+      {/* Bookings tab */}
+      {tab === 'bookings' && <AdminBookingsTab />}
+    </div>
+  );
+}
+
+const BOOKING_STATUS_LABELS: Record<string, string> = {
+  stripe_pending: 'Awaiting card',
+  manual_pending: 'Awaiting payment',
+  awaiting_verification: 'Verifying',
+  confirmed: 'Confirmed',
+  checked_in: 'Checked in',
+  checked_out: 'Completed',
+  cancelled: 'Cancelled',
+  refunded: 'Refunded',
+  disputed: 'Disputed',
+};
+
+const BOOKING_STATUS_COLOURS: Record<string, string> = {
+  stripe_pending: 'bg-blue-100 text-blue-700',
+  manual_pending: 'bg-amber-100 text-amber-700',
+  awaiting_verification: 'bg-blue-100 text-blue-700',
+  confirmed: 'bg-emerald-100 text-emerald-700',
+  checked_in: 'bg-green-100 text-green-700',
+  checked_out: 'bg-zinc-100 text-zinc-600',
+  cancelled: 'bg-red-100 text-red-600',
+  refunded: 'bg-zinc-100 text-zinc-500',
+  disputed: 'bg-orange-100 text-orange-700',
+};
+
+function AdminBookingsTab(): React.ReactElement {
+  type AdminBooking = {
+    id: string;
+    referenceCode: string;
+    guestEmail: string;
+    guestName: string;
+    checkIn: string;
+    checkOut: string;
+    totalMinor: number;
+    status: string;
+    paymentMode: string;
+    createdAt: string;
+    propertyName: string;
+  };
+
+  const [bookingList, setBookingList] = useState<AdminBooking[]>([]);
+  const [bookingsLoading, setBookingsLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [offset, setOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const LIMIT = 50;
+
+  async function load(newOffset = 0, status = statusFilter) {
+    setBookingsLoading(true);
+    try {
+      const res = await api.admin.listAllBookings({
+        status: status || undefined,
+        limit: LIMIT,
+        offset: newOffset,
+      });
+      const data = res.data as AdminBooking[];
+      if (newOffset === 0) {
+        setBookingList(data);
+      } else {
+        setBookingList((prev) => [...prev, ...data]);
+      }
+      setHasMore(data.length === LIMIT);
+      setOffset(newOffset + data.length);
+    } catch {
+      // non-fatal
+    } finally {
+      setBookingsLoading(false);
+    }
+  }
+
+  useEffect(() => {
+    void load(0);
+  }, []);
+
+  function handleStatusChange(s: string) {
+    setStatusFilter(s);
+    setOffset(0);
+    void load(0, s);
+  }
+
+  return (
+    <div className="space-y-4">
+      <div className="flex items-center gap-2">
+        <select
+          value={statusFilter}
+          onChange={(e) => handleStatusChange(e.target.value)}
+          className="h-10 rounded-xl border border-zinc-200 bg-white px-3 text-sm text-zinc-700 focus:outline-none dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300"
+        >
+          <option value="">All statuses</option>
+          {Object.entries(BOOKING_STATUS_LABELS).map(([v, l]) => (
+            <option key={v} value={v}>
+              {l}
+            </option>
+          ))}
+        </select>
+        <p className="text-sm text-zinc-500">{bookingList.length} bookings</p>
+      </div>
+
+      {bookingsLoading && bookingList.length === 0 && (
+        <div className="py-12 text-center text-sm text-zinc-400">Loading…</div>
+      )}
+
+      <div className="overflow-x-auto rounded-xl border border-zinc-200 dark:border-zinc-800">
+        <table className="w-full text-left text-xs">
+          <thead className="bg-zinc-50 text-zinc-500 dark:bg-zinc-900">
+            <tr>
+              <th className="px-3 py-2">Ref</th>
+              <th className="px-3 py-2">Guest</th>
+              <th className="px-3 py-2">Property</th>
+              <th className="px-3 py-2">Dates</th>
+              <th className="px-3 py-2">Amount</th>
+              <th className="px-3 py-2">Status</th>
+            </tr>
+          </thead>
+          <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800">
+            {bookingList.map((b) => (
+              <tr key={b.id} className="bg-white dark:bg-zinc-900">
+                <td className="px-3 py-2 font-mono text-zinc-700 dark:text-zinc-300">
+                  {b.referenceCode}
+                </td>
+                <td className="px-3 py-2">
+                  <p className="font-medium text-zinc-800 dark:text-zinc-200">{b.guestName}</p>
+                  <p className="text-zinc-400">{b.guestEmail}</p>
+                </td>
+                <td className="max-w-[140px] truncate px-3 py-2 text-zinc-600 dark:text-zinc-400">
+                  {b.propertyName}
+                </td>
+                <td className="px-3 py-2 text-zinc-500">
+                  {new Date(b.checkIn + 'T00:00:00').toLocaleDateString('en-PH', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                  {' → '}
+                  {new Date(b.checkOut + 'T00:00:00').toLocaleDateString('en-PH', {
+                    month: 'short',
+                    day: 'numeric',
+                  })}
+                </td>
+                <td className="px-3 py-2 font-medium text-zinc-800 dark:text-zinc-200">
+                  ₱{(b.totalMinor / 100).toLocaleString('en-PH')}
+                </td>
+                <td className="px-3 py-2">
+                  <span
+                    className={`rounded-full px-2 py-0.5 text-[10px] font-medium ${BOOKING_STATUS_COLOURS[b.status] ?? ''}`}
+                  >
+                    {BOOKING_STATUS_LABELS[b.status] ?? b.status}
+                  </span>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {hasMore && (
+        <button
+          onClick={() => load(offset)}
+          disabled={bookingsLoading}
+          className="flex h-10 w-full items-center justify-center rounded-lg border border-zinc-200 text-sm font-medium text-zinc-600 hover:bg-zinc-50 disabled:opacity-50 dark:border-zinc-700 dark:text-zinc-400"
+        >
+          {bookingsLoading ? 'Loading…' : 'Load more'}
+        </button>
       )}
     </div>
   );

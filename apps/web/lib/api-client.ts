@@ -150,6 +150,13 @@ export const api = {
         `/properties/${propertyId}/availability?checkIn=${checkIn}&checkOut=${checkOut}`,
       ),
     mine: () => apiFetch<{ data: unknown[] }>('/bookings/mine'),
+    ownerSummary: () =>
+      apiFetch<{
+        pendingCount: number;
+        todayCheckIns: number;
+        unreadMessages: number;
+        monthRevenueMinor: number;
+      }>('/bookings/owner/summary'),
     getByRef: (code: string) => apiFetch<unknown>(`/bookings/ref/${encodeURIComponent(code)}`),
     create: (body: unknown) =>
       apiFetch<unknown>('/bookings', { method: 'POST', body: JSON.stringify(body) }),
@@ -234,6 +241,21 @@ export const api = {
     listAuditLog: (limit?: number) =>
       apiFetch<{ data: unknown[] }>(`/auth/admin/audit${limit ? `?limit=${limit}` : ''}`),
     deleteReview: (id: string) => apiFetch<unknown>(`/admin/reviews/${id}`, { method: 'DELETE' }),
+    stats: () =>
+      apiFetch<{
+        activeProperties: number;
+        totalUsers: number;
+        bookingsThisMonth: number;
+        revenueThisMonthMinor: number;
+      }>('/auth/admin/stats'),
+    listAllBookings: (params?: { status?: string; limit?: number; offset?: number }) => {
+      const qs = new URLSearchParams();
+      if (params?.status) qs.set('status', params.status);
+      if (params?.limit) qs.set('limit', String(params.limit));
+      if (params?.offset) qs.set('offset', String(params.offset));
+      const q = qs.toString();
+      return apiFetch<{ data: unknown[] }>(`/bookings/admin/all${q ? `?${q}` : ''}`);
+    },
   },
   promoCodes: {
     list: () => apiFetch<{ data: unknown[] }>('/promo-codes'),
@@ -265,6 +287,12 @@ export const api = {
       apiFetch<{ ok: boolean }>(`/properties/slug/${slug}/enquiry`, {
         method: 'POST',
         body: JSON.stringify(body),
+      }),
+    list: (propertyId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/${propertyId}/enquiries`),
+    markRead: (propertyId: string, enquiryId: string) =>
+      apiFetch<{ ok: boolean }>(`/properties/${propertyId}/enquiries/${enquiryId}/read`, {
+        method: 'PATCH',
       }),
   },
   wishlist: {

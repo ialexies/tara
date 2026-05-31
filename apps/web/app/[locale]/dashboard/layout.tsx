@@ -1,5 +1,6 @@
 import { redirect } from 'next/navigation';
 import { getSession } from '@/lib/session';
+import { BottomNav } from './bottom-nav';
 
 export default async function DashboardLayout({
   children,
@@ -42,7 +43,10 @@ export default async function DashboardLayout({
           </div>
         </div>
       </header>
-      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 sm:px-6 sm:py-10">{children}</main>
+      <main className="mx-auto w-full max-w-5xl flex-1 px-4 py-6 pb-20 sm:px-6 sm:py-10 sm:pb-10">
+        {children}
+      </main>
+      <BottomNav />
     </div>
   );
 }

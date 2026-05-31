@@ -115,6 +115,7 @@ export default function RoomsPage(): React.ReactElement {
             { href: `/${locale}/dashboard/properties/${propertyId}/blacklist`, label: 'Blacklist' },
             { href: `/${locale}/dashboard/properties/${propertyId}/staff`, label: 'Staff' },
             { href: `/${locale}/dashboard/properties/${propertyId}/waitlist`, label: 'Waitlist' },
+            { href: `/${locale}/dashboard/properties/${propertyId}/enquiries`, label: 'Enquiries' },
           ].map(({ href, label }) => (
             <Link
               key={href}

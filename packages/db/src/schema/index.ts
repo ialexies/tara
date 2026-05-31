@@ -19,3 +19,4 @@ export * from './waitlist.js';
 export * from './search-alerts.js';
 export * from './webhooks.js';
 export * from './property-staff.js';
+export * from './property-enquiries.js';

@@ -65,6 +65,12 @@ export default function DashboardPage(): React.ReactElement {
   const [error, setError] = useState<string | null>(null);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [revenue, setRevenue] = useState<RevenueRow[]>([]);
+  const [summary, setSummary] = useState<{
+    pendingCount: number;
+    todayCheckIns: number;
+    unreadMessages: number;
+    monthRevenueMinor: number;
+  } | null>(null);
 
   function load() {
     setLoading(true);
@@ -73,6 +79,10 @@ export default function DashboardPage(): React.ReactElement {
       api.properties
         .revenue()
         .then((res) => setRevenue(res.data as RevenueRow[]))
+        .catch(() => {}),
+      api.bookings
+        .ownerSummary()
+        .then(setSummary)
         .catch(() => {}),
     ])
       .catch((e: Error) => setError(e.message))
@@ -95,12 +105,57 @@ export default function DashboardPage(): React.ReactElement {
         </Link>
       </div>
 
+      {/* At-a-glance summary */}
+      {summary && (
+        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <Link
+            href={`/${locale}/dashboard/bookings`}
+            className="rounded-xl border border-amber-200 bg-amber-50 p-4 dark:border-amber-900 dark:bg-amber-950"
+          >
+            <p className="text-2xl font-bold text-amber-800 dark:text-amber-200">
+              {summary.pendingCount}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">
+              Pending payments
+            </p>
+            {summary.pendingCount > 0 && (
+              <p className="mt-1 text-[10px] font-semibold uppercase tracking-wide text-amber-600 dark:text-amber-400">
+                Needs action →
+              </p>
+            )}
+          </Link>
+          <Link
+            href={`/${locale}/dashboard/bookings`}
+            className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 dark:border-emerald-900 dark:bg-emerald-950"
+          >
+            <p className="text-2xl font-bold text-emerald-800 dark:text-emerald-200">
+              {summary.todayCheckIns}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300">
+              Today's check-ins
+            </p>
+          </Link>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              {summary.unreadMessages}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-500">Unread messages</p>
+          </div>
+          <div className="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+            <p className="text-2xl font-bold text-zinc-900 dark:text-zinc-50">
+              ₱{(summary.monthRevenueMinor / 100).toLocaleString('en-PH')}
+            </p>
+            <p className="mt-0.5 text-xs font-medium text-zinc-500">This month's revenue</p>
+          </div>
+        </div>
+      )}
+
+      {/* Secondary nav */}
       <div className="flex flex-wrap gap-2">
         {[
           { href: `/${locale}/dashboard/calendar`, label: 'Calendar' },
           { href: `/${locale}/dashboard/compare`, label: 'Compare' },
           { href: `/${locale}/dashboard/promo-codes`, label: 'Promo codes' },
-          { href: `/${locale}/dashboard/reviews`, label: 'Reviews' },
           { href: `/${locale}/dashboard/refer`, label: 'Refer' },
           { href: `/${locale}/dashboard/webhooks`, label: 'Webhooks' },
         ].map(({ href, label }) => (

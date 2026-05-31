@@ -269,7 +269,32 @@ export class PropertiesController {
       });
     }
 
+    void this.svc.saveEnquiry(prop.id, prop.tenantId, guestName, guestEmail, message);
+
     return { ok: true };
+  }
+
+  /** Owner — list enquiries for a property. */
+  @Get(':id/enquiries')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async listEnquiries(@Param('id') id: string, @CurrentUser() user: AuthedUser) {
+    const data = await this.svc.listEnquiries(id, user);
+    return { data };
+  }
+
+  /** Owner — mark an enquiry as read. */
+  @Patch(':id/enquiries/:enquiryId/read')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('owner', 'admin')
+  async markEnquiryRead(
+    @Param('id') id: string,
+    @Param('enquiryId') enquiryId: string,
+    @CurrentUser() user: AuthedUser,
+  ) {
+    return this.svc.markEnquiryRead(id, enquiryId, user);
   }
 
   /** Admin — list all properties across all tenants. */

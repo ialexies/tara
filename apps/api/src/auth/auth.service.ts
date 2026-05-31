@@ -1,7 +1,7 @@
 import { Injectable, Logger, UnauthorizedException } from '@nestjs/common';
 import { db } from '@tara/db/client';
-import { users, type User } from '@tara/db/schema';
-import { and, eq, isNull } from 'drizzle-orm';
+import { users, properties, bookings, type User } from '@tara/db/schema';
+import { and, eq, isNull, inArray, count, sum, sql } from 'drizzle-orm';
 import { getFirebaseAdmin } from './firebase-admin.js';
 
 type SyncProfileInput = {
@@ -211,5 +211,27 @@ export class AuthService {
       .returning();
     if (!updated) throw new Error('User not found');
     return updated;
+  }
+
+  async getPlatformStats() {
+    const [[propCount], [userCount], [bookingStats]] = await Promise.all([
+      db.select({ c: count() }).from(properties).where(eq(properties.status, 'active')),
+      db.select({ c: count() }).from(users).where(isNull(users.deletedAt)),
+      db
+        .select({ bookingCount: count(), revenue: sum(bookings.totalMinor) })
+        .from(bookings)
+        .where(
+          and(
+            inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+            sql`date_trunc('month', ${bookings.checkIn}::date) = date_trunc('month', now())`,
+          ),
+        ),
+    ]);
+    return {
+      activeProperties: propCount?.c ?? 0,
+      totalUsers: userCount?.c ?? 0,
+      bookingsThisMonth: bookingStats?.bookingCount ?? 0,
+      revenueThisMonthMinor: bookingStats?.revenue ? parseInt(String(bookingStats.revenue), 10) : 0,
+    };
   }
 }

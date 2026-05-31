@@ -15,6 +15,7 @@ import {
   propertyImages,
   ownerBlocks,
   users,
+  propertyEnquiries,
 } from '@tara/db';
 import {
   eq,
@@ -599,5 +600,54 @@ export class PropertiesService {
     }
 
     return updated!;
+  }
+
+  async saveEnquiry(
+    propertyId: string,
+    tenantId: string,
+    guestName: string,
+    guestEmail: string,
+    message: string,
+  ) {
+    await db
+      .insert(propertyEnquiries)
+      .values({ propertyId, tenantId, guestName, guestEmail, message });
+  }
+
+  async listEnquiries(propertyId: string, user: AuthedUser) {
+    const [prop] = await db
+      .select({ id: properties.id, tenantId: properties.tenantId })
+      .from(properties)
+      .where(and(eq(properties.id, propertyId), isNull(properties.deletedAt)))
+      .limit(1);
+    if (!prop) throw new NotFoundException('Property not found');
+    if (prop.tenantId !== user.tenantId)
+      throw new (await import('@nestjs/common').then((m) => m.ForbiddenException))(
+        'Not your property',
+      );
+    return db
+      .select()
+      .from(propertyEnquiries)
+      .where(eq(propertyEnquiries.propertyId, propertyId))
+      .orderBy(sql`${propertyEnquiries.createdAt} DESC`);
+  }
+
+  async markEnquiryRead(propertyId: string, enquiryId: string, user: AuthedUser) {
+    const [prop] = await db
+      .select({ tenantId: properties.tenantId })
+      .from(properties)
+      .where(eq(properties.id, propertyId))
+      .limit(1);
+    if (!prop || prop.tenantId !== user.tenantId)
+      throw new (await import('@nestjs/common').then((m) => m.ForbiddenException))(
+        'Not your property',
+      );
+    const [updated] = await db
+      .update(propertyEnquiries)
+      .set({ isRead: true })
+      .where(and(eq(propertyEnquiries.id, enquiryId), eq(propertyEnquiries.propertyId, propertyId)))
+      .returning();
+    if (!updated) throw new NotFoundException('Enquiry not found');
+    return { ok: true };
   }
 }

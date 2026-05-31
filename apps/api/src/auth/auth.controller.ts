@@ -132,4 +132,11 @@ export class AuthController {
     const data = await this.auditSvc.listRecent(limit ? parseInt(limit, 10) : 100);
     return { data };
   }
+
+  @Get('admin/stats')
+  @Roles('admin')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  async adminStats() {
+    return this.auth.getPlatformStats();
+  }
 }
