@@ -780,6 +780,38 @@ export class BookingsService {
     return { ok: true };
   }
 
+  async getPaymentProofUploadUrl(id: string, contentType: string, guestEmail: string) {
+    const [booking] = await db
+      .select({ id: bookings.id, guestEmail: bookings.guestEmail, status: bookings.status })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase()) {
+      throw new ForbiddenException('Email does not match');
+    }
+    if (booking.status !== 'manual_pending') {
+      throw new BadRequestException('Payment proof can only be uploaded for pending bookings');
+    }
+    const key = `payment-proofs/${id}/${Date.now()}`;
+    return this.uploadsService.presignUpload({ key, contentType });
+  }
+
+  async savePaymentProofUrl(id: string, proofUrl: string, guestEmail: string) {
+    const [booking] = await db
+      .select({ id: bookings.id, guestEmail: bookings.guestEmail })
+      .from(bookings)
+      .where(eq(bookings.id, id))
+      .limit(1);
+    if (!booking) throw new NotFoundException('Booking not found');
+    if (booking.guestEmail.toLowerCase() !== guestEmail.toLowerCase()) {
+      throw new ForbiddenException('Email does not match');
+    }
+    await db.update(bookings).set({ paymentProofUrl: proofUrl }).where(eq(bookings.id, id));
+    this.logger.log({ event: 'booking.payment_proof_uploaded', bookingId: id });
+    return { ok: true };
+  }
+
   async getIdUploadUrl(id: string, contentType: string, guestEmail: string) {
     const [booking] = await db
       .select({ id: bookings.id, guestEmail: bookings.guestEmail, status: bookings.status })

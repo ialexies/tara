@@ -9,6 +9,7 @@ import { MessageThread } from './message-thread';
 import { ReceiptButton } from './receipt-button';
 import { AddToCalendarButton } from './add-to-calendar';
 import { IdUpload } from './id-upload';
+import { PaymentProofUpload } from './payment-proof-upload';
 
 const API_URL = process.env.API_URL ?? 'http://localhost:4000';
 
@@ -281,6 +282,12 @@ export default async function BookingConfirmationPage({
           <div className="mb-4 rounded-xl border border-zinc-200 bg-white p-4 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-400">
             The property will contact you at <strong>{booking.guestEmail}</strong> with payment
             instructions shortly.
+          </div>
+        )}
+
+        {isPending && (
+          <div className="mb-4">
+            <PaymentProofUpload bookingId={booking.id} guestEmail={booking.guestEmail} />
           </div>
         )}
 

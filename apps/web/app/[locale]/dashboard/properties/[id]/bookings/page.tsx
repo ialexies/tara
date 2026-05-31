@@ -20,6 +20,7 @@ type Booking = {
   totalMinor: number;
   status: string;
   specialRequests: string | null;
+  paymentProofUrl: string | null;
   createdAt: string;
 };
 
@@ -578,6 +579,26 @@ function BookingCard({
             <MessageThread bookingId={booking.id} guestName={booking.guestName} />
           </div>
         </>
+      )}
+
+      {canConfirm && booking.paymentProofUrl && (
+        <div className="mt-3 border-t border-zinc-100 pt-3 dark:border-zinc-800">
+          <p className="mb-2 text-xs font-medium text-zinc-500">Payment screenshot</p>
+          <a
+            href={booking.paymentProofUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="block"
+          >
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src={booking.paymentProofUrl}
+              alt="Payment proof"
+              className="max-h-48 w-full rounded-lg border border-zinc-200 bg-zinc-50 object-contain dark:border-zinc-700 dark:bg-zinc-800"
+            />
+            <p className="mt-1 text-xs text-zinc-400 underline">Tap to open full size</p>
+          </a>
+        </div>
       )}
 
       {(canConfirm || canCancel || canCheckIn || canCheckOut) && (

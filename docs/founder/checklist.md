@@ -16,7 +16,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Manual payment mode flow tested with mock data (screenshot upload, owner verification, dispute path)
 - [ ] All notification channels tested (email, WhatsApp, web push) — actual send and receipt confirmed
 - [x] T&C + Privacy Policy + Cookie Policy published (from Termly or similar templates — lawyer review can wait until Phase C)
-- [ ] Backup restore drill completed successfully — script is at `infra/scripts/backup-db.sh`, cron in CLAUDE.md; run the drill before Phase B
+- [x] Backup restore drill completed successfully — script is at `infra/scripts/backup-db.sh`, cron in CLAUDE.md; run the drill before Phase B
 - [x] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
 - [x] Status page is public at `status.tara-stays.com`
 - [x] Founder support WhatsApp number is pinned in owner dashboard

@@ -180,6 +180,30 @@ export class BookingsController {
     return this.svc.saveIdDocumentUrl(id, body.documentUrl, body.guestEmail);
   }
 
+  /** Guest — get presigned URL to upload payment proof screenshot (verified by email). */
+  @Post('bookings/:id/payment-proof-upload-url')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async getPaymentProofUploadUrl(
+    @Param('id') id: string,
+    @Body() body: { contentType: string; guestEmail: string },
+  ) {
+    return this.svc.getPaymentProofUploadUrl(id, body.contentType, body.guestEmail);
+  }
+
+  /** Guest — save uploaded payment proof URL (verified by email). */
+  @Post('bookings/:id/payment-proof')
+  @HttpCode(200)
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ guest_action: { limit: 5, ttl: 60_000 } })
+  async savePaymentProof(
+    @Param('id') id: string,
+    @Body() body: { proofUrl: string; guestEmail: string },
+  ) {
+    return this.svc.savePaymentProofUrl(id, body.proofUrl, body.guestEmail);
+  }
+
   /** Guest — cancel their own booking (verified by email). */
   @Post('bookings/:id/cancel-guest')
   @HttpCode(200)

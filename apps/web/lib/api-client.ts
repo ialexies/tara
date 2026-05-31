@@ -171,6 +171,16 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ documentUrl, guestEmail }),
       }),
+    getPaymentProofUploadUrl: (id: string, contentType: string, guestEmail: string) =>
+      apiFetch<{ uploadUrl: string; publicUrl: string }>(
+        `/bookings/${id}/payment-proof-upload-url`,
+        { method: 'POST', body: JSON.stringify({ contentType, guestEmail }) },
+      ),
+    savePaymentProof: (id: string, proofUrl: string, guestEmail: string) =>
+      apiFetch<{ ok: boolean }>(`/bookings/${id}/payment-proof`, {
+        method: 'POST',
+        body: JSON.stringify({ proofUrl, guestEmail }),
+      }),
     cancelByGuest: (id: string, guestEmail: string) =>
       apiFetch<unknown>(`/bookings/${id}/cancel-guest`, {
         method: 'POST',

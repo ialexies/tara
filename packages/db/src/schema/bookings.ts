@@ -72,6 +72,7 @@ export const bookings = pgTable(
     idVerified: boolean('id_verified').notNull().default(false),
     idVerifiedAt: timestamp('id_verified_at', { withTimezone: true }),
     idDocumentUrl: text('id_document_url'),
+    paymentProofUrl: text('payment_proof_url'),
 
     createdAt: timestamp('created_at', { withTimezone: true })
       .notNull()
