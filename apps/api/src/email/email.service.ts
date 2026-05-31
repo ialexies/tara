@@ -185,7 +185,7 @@ export class EmailService {
     if (!this.resend) return;
     const unsubUrl = this.buildUnsubscribeUrl(params.to);
     try {
-      await this.resend.emails.send({
+      const { error } = await this.resend.emails.send({
         from: this.from,
         ...params,
         headers: {
@@ -193,7 +193,11 @@ export class EmailService {
           'List-Unsubscribe-Post': 'List-Unsubscribe=One-Click',
         },
       });
-      this.logger.log({ event: 'email.sent', to: params.to, subject: params.subject });
+      if (error) {
+        this.logger.error({ event: 'email.send_failed', to: params.to, error: error.message });
+      } else {
+        this.logger.log({ event: 'email.sent', to: params.to, subject: params.subject });
+      }
     } catch (err) {
       this.logger.error({ event: 'email.send_failed', to: params.to, error: String(err) });
     }

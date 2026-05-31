@@ -19,7 +19,7 @@ These must be true before moving between phases. Don't shortcut them.
 - [ ] Backup restore drill completed successfully — script is at `infra/scripts/backup-db.sh`, cron in CLAUDE.md; run the drill before Phase B
 - [x] Critical user paths have E2E tests (search, book, checkout, owner verify booking)
 - [x] Status page is public at `status.tara-stays.com`
-- [ ] Founder support WhatsApp number is pinned in owner dashboard
+- [x] Founder support WhatsApp number is pinned in owner dashboard
 - [x] Audit log table exists and is being written to
 - [x] Risk register reviewed; top 5 risks have mitigations in place
 - [ ] You've personally visited every onboarded property at least once
