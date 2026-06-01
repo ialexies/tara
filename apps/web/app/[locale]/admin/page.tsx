@@ -168,7 +168,7 @@ export default function AdminHomePage(): React.ReactElement {
                 width={45}
               />
               <Tooltip
-                formatter={(v: number) => [`₱${v.toLocaleString('en-PH')}`, 'Revenue']}
+                formatter={(v) => [`₱${Number(v ?? 0).toLocaleString('en-PH')}`, 'Revenue']}
                 contentStyle={{
                   borderRadius: '8px',
                   border: '1px solid #e4e4e7',
