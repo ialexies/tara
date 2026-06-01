@@ -1,4 +1,20 @@
 services:
+  deployer:
+    image: tara-deployer:latest
+    pull_policy: never
+    command: python /scripts/webhook.py
+    volumes:
+      - /home/ialexies/projects/tara:/repo
+      - /home/ialexies/stacks/tara-staging/.env:/env/.env:ro
+      - /home/ialexies/projects/tara/infra/deploy/webhook.py:/scripts/webhook.py:ro
+      - /home/ialexies/projects/tara/infra/deploy/deploy.sh:/scripts/deploy.sh:ro
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - WEBHOOK_SECRET=${WEBHOOK_SECRET}
+    networks:
+      - tara-staging
+    restart: unless-stopped
+
   cloudflared:
     image: cloudflare/cloudflared:latest
     command: tunnel --no-autoupdate --config /etc/cloudflared/config.yml run
