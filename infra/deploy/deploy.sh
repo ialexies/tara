@@ -9,7 +9,7 @@ log() { echo "[deploy] $*"; }
 
 cd "$REPO"
 log "Pulling latest code..."
-git pull origin main -q
+git pull origin staging -q
 
 read_env() {
   grep "^$1=" "$ENV_FILE" | cut -d= -f2- | tr -d '"'

@@ -40,7 +40,7 @@ class WebhookHandler(http.server.BaseHTTPRequestHandler):
         except Exception:
             ref = ""
 
-        if ref != "refs/heads/main":
+        if ref != "refs/heads/staging":
             self.send_response(200)
             self.end_headers()
             self.wfile.write(f"Skipped (ref={ref})".encode())
