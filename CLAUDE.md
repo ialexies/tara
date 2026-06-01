@@ -518,6 +518,53 @@ Any function (`onClick`, `onXxx`, `window.*`) used inside a Server Component fil
 - To keep in sync: after a Portainer update that adds new vars, also add them to the disk `.env`.
 - `StripeService.createCheckoutSession` accepts `guestEmail` and `guestName` — pass them when creating sessions so Stripe Checkout pre-fills the customer's details.
 
+## Admin dashboard
+
+Full admin panel at `/admin` — accessible only to users with `role = 'admin'`. The layout guard in `apps/web/app/[locale]/admin/layout.tsx` redirects non-admins to `/dashboard`.
+
+### Pages
+
+| Route               | Description                                                                                                   |
+| ------------------- | ------------------------------------------------------------------------------------------------------------- |
+| `/admin`            | Home — platform stats, revenue bar chart (last 6 months), pending property approvals, recent bookings         |
+| `/admin/owners`     | Owner list with booking/revenue aggregates, per-owner property accordion, suspend-all action, broadcast modal |
+| `/admin/properties` | All properties across all tenants — approve / suspend / pause per property                                    |
+| `/admin/bookings`   | All platform bookings — TanStack Table, status filter, load-more pagination                                   |
+| `/admin/users`      | All users — inline role selector (guest / owner / admin)                                                      |
+| `/admin/reviews`    | All reviews with property name — reply via `prompt()`, delete                                                 |
+| `/admin/broadcast`  | Compose and send email to all active owners via Resend                                                        |
+| `/admin/audit`      | Audit log — TanStack Table with sort + global filter                                                          |
+
+### Navigation
+
+- **Desktop**: dark sidebar (`AdminSidebar`) — fixed 220px left, dark zinc-900 background
+- **Mobile**: bottom nav (`AdminBottomNav`) with 4 primary items + "More" sheet for Users / Reviews / Broadcast / Audit
+
+### Key API endpoints (all require `@Roles('admin')`)
+
+| Endpoint                                       | Purpose                                                                       |
+| ---------------------------------------------- | ----------------------------------------------------------------------------- |
+| `GET /auth/admin/stats`                        | Platform stats (active properties, owners, users, monthly bookings + revenue) |
+| `GET /auth/admin/owners`                       | Owners with property/booking/revenue aggregates                               |
+| `POST /auth/admin/broadcast`                   | Send email to all owners (rate-limited 1/hr)                                  |
+| `GET /auth/admin/users`                        | All users                                                                     |
+| `POST /auth/admin/users/:id/role`              | Change user role                                                              |
+| `GET /auth/admin/audit`                        | Audit log (limit param)                                                       |
+| `GET /properties/admin/revenue/monthly`        | Platform-wide monthly revenue (not filtered by tenant)                        |
+| `GET /properties/admin/all`                    | All properties across all owners                                              |
+| `POST /properties/admin/:id/status`            | Set property status — emails owner on active/suspended                        |
+| `GET /properties/admin/owner/:id/properties`   | Properties for one owner                                                      |
+| `POST /properties/admin/owner/:id/suspend-all` | Suspend all active properties for one owner                                   |
+| `GET /bookings/admin/all`                      | All bookings — `status`, `limit`, `offset` query params                       |
+| `GET /admin/reviews`                           | All reviews joined with property name                                         |
+| `DELETE /admin/reviews/:id`                    | Delete a review                                                               |
+
+All admin read endpoints carry `@SkipThrottle({ global: true, auth: true, guest_action: true })` — they're auth-gated, so rate-limiting adds nothing and would 429 on a busy admin dashboard.
+
+### Test credentials (staging + local)
+
+`admin@test.tara-stays.com` / `Test1234!` — must have `role = 'admin'` in the `users` table and Firebase custom claim `role: admin`.
+
 ## Admin endpoints — @Roles decorator required
 
 All `GET/POST /auth/admin/*` routes use `@Roles('admin')` + `@UseGuards(FirebaseGuard, RolesGuard)`. Do **not** use `throw new Error('Forbidden')` manually — it produces a 500 instead of 403 because NestJS doesn't recognize plain `Error` as an `HttpException`. Always use the `@Roles` decorator on the handler.
@@ -535,15 +582,27 @@ Object.entries(manualPaymentMethods)
 
 ## Deploying to staging
 
-CI runner is not in use. All deploys are done directly via SSH:
+### Auto-deploy webhook (normal flow)
+
+A `deployer` container runs inside the Portainer stack and listens at `https://deploy-staging.tara-stays.com/deploy`. GitHub sends a push webhook whenever `staging` branch is updated → `deploy.sh` runs `git pull origin staging`, rebuilds both Docker images, and restarts `api` + `web` via docker compose. **No SSH or Portainer click needed.**
+
+Workflow: finish work on `main` → merge/push to `staging` → deploy happens automatically (~4 min build time).
+
+Files: `infra/deploy/webhook.py` (HMAC-verified Python server), `infra/deploy/deploy.sh` (build + restart script), `infra/deploy/Dockerfile` (`python:3.12-alpine` + docker-cli).
+
+One-time setup to activate (Portainer + browser only):
+
+1. Portainer → Images → Build image → repo `https://github.com/ialexies/tara`, branch `main`, path `infra/deploy/Dockerfile`, name `tara-deployer:latest`
+2. Portainer → tara-staging stack → add env var `WEBHOOK_SECRET=<openssl rand -hex 32>` → update stack (deployer service is already in `tara-staging.yml`)
+3. Cloudflare Zero Trust → Tunnels → Public Hostnames → add `deploy-staging.tara-stays.com` → `http://deployer:9000`
+4. GitHub → repo Settings → Webhooks → add `https://deploy-staging.tara-stays.com/deploy`, content type `application/json`, secret = same `WEBHOOK_SECRET`, event = push
+
+### Manual deploy via SSH (fallback)
 
 ```bash
 ssh ialexies@192.168.0.253 << 'ENDSSH'
 cd /home/ialexies/projects/tara
-git pull origin main -q
-
-# Sync Portainer stack env vars → .env before every deploy (single source of truth = Portainer)
-PORTAINER_API_TOKEN="<your-portainer-api-token>" python3 infra/scripts/sync-portainer-env.sh
+git pull origin staging -q
 
 read_env() { grep "^$1=" /home/ialexies/stacks/tara-staging/.env | cut -d= -f2- | tr -d '"'; }
 
