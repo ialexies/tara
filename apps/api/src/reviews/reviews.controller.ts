@@ -77,6 +77,7 @@ export class ReviewsController {
 
   /** Admin — list all reviews. */
   @Get('admin/reviews')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('admin')
   async adminListAll(@CurrentUser() _user: AuthedUser) {

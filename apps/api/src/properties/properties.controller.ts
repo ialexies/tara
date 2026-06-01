@@ -297,8 +297,19 @@ export class PropertiesController {
     return this.svc.markEnquiryRead(id, enquiryId, user);
   }
 
+  /** Admin — platform-wide monthly revenue breakdown. */
+  @Get('admin/revenue/monthly')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminRevenueByMonth() {
+    const data = await this.svc.adminRevenueByMonth();
+    return { data };
+  }
+
   /** Admin — list all properties across all tenants. */
   @Get('admin/all')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @UseGuards(FirebaseGuard, RolesGuard)
   @Roles('admin')
   async adminListAll() {
@@ -316,5 +327,24 @@ export class PropertiesController {
       .object({ status: z.enum(['active', 'suspended', 'paused', 'pending']) })
       .parse(body);
     return this.svc.adminSetStatus(id, status);
+  }
+
+  /** Admin — list properties for one owner. */
+  @Get('admin/owner/:ownerId/properties')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminListByOwner(@Param('ownerId') ownerId: string) {
+    const data = await this.svc.adminListPropertiesByOwner(ownerId);
+    return { data };
+  }
+
+  /** Admin — suspend all active properties for one owner. */
+  @Post('admin/owner/:ownerId/suspend-all')
+  @HttpCode(200)
+  @UseGuards(FirebaseGuard, RolesGuard)
+  @Roles('admin')
+  async adminSuspendAllByOwner(@Param('ownerId') ownerId: string) {
+    return this.svc.adminSuspendAllByOwner(ownerId);
   }
 }

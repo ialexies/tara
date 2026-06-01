@@ -181,6 +181,22 @@ export class EmailService {
     return `${webUrl}/en/unsubscribe?token=${token}`;
   }
 
+  async sendBroadcast(to: string, subject: string, message: string): Promise<void> {
+    const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';
+    await this.send({
+      to,
+      subject,
+      html: shell(
+        subject,
+        `<p style="margin:0 0 16px;font-size:12px;color:#71717a">Message from the Tara team</p>
+         <div style="font-size:14px;line-height:1.7;color:#18181b">${message.replace(/\n/g, '<br>')}</div>
+         <p style="margin-top:28px">
+           <a href="${webUrl}/en/dashboard" class="btn">Go to your dashboard →</a>
+         </p>`,
+      ),
+    });
+  }
+
   private async send(params: { to: string; subject: string; html: string }): Promise<void> {
     if (!this.resend) return;
     const unsubUrl = this.buildUnsubscribeUrl(params.to);

@@ -79,6 +79,12 @@ export const api = {
         method: 'POST',
         body: JSON.stringify({ status }),
       }),
+    adminListByOwner: (ownerId: string) =>
+      apiFetch<{ data: unknown[] }>(`/properties/admin/owner/${ownerId}/properties`),
+    adminSuspendAllByOwner: (ownerId: string) =>
+      apiFetch<{ suspended: number }>(`/properties/admin/owner/${ownerId}/suspend-all`, {
+        method: 'POST',
+      }),
     listImages: (id: string) => apiFetch<{ data: unknown[] }>(`/properties/${id}/images`),
     getImageUploadUrl: (id: string, contentType: string, contentLength: number) =>
       apiFetch<{ uploadUrl: string; publicUrl: string }>(`/properties/${id}/images/upload-url`, {
@@ -245,10 +251,17 @@ export const api = {
     stats: () =>
       apiFetch<{
         activeProperties: number;
+        totalOwners: number;
         totalUsers: number;
         bookingsThisMonth: number;
         revenueThisMonthMinor: number;
       }>('/auth/admin/stats'),
+    listOwners: () => apiFetch<{ data: unknown[] }>('/auth/admin/owners'),
+    broadcast: (body: { subject: string; message: string }) =>
+      apiFetch<{ sent: number }>('/auth/admin/broadcast', {
+        method: 'POST',
+        body: JSON.stringify(body),
+      }),
     listAllBookings: (params?: { status?: string; limit?: number; offset?: number }) => {
       const qs = new URLSearchParams();
       if (params?.status) qs.set('status', params.status);
@@ -257,6 +270,7 @@ export const api = {
       const q = qs.toString();
       return apiFetch<{ data: unknown[] }>(`/bookings/admin/all${q ? `?${q}` : ''}`);
     },
+    revenueByMonth: () => apiFetch<{ data: unknown[] }>('/properties/admin/revenue/monthly'),
   },
   promoCodes: {
     list: () => apiFetch<{ data: unknown[] }>('/promo-codes'),

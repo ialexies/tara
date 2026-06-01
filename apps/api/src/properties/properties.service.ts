@@ -28,6 +28,7 @@ import {
   getTableColumns,
   asc,
   inArray,
+  notInArray,
   notExists,
 } from 'drizzle-orm';
 import type { CreateProperty, UpdateProperty } from '@tara/schemas';
@@ -534,6 +535,30 @@ export class PropertiesService {
     }));
   }
 
+  async adminRevenueByMonth(months = 6) {
+    const rows = await db
+      .select({
+        month: sql<string>`to_char(date_trunc('month', ${bookings.checkIn}::date), 'YYYY-MM')`,
+        total: sum(bookings.totalMinor),
+        count: count(),
+      })
+      .from(bookings)
+      .where(
+        and(
+          inArray(bookings.status, ['confirmed', 'checked_in', 'checked_out']),
+          sql`${bookings.checkIn}::date >= date_trunc('month', now()) - interval '${sql.raw(String(months - 1))} months'`,
+        ),
+      )
+      .groupBy(sql`date_trunc('month', ${bookings.checkIn}::date)`)
+      .orderBy(sql`date_trunc('month', ${bookings.checkIn}::date)`);
+
+    return rows.map((r) => ({
+      month: r.month,
+      totalMinor: r.total ? parseInt(String(r.total)) : 0,
+      bookingCount: r.count,
+    }));
+  }
+
   async adminListAll() {
     return db
       .select({
@@ -546,9 +571,43 @@ export class PropertiesService {
         status: properties.status,
         tenantId: properties.tenantId,
         createdAt: properties.createdAt,
+        ownerEmail: users.email,
+        ownerName: users.fullName,
       })
       .from(properties)
+      .leftJoin(users, eq(users.id, properties.ownerId))
       .orderBy(properties.createdAt);
+  }
+
+  async adminListPropertiesByOwner(ownerId: string) {
+    return db
+      .select({
+        id: properties.id,
+        name: properties.name,
+        slug: properties.slug,
+        status: properties.status,
+        city: properties.city,
+        createdAt: properties.createdAt,
+      })
+      .from(properties)
+      .where(and(eq(properties.ownerId, ownerId), isNull(properties.deletedAt)))
+      .orderBy(properties.createdAt);
+  }
+
+  async adminSuspendAllByOwner(ownerId: string) {
+    const result = await db
+      .update(properties)
+      .set({ status: 'suspended', updatedAt: new Date() })
+      .where(
+        and(
+          eq(properties.ownerId, ownerId),
+          isNull(properties.deletedAt),
+          notInArray(properties.status, ['archived', 'suspended']),
+        ),
+      )
+      .returning({ id: properties.id });
+    this.logger.log({ event: 'admin.owner.properties_suspended', ownerId, count: result.length });
+    return { suspended: result.length };
   }
 
   async adminSetStatus(id: string, status: 'active' | 'suspended' | 'paused' | 'pending') {
@@ -583,7 +642,7 @@ export class PropertiesService {
       const [owner] = await db
         .select({ email: users.email })
         .from(users)
-        .where(eq(users.firebaseUid, prop.ownerId))
+        .where(eq(users.id, prop.ownerId))
         .limit(1);
       if (owner?.email) {
         const webUrl = process.env['WEB_URL'] ?? 'https://tara-stays.com';

@@ -3,6 +3,7 @@ import { db } from '@tara/db/client';
 import { users, properties, bookings, type User } from '@tara/db/schema';
 import { and, eq, isNull, inArray, count, sum, sql } from 'drizzle-orm';
 import { getFirebaseAdmin } from './firebase-admin.js';
+import { EmailService } from '../email/email.service.js';
 
 type SyncProfileInput = {
   idToken: string;
@@ -15,6 +16,8 @@ const SESSION_COOKIE_TTL_MS = 60 * 60 * 24 * 14 * 1000; // 14 days
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+
+  constructor(private readonly email: EmailService) {}
 
   /**
    * Exchange a Firebase ID token for a long-lived session cookie.
@@ -214,8 +217,12 @@ export class AuthService {
   }
 
   async getPlatformStats() {
-    const [[propCount], [userCount], [bookingStats]] = await Promise.all([
+    const [[propCount], [ownerCount], [userCount], [bookingStats]] = await Promise.all([
       db.select({ c: count() }).from(properties).where(eq(properties.status, 'active')),
+      db
+        .select({ c: count() })
+        .from(users)
+        .where(and(eq(users.role, 'owner'), isNull(users.deletedAt))),
       db.select({ c: count() }).from(users).where(isNull(users.deletedAt)),
       db
         .select({ bookingCount: count(), revenue: sum(bookings.totalMinor) })
@@ -229,9 +236,54 @@ export class AuthService {
     ]);
     return {
       activeProperties: propCount?.c ?? 0,
+      totalOwners: ownerCount?.c ?? 0,
       totalUsers: userCount?.c ?? 0,
       bookingsThisMonth: bookingStats?.bookingCount ?? 0,
       revenueThisMonthMinor: bookingStats?.revenue ? parseInt(String(bookingStats.revenue), 10) : 0,
     };
+  }
+
+  async listOwners() {
+    const rows = await db.execute(sql`
+      SELECT
+        u.id, u.email, u.full_name, u.first_name, u.last_name, u.phone, u.created_at,
+        COUNT(DISTINCT p.id)::int                                                     AS property_count,
+        COUNT(DISTINCT CASE WHEN p.status = 'active' THEN p.id END)::int             AS active_property_count,
+        COUNT(DISTINCT b.id)::int                                                     AS booking_count,
+        COALESCE(SUM(CASE WHEN b.status IN ('confirmed','checked_in','checked_out')
+          THEN b.total_minor ELSE 0 END), 0)::int                                    AS total_revenue_minor
+      FROM users u
+      LEFT JOIN properties p ON p.owner_id = u.id AND p.deleted_at IS NULL
+      LEFT JOIN bookings b ON b.property_id = p.id
+      WHERE u.role = 'owner' AND u.deleted_at IS NULL
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `);
+    return Array.from(rows) as unknown as {
+      id: string;
+      email: string;
+      full_name: string | null;
+      first_name: string | null;
+      last_name: string | null;
+      phone: string | null;
+      created_at: string;
+      property_count: number;
+      active_property_count: number;
+      booking_count: number;
+      total_revenue_minor: number;
+    }[];
+  }
+
+  async broadcastToOwners(subject: string, message: string) {
+    const ownerEmails = await db
+      .select({ email: users.email })
+      .from(users)
+      .where(and(eq(users.role, 'owner'), isNull(users.deletedAt)));
+
+    await Promise.allSettled(
+      ownerEmails.map(({ email }) => this.email.sendBroadcast(email, subject, message)),
+    );
+    this.logger.log({ event: 'admin.broadcast.sent', count: ownerEmails.length, subject });
+    return { sent: ownerEmails.length };
   }
 }

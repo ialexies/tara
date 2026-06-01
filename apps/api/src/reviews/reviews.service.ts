@@ -99,7 +99,22 @@ export class ReviewsService {
   }
 
   async listAll() {
-    return db.select().from(reviews).orderBy(desc(reviews.createdAt)).limit(200);
+    return db
+      .select({
+        id: reviews.id,
+        propertyId: reviews.propertyId,
+        propertyName: properties.name,
+        guestName: reviews.guestName,
+        rating: reviews.rating,
+        body: reviews.body,
+        ownerReply: reviews.ownerReply,
+        status: reviews.status,
+        createdAt: reviews.createdAt,
+      })
+      .from(reviews)
+      .leftJoin(properties, eq(properties.id, reviews.propertyId))
+      .orderBy(desc(reviews.createdAt))
+      .limit(200);
   }
 
   async delete(id: string) {

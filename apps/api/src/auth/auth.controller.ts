@@ -9,7 +9,8 @@ import {
   Query,
   UseGuards,
 } from '@nestjs/common';
-import { Throttle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
+import { HttpException } from '@nestjs/common';
 import { z } from 'zod';
 import { AuthService } from './auth.service.js';
 import { AuditService } from '../audit/audit.service.js';
@@ -35,9 +36,16 @@ const UpdateProfileSchema = z.object({
   nationality: z.string().max(100).optional(),
 });
 
+const BroadcastSchema = z.object({
+  subject: z.string().min(1).max(200),
+  message: z.string().min(1).max(5000),
+});
+
 @Throttle({ auth: {} })
 @Controller('auth')
 export class AuthController {
+  private lastBroadcastAt: number | null = null;
+
   constructor(
     private readonly auth: AuthService,
     private readonly auditSvc: AuditService,
@@ -108,6 +116,7 @@ export class AuthController {
   }
 
   @Get('admin/users')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
   async adminListUsers() {
@@ -126,6 +135,7 @@ export class AuthController {
   }
 
   @Get('admin/audit')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
   async adminAuditLog(@Query('limit') limit?: string) {
@@ -134,9 +144,34 @@ export class AuthController {
   }
 
   @Get('admin/stats')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
   @Roles('admin')
   @UseGuards(FirebaseGuard, RolesGuard)
   async adminStats() {
     return this.auth.getPlatformStats();
+  }
+
+  @Get('admin/owners')
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @Roles('admin')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  async adminListOwners() {
+    const data = await this.auth.listOwners();
+    return { data };
+  }
+
+  @Post('admin/broadcast')
+  @HttpCode(200)
+  @SkipThrottle({ global: true, auth: true, guest_action: true })
+  @Roles('admin')
+  @UseGuards(FirebaseGuard, RolesGuard)
+  async adminBroadcast(@Body() body: unknown) {
+    const now = Date.now();
+    if (this.lastBroadcastAt && now - this.lastBroadcastAt < 3_600_000) {
+      throw new HttpException('Broadcast rate limit: once per hour', 429);
+    }
+    this.lastBroadcastAt = now;
+    const { subject, message } = BroadcastSchema.parse(body);
+    return this.auth.broadcastToOwners(subject, message);
   }
 }
