@@ -1,11 +1,11 @@
-import { test, expect } from '@playwright/test';
+import { test, expect, type Page } from '@playwright/test';
 
 const ADMIN_EMAIL = 'admin@test.tara-stays.com';
 const ADMIN_PASSWORD = 'Test1234!';
 const OWNER_EMAIL = 'owner@test.tara-stays.com';
 const OWNER_PASSWORD = 'Test1234!';
 
-async function loginAs(page: ReturnType<typeof test.extend>, email: string, password: string) {
+async function loginAs(page: Page, email: string, password: string) {
   await page.goto('/en/login');
   await page.getByLabel(/email/i).fill(email);
   await page.getByLabel(/password/i).fill(password);
