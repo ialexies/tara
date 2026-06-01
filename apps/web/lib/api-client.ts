@@ -379,6 +379,12 @@ export const api = {
   },
   referral: {
     getMyCode: () => apiFetch<{ code: string }>('/auth/me/referral'),
+    track: (code: string) =>
+      apiFetch<{ ok: boolean }>('/referrals/track', {
+        method: 'POST',
+        body: JSON.stringify({ code }),
+      }),
+    getMyStats: () => apiFetch<{ referred: number; converted: number }>('/referrals/mine'),
   },
   webhooks: {
     list: () => apiFetch<{ data: unknown[] }>('/webhooks'),

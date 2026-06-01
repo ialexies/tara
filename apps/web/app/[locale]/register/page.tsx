@@ -4,8 +4,9 @@ export const dynamic = 'force-dynamic';
 
 import { useEffect, useRef, useState, type FormEvent } from 'react';
 import Link from 'next/link';
-import { useParams, useRouter } from 'next/navigation';
+import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { useTranslations } from 'next-intl';
+import { api } from '@/lib/api-client';
 import {
   createUserWithEmailAndPassword,
   onAuthStateChanged,
@@ -19,6 +20,8 @@ import { syncProfileAction, establishSessionAction } from '@/lib/auth-actions';
 export default function RegisterPage(): React.ReactElement {
   const router = useRouter();
   const { locale } = useParams<{ locale: string }>();
+  const searchParams = useSearchParams();
+  const refCode = searchParams.get('ref');
   const t = useTranslations('auth.register');
   const [error, setError] = useState<string | null>(null);
   const [pending, setPending] = useState(false);
@@ -33,6 +36,7 @@ export default function RegisterPage(): React.ReactElement {
   async function finishSignIn(
     user: import('firebase/auth').User,
     profile: { fullName?: string; role?: 'guest' | 'owner' },
+    trackRef?: string,
   ): Promise<void> {
     const idToken = await user.getIdToken();
     const sync = await syncProfileAction(idToken, profile);
@@ -45,6 +49,10 @@ export default function RegisterPage(): React.ReactElement {
     if (session && 'error' in session) {
       setError(session.error);
       return;
+    }
+    // Track referral silently — don't block navigation on failure
+    if (trackRef) {
+      void api.referral.track(trackRef).catch(() => {});
     }
     router.push(`/${locale}`);
   }
@@ -66,7 +74,11 @@ export default function RegisterPage(): React.ReactElement {
         await updateProfile(cred.user, { displayName: fullName });
       }
       await sendEmailVerification(cred.user).catch(() => {});
-      await finishSignIn(cred.user, { fullName: fullName || undefined, role });
+      await finishSignIn(
+        cred.user,
+        { fullName: fullName || undefined, role },
+        refCode ?? undefined,
+      );
     } catch (err: unknown) {
       const code = (err as { code?: string }).code;
       setError(friendlyError(code, t) ?? t('errors.failed'));
@@ -83,10 +95,11 @@ export default function RegisterPage(): React.ReactElement {
     try {
       // Popup avoids the third-party-storage isolation problem on localhost.
       const cred = await signInWithPopup(firebaseAuth, googleProvider);
-      await finishSignIn(cred.user, {
-        fullName: cred.user.displayName ?? undefined,
-        role: 'guest',
-      });
+      await finishSignIn(
+        cred.user,
+        { fullName: cred.user.displayName ?? undefined, role: 'guest' },
+        refCode ?? undefined,
+      );
     } catch (err: unknown) {
       console.error('[google sign-in]', err);
       const code = (err as { code?: string }).code;

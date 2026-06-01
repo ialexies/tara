@@ -30,6 +30,7 @@ import { GuestBlacklistService } from '../guest-blacklist/guest-blacklist.servic
 import { WaitlistService } from '../waitlist/waitlist.service.js';
 import { WebhooksService } from '../webhooks/webhooks.service.js';
 import { UploadsService } from '../uploads/uploads.service.js';
+import { ReferralsService } from '../referrals/referrals.service.js';
 import { getFirebaseAdmin } from '../auth/firebase-admin.js';
 
 function nightsBetween(checkIn: string, checkOut: string): string[] {
@@ -65,6 +66,7 @@ export class BookingsService {
     private readonly waitlistService: WaitlistService,
     private readonly webhooksService: WebhooksService,
     private readonly uploadsService: UploadsService,
+    private readonly referralsService: ReferralsService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -490,6 +492,9 @@ export class BookingsService {
             guestName: ctx.guestName,
           });
         }
+
+        // Mark referral conversion — fire-and-forget, never blocks the booking
+        void this.referralsService.markConversion(input.guestEmail, result.id);
 
         return result;
       })
