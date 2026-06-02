@@ -29,6 +29,7 @@ docker build -f apps/web/Dockerfile \
   --build-arg NEXT_PUBLIC_FIREBASE_APP_ID="$(read_env NEXT_PUBLIC_FIREBASE_APP_ID)" \
   --build-arg R2_PUBLIC_URL="$(read_env R2_PUBLIC_URL)" \
   --build-arg NEXT_PUBLIC_SENTRY_DSN="$(read_env NEXT_PUBLIC_SENTRY_DSN)" \
+  --build-arg NEXT_PUBLIC_FIREBASE_VAPID_KEY="$(read_env NEXT_PUBLIC_FIREBASE_VAPID_KEY)" \
   -t tara-web:staging .
 
 log "Restarting containers..."
