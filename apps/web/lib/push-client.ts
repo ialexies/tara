@@ -2,19 +2,28 @@ import { getMessaging, getToken } from 'firebase/messaging';
 import { getApps, getApp } from 'firebase/app';
 import { api } from './api-client';
 
-// Set NEXT_PUBLIC_FIREBASE_VAPID_KEY from Firebase Console →
-// Project Settings → Cloud Messaging → Web Push certificates → Key pair
-const VAPID_KEY = process.env['NEXT_PUBLIC_FIREBASE_VAPID_KEY'];
 const TOKEN_KEY = 'fcm_token';
+
+async function getVapidKey(): Promise<string | null> {
+  try {
+    const res = await fetch('/api/push-config');
+    const data = (await res.json()) as { vapidKey: string | null };
+    return data.vapidKey;
+  } catch {
+    return null;
+  }
+}
 
 export async function initPush(): Promise<void> {
   if (typeof window === 'undefined') return;
   if (!('Notification' in window) || !('serviceWorker' in navigator)) return;
   if (Notification.permission === 'denied') return;
   if (!getApps().length) return; // Firebase not initialized
-  if (!VAPID_KEY) return; // Not configured
 
   try {
+    const vapidKey = await getVapidKey();
+    if (!vapidKey) return; // Not configured
+
     const permission = await Notification.requestPermission();
     if (permission !== 'granted') return;
 
@@ -22,7 +31,7 @@ export async function initPush(): Promise<void> {
     const sw = existing ?? (await navigator.serviceWorker.register('/firebase-messaging-sw.js'));
     const messaging = getMessaging(getApp());
     const token = await getToken(messaging, {
-      vapidKey: VAPID_KEY,
+      vapidKey,
       serviceWorkerRegistration: sw,
     });
 
