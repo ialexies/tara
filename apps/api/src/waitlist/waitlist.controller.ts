@@ -8,7 +8,7 @@ import {
   Post,
   UseGuards,
 } from '@nestjs/common';
-import { SkipThrottle } from '@nestjs/throttler';
+import { SkipThrottle, Throttle } from '@nestjs/throttler';
 import { WaitlistService } from './waitlist.service.js';
 import { FirebaseGuard } from '../auth/firebase.guard.js';
 import { RolesGuard, Roles } from '../auth/roles.guard.js';
@@ -32,6 +32,7 @@ export class WaitlistController {
   /** Public — guest joins waitlist */
   @Post()
   @HttpCode(201)
+  @Throttle({ guest_action: {} })
   async join(@Body() body: unknown) {
     const result = JoinSchema.safeParse(body);
     if (!result.success) throw new BadRequestException(result.error.issues);

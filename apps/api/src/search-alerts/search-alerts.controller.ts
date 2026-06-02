@@ -1,4 +1,5 @@
 import { Body, Controller, Delete, Get, HttpCode, Param, Post, Query } from '@nestjs/common';
+import { Throttle } from '@nestjs/throttler';
 import { SearchAlertsService } from './search-alerts.service.js';
 import { z } from 'zod';
 
@@ -16,6 +17,7 @@ export class SearchAlertsController {
 
   @Post()
   @HttpCode(201)
+  @Throttle({ guest_action: {} })
   async save(@Body() body: unknown) {
     const { guestEmail, ...filters } = SaveSchema.parse(body);
     return this.svc.save(guestEmail, filters);
@@ -29,6 +31,7 @@ export class SearchAlertsController {
 
   @Delete(':id')
   @HttpCode(204)
+  @Throttle({ guest_action: {} })
   async remove(@Param('id') id: string, @Query('email') email: string) {
     await this.svc.remove(id, email ?? '');
   }
