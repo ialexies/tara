@@ -52,7 +52,9 @@ export default function RegisterPage(): React.ReactElement {
     }
     // Track referral silently — don't block navigation on failure
     if (trackRef) {
-      void api.referral.track(trackRef).catch(() => {});
+      void api.referral.track(trackRef).catch((err) => {
+        console.warn('referral.track failed', err);
+      });
     }
     router.push(`/${locale}`);
   }

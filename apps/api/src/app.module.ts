@@ -27,6 +27,7 @@ import { SearchAlertsModule } from './search-alerts/search-alerts.module.js';
 import { WebhooksModule } from './webhooks/webhooks.module.js';
 import { PropertyStaffModule } from './property-staff/property-staff.module.js';
 import { ReferralsModule } from './referrals/referrals.module.js';
+import { PushModule } from './push/push.module.js';
 import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
@@ -63,6 +64,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     WebhooksModule,
     PropertyStaffModule,
     ReferralsModule,
+    PushModule,
     ScheduleModule.forRoot(),
     SchedulerModule,
     AuthModule,

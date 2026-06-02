@@ -2,10 +2,13 @@ import { Injectable, Logger, NotFoundException, ForbiddenException } from '@nest
 import { db, messages, bookings } from '@tara/db';
 import { eq, and, asc, sql } from 'drizzle-orm';
 import type { AuthedUser } from '../auth/firebase.guard.js';
+import { PushService } from '../push/push.service.js';
 
 @Injectable()
 export class MessagesService {
   private readonly logger = new Logger(MessagesService.name);
+
+  constructor(private readonly pushService: PushService) {}
 
   private async assertBookingAccess(bookingId: string, user: AuthedUser) {
     const [booking] = await db
@@ -45,7 +48,7 @@ export class MessagesService {
   }
 
   async send(bookingId: string, user: AuthedUser, body: string, senderName: string) {
-    await this.assertBookingAccess(bookingId, user);
+    const booking = await this.assertBookingAccess(bookingId, user);
 
     const [msg] = await db
       .insert(messages)
@@ -53,6 +56,19 @@ export class MessagesService {
       .returning();
 
     this.logger.log({ event: 'message.sent', bookingId, senderUid: user.uid });
+
+    // Push to the other party — guest → owner, owner → guest
+    const isGuest = booking.guestUid === user.uid;
+    const recipientUid = isGuest ? booking.tenantId : booking.guestUid;
+    if (recipientUid) {
+      void this.pushService.sendToUser(
+        recipientUid,
+        senderName,
+        body.length > 80 ? body.slice(0, 80) + '…' : body,
+        { url: `/en/bookings/${bookingId}` },
+      );
+    }
+
     return msg!;
   }
 

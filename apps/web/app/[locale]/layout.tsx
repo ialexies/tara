@@ -6,6 +6,7 @@ import { notFound } from 'next/navigation';
 import { headers } from 'next/headers';
 import Script from 'next/script';
 import { routing } from '@/i18n/routing';
+import { PushInit } from '@/components/push-init';
 import '../globals.css';
 import 'leaflet/dist/leaflet.css';
 
@@ -96,6 +97,7 @@ export default async function LocaleLayout({
     >
       <body className="flex min-h-full flex-col">
         <NextIntlClientProvider>{children}</NextIntlClientProvider>
+        <PushInit />
         {PLAUSIBLE_DOMAIN && (
           <Script
             defer

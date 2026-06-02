@@ -433,4 +433,13 @@ export const api = {
         `/waitlist/property/${propertyId}/counts`,
       ),
   },
+  push: {
+    register: (token: string) =>
+      apiFetch<{ ok: boolean }>('/push/token', { method: 'POST', body: JSON.stringify({ token }) }),
+    unregister: (token: string) =>
+      apiFetch<{ ok: boolean }>('/push/token', {
+        method: 'DELETE',
+        body: JSON.stringify({ token }),
+      }),
+  },
 };

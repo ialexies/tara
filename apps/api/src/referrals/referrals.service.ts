@@ -1,7 +1,7 @@
 import { BadRequestException, ConflictException, Injectable, Logger } from '@nestjs/common';
 import { db } from '@tara/db/client';
 import { referrals, users } from '@tara/db';
-import { and, count, eq, isNotNull, isNull } from 'drizzle-orm';
+import { and, count, eq, isNotNull, isNull, sql } from 'drizzle-orm';
 
 @Injectable()
 export class ReferralsService {
@@ -19,18 +19,20 @@ export class ReferralsService {
     if (referrer.firebaseUid === referredUid)
       throw new BadRequestException('Cannot refer yourself');
 
+    const normalizedEmail = referredEmail.toLowerCase();
+
     // Idempotent — ignore if this email was already tracked
     const [existing] = await db
       .select({ id: referrals.id })
       .from(referrals)
-      .where(eq(referrals.referredEmail, referredEmail))
+      .where(eq(referrals.referredEmail, normalizedEmail))
       .limit(1);
 
     if (existing) throw new ConflictException('Referral already recorded');
 
     await db.insert(referrals).values({
       referrerUid: referrer.firebaseUid,
-      referredEmail,
+      referredEmail: normalizedEmail,
     });
 
     this.logger.log({
@@ -59,19 +61,19 @@ export class ReferralsService {
   }
 
   async markConversion(referredEmail: string, bookingId: string) {
-    const [pending] = await db
-      .select({ id: referrals.id })
-      .from(referrals)
-      .where(and(eq(referrals.referredEmail, referredEmail), isNull(referrals.bookingId)))
-      .limit(1);
-
-    if (!pending) return;
-
-    await db
+    const result = await db
       .update(referrals)
       .set({ bookingId, discountApplied: true })
-      .where(eq(referrals.id, pending.id));
+      .where(
+        and(
+          sql`lower(${referrals.referredEmail}) = lower(${referredEmail})`,
+          isNull(referrals.bookingId),
+        ),
+      )
+      .returning({ id: referrals.id });
 
-    this.logger.log({ event: 'referral.converted', referredEmail, bookingId });
+    if (result.length > 0) {
+      this.logger.log({ event: 'referral.converted', referredEmail, bookingId });
+    }
   }
 }

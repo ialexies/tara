@@ -11,6 +11,7 @@ import { WebhooksModule } from '../webhooks/webhooks.module.js';
 import { UploadsModule } from '../uploads/uploads.module.js';
 import { MessagesModule } from '../messages/messages.module.js';
 import { ReferralsModule } from '../referrals/referrals.module.js';
+import { PushModule } from '../push/push.module.js';
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { ReferralsModule } from '../referrals/referrals.module.js';
     UploadsModule,
     MessagesModule,
     ReferralsModule,
+    PushModule,
   ],
   controllers: [BookingsController],
   providers: [BookingsService, RolesGuard],

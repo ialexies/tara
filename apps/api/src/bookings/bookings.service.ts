@@ -22,6 +22,7 @@ import type { CreateBooking } from '@tara/schemas';
 import type { AuthedUser } from '../auth/firebase.guard.js';
 import { EmailService } from '../email/email.service.js';
 import { WhatsAppService } from '../whatsapp/whatsapp.service.js';
+import { PushService } from '../push/push.service.js';
 import { StripeService } from '../stripe/stripe.service.js';
 import { AuditService } from '../audit/audit.service.js';
 import { PriceRulesService } from '../price-rules/price-rules.service.js';
@@ -67,6 +68,7 @@ export class BookingsService {
     private readonly webhooksService: WebhooksService,
     private readonly uploadsService: UploadsService,
     private readonly referralsService: ReferralsService,
+    private readonly pushService: PushService,
   ) {}
 
   /** Returns available unit count per room for the given date range. */
@@ -496,6 +498,14 @@ export class BookingsService {
         // Mark referral conversion — fire-and-forget, never blocks the booking
         void this.referralsService.markConversion(input.guestEmail, result.id);
 
+        // Push: notify owner of new booking
+        void this.pushService.sendToUser(
+          property.tenantId,
+          'New booking',
+          `${input.guestName} booked ${property.name}`,
+          { url: `/en/dashboard/bookings` },
+        );
+
         return result;
       })
       .catch((err: unknown) => {
@@ -812,6 +822,14 @@ export class BookingsService {
       'confirmed',
     );
     await this.sendStatusEmail(booking, 'confirmed');
+    if (booking.guestUid) {
+      void this.pushService.sendToUser(
+        booking.guestUid,
+        'Booking confirmed',
+        'Your booking has been confirmed!',
+        { url: `/en/bookings/${booking.id}` },
+      );
+    }
     return booking;
   }
 
@@ -842,6 +860,14 @@ export class BookingsService {
       booking.checkIn,
       booking.checkOut,
     );
+    if (booking.guestUid) {
+      void this.pushService.sendToUser(
+        booking.guestUid,
+        'Booking cancelled',
+        'Your booking has been cancelled.',
+        { url: `/en/bookings/${booking.id}` },
+      );
+    }
     return booking;
   }
 
@@ -978,6 +1004,7 @@ export class BookingsService {
       refundPercent,
     });
     await this.sendStatusEmail(updated!, 'cancelled');
+    // The guest cancelled themselves — no push needed (they know)
     return { ...updated!, refundPercent };
   }
 

@@ -33,6 +33,7 @@ function buildCsp(nonce: string, apiUrl: string, isDev: boolean): string {
       'https://*.firebaseapp.com',
       'https://accounts.google.com',
       'https://securetoken.googleapis.com',
+      'https://fcm.googleapis.com',
       'https://*.r2.cloudflarestorage.com',
       'https://*.r2.dev',
     ]
