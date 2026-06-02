@@ -53,6 +53,13 @@ const nextConfig: NextConfig = {
   // Allow Playwright running inside a Docker container to reach the dev server
   // via host.docker.internal. Only affects `next dev`, not production.
   allowedDevOrigins: ['host.docker.internal'],
+  async rewrites() {
+    return [
+      // The FCM SW must be served at /firebase-messaging-sw.js but Next.js App Router
+      // can't route directory names containing dots — rewrite to a normal API route.
+      { source: '/firebase-messaging-sw.js', destination: '/api/fcm-sw' },
+    ];
+  },
   async headers() {
     return [{ source: '/(.*)', headers: securityHeaders }];
   },
